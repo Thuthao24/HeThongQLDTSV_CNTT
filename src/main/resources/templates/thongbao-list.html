@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title != null ? title : 'Thông báo'}">Thông báo</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('thongbao')}"></div>
+        <main class="main-panel">
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">Cổng thông tin đào tạo / Thông báo</div>
+                    <h1>THÔNG BÁO</h1>
+                    <p>Thông tin và thông báo chính thức từ Khoa và Nhà trường.</p>
+                </div>
+                <div th:if="${canManage}">
+                    <a th:href="@{/thongbao/create}" class="btn btn-primary" title="Tạo thông báo mới">+ Thêm thông báo</a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="publication-message success" role="status" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="publication-message error" role="alert" th:text="${errorMessage}"></div>
+
+            <section class="panel-card notice-card">
+                <div class="table-toolbar notice-toolbar">
+                    <form th:action="@{/thongbao}" method="get" class="search-form">
+                        <div class="search-box">
+                            <span class="search-icon">⌕</span>
+                            <input type="search"
+                                   name="keyword"
+                                   th:value="${keyword}"
+                                   placeholder="Tìm kiếm theo từ khóa tiêu đề hoặc nội dung..."
+                                   autocomplete="off">
+                            <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                            <a th:if="${keyword != null and !#strings.isEmpty(keyword)}"
+                               th:href="@{/thongbao}"
+                               class="btn btn-secondary"
+                               title="Xem tất cả thông báo">Tất cả</a>
+                        </div>
+                    </form>
+                    <div class="record-count"><b th:text="${pageData.totalElements}">0</b> thông báo</div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table notice-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">STT</th>
+                                <th>Tiêu đề thông báo</th>
+                                <th style="width: 200px;">Người gửi</th>
+                                <th style="width: 160px;">Thời gian gửi</th>
+                                <th style="width: 140px;" th:if="${canManage}">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item, stat : ${items}">
+                                <td th:text="${pageData.number * pageData.size + stat.count}">1</td>
+                                <td>
+                                    <a th:href="@{/thongbao/{id}(id=${item.id})}"
+                                       class="notice-title-link"
+                                       th:text="${item.tieude != null ? item.tieude : '---'}">Tiêu đề</a>
+                                </td>
+                                <td>
+                                    <span th:text="${item.nguoidangHoten != null and !#strings.isEmpty(item.nguoidangHoten) ? item.nguoidangHoten : 'Quản trị viên'}">Người gửi</span>
+                                </td>
+                                <td th:text="${item.ngaydang != null ? #temporals.format(item.ngaydang, 'dd/MM/yyyy HH:mm') : '—'}">---</td>
+                                <td th:if="${canManage}">
+                                    <div class="action-group">
+                                        <a th:href="@{/thongbao/{id}/edit(id=${item.id})}"
+                                           class="btn btn-sm btn-secondary"
+                                           title="Chỉnh sửa thông báo">Sửa</a>
+                                        <form th:id="'deleteForm-' + ${item.id}"
+                                              th:action="@{/thongbao/{id}/delete(id=${item.id})}"
+                                              method="post"
+                                              class="inline-form">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-danger btn-trigger-delete"
+                                                    th:data-target-form="'deleteForm-' + ${item.id}"
+                                                    th:data-notice-title="${item.tieude != null ? item.tieude : '---'}"
+                                                    title="Xóa thông báo">Xóa</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(items)}">
+                                <td th:colspan="${canManage ? 5 : 4}">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">📢</div>
+                                        <strong th:if="${keyword != null and !#strings.isEmpty(keyword)}">Không tìm thấy thông báo phù hợp</strong>
+                                        <strong th:unless="${keyword != null and !#strings.isEmpty(keyword)}">Chưa có thông báo nào</strong>
+                                        <span th:if="${keyword != null and !#strings.isEmpty(keyword)}">
+                                            Không có thông báo nào khớp với từ khóa "<span th:text="${keyword}"></span>".
+                                            <a th:href="@{/thongbao}" style="color: var(--portal-blue); font-weight: 600; text-decoration: underline;">Quay lại danh sách đầy đủ</a>.
+                                        </span>
+                                        <span th:unless="${keyword != null and !#strings.isEmpty(keyword)}">Các thông báo mới về đợt đề tài và kế hoạch đào tạo sẽ xuất hiện tại đây.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <nav class="pagination"
+                     th:if="${pageData.totalPages > 1}"
+                     aria-label="Phân trang thông báo">
+
+                    <a th:if="${pageData.hasPrevious()}"
+                       th:href="@{/thongbao(page=${pageData.number - 1},keyword=${keyword})}">
+                        ← Trang trước
+                    </a>
+
+                    <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages}|">
+                        Trang 1
+                    </span>
+
+                    <a th:if="${pageData.hasNext()}"
+                       th:href="@{/thongbao(page=${pageData.number + 1},keyword=${keyword})}">
+                        Trang sau →
+                    </a>
+                </nav>            </section>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Xác nhận xóa (Chỉ hiển thị khi có quyền quản trị) -->
+<div th:if="${canManage}"
+     id="deleteModal"
+     class="portal-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="deleteModalTitle"
+     aria-describedby="deleteModalDesc"
+     aria-hidden="true">
+    <div class="portal-modal-backdrop" data-modal-dismiss></div>
+    <div class="portal-modal-dialog">
+        <div class="portal-modal-header">
+            <div class="modal-icon-danger" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+            </div>
+            <h2 id="deleteModalTitle" class="portal-modal-title">Xác nhận xóa thông báo</h2>
+            <button type="button" class="portal-modal-close" data-modal-dismiss aria-label="Đóng cửa sổ">×</button>
+        </div>
+        <div class="portal-modal-body">
+            <p id="deleteModalDesc" class="portal-modal-text">
+                Bạn có chắc chắn muốn xóa thông báo:
+                <strong id="deleteModalNoticeTitle" class="delete-target-title">---</strong>?
+            </p>
+            <div class="portal-modal-warning">
+                <span class="warning-icon" aria-hidden="true">⚠️</span>
+                <span>Thao tác này không thể hoàn tác. Dữ liệu thông báo sẽ bị xóa vĩnh viễn khỏi hệ thống.</span>
+            </div>
+        </div>
+        <div class="portal-modal-footer">
+            <button type="button" class="btn btn-secondary" data-modal-dismiss id="deleteModalCancelBtn">Hủy bỏ</button>
+            <button type="button" class="btn btn-danger" id="deleteModalConfirmBtn">
+                <span class="btn-text">Xác nhận xóa</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đợt đăng ký</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div class="app-shell">
+<div th:replace="~{fragments :: portalHeader}"></div>
+<div class="portal-body">
+<div th:replace="~{fragments :: sidebar('dotdangky')}"></div>
+<main class="main-panel">
+<div class="page-heading">
+  <div><div class="breadcrumb">Cổng thông tin đào tạo / Đợt đăng ký</div><h1>ĐỢT ĐĂNG KÝ</h1><p>Quản lý thời gian đăng ký giảng viên và sinh viên theo từng loại đề tài.</p></div>
+  <a th:if="${vaitro == 'TRUONGKHOA'}" class="btn btn-primary" th:href="@{/giai-doan-1/dot/tao}">+ Tạo đợt</a>
+</div>
+<section class="panel-card"><p th:if="${successMessage}" style="color:green;padding:10px" th:text="${successMessage}"></p><p th:if="${errorMessage}" style="color:#b42318;padding:10px" th:text="${errorMessage}"></p>
+<div class="table-toolbar">
+  <form class="search-box" th:action="@{/dotdangky}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đợt</th><th>Loại</th><th>GV bắt đầu</th><th>GV kết thúc</th><th>SV bắt đầu</th><th>SV kết thúc</th><th>Trạng thái</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendot}">---</td><td><span class="badge" th:text="${item.loaidot}">---</span></td><td th:text="${item.batdaugiangvien}">---</td><td th:text="${item.ketthucgiangvien}">---</td><td th:text="${item.batdausinhvien}">---</td><td th:text="${item.ketthucsinhvien}">---</td><td><span class="badge" th:text="${item.trangthai}">---</span></td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:220px">
+<a th:if="${vaitro == 'TRUONGKHOA' and item.trangthai.name() == 'NHAP'}" th:href="@{/giai-doan-1/dot/{id}/sua(id=${item.id})}">Sửa</a>
+<form th:if="${vaitro == 'TRUONGKHOA' and item.trangthai.name() == 'NHAP'}" th:action="@{/giai-doan-1/dot/{id}/xoa(id=${item.id})}" method="post" style="display:inline" onsubmit="return confirm('Xóa đợt chưa có đề tài?')"><button type="submit">Xóa</button></form>
+<form th:if="${vaitro == 'TRUONGKHOA' and item.trangthai.name() != 'DONG'}" th:action="@{/giai-doan-1/dot/{id}/chuyen(id=${item.id})}" method="post" style="display:inline">
+<input type="hidden" name="trangthai" th:value="${item.trangthai.name() == 'NHAP' ? 'GIAIDOAN1' : (item.trangthai.name() == 'GIAIDOAN1' ? 'CONGBO' : (item.trangthai.name() == 'CONGBO' ? 'GIAIDOAN2' : 'DONG'))}">
+<button type="submit" th:text="${item.trangthai.name() == 'NHAP' ? 'Mở GĐ1' : (item.trangthai.name() == 'GIAIDOAN1' ? 'Chốt công bố' : (item.trangthai.name() == 'CONGBO' ? 'Mở GĐ2' : 'Đóng đợt'))}"></button>
+</form></td></tr>
+<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 9 : 8}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+</tbody></table></div>
+<nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+ <a th:if="${pageData.hasPrevious()}" th:href="@{/dotdangky(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+ <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
+ <a th:if="${pageData.hasNext()}" th:href="@{/dotdangky(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
+</nav>
+</section>
+</main></div></div><script th:src="@{/js/app.js}"></script></body></html>

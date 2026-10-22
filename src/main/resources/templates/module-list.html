@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">Danh sách</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="container">
+    <a href="/">← Trang chủ</a>
+    <h1 th:text="${title}">Danh sách</h1>
+    <p>Đây là trang sườn. Bước tiếp theo sẽ thêm bảng hiển thị, form thêm/sửa/xóa và validation.</p>
+    <div class="card">
+        <strong>Số bản ghi:</strong>
+        <span th:text="${#lists.size(items)}">0</span>
+    </div>
+</main>
+</body>
+</html>

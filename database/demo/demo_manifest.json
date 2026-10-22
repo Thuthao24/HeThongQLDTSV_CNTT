@@ -1,0 +1,111 @@
+{
+  "source": "Huu_Nghi_Du_Lieu_Demo_Cong_Bo_Ket_Qua.xlsx",
+  "sha256": "a1c906b808836222d1559440a05662dc258db5f6dccf04763428d42e1f5ca1e6",
+  "counts": {
+    "bomon": 5,
+    "taikhoan": 46,
+    "giangvien": 21,
+    "sinhvien": 24,
+    "dotdangky": 4,
+    "detai": 8,
+    "giangvienhuongdan": 10,
+    "nhomsinhvien": 8,
+    "thanhviennhom": 24,
+    "dangkydetai": 8,
+    "nopbaocao": 0,
+    "hoidong": 3,
+    "thanhvienhoidong": 9,
+    "giangvienphanbien": 8,
+    "diem": 12,
+    "ketqua": 8,
+    "thongbao": 0,
+    "phanconghoidong": 8,
+    "emailketqua": 0
+  },
+  "ready": [
+    1,
+    2,
+    3,
+    4,
+    7
+  ],
+  "already_published": [
+    5
+  ],
+  "missing_graders": {
+    "6": [
+      "10"
+    ],
+    "8": [
+      "18"
+    ]
+  },
+  "scenario_dot_corrections": [
+    {
+      "registration": "5",
+      "scenario_dot": "5",
+      "actual_dot": "1"
+    },
+    {
+      "registration": "6",
+      "scenario_dot": "6",
+      "actual_dot": "2"
+    },
+    {
+      "registration": "7",
+      "scenario_dot": "7",
+      "actual_dot": "3"
+    },
+    {
+      "registration": "8",
+      "scenario_dot": "8",
+      "actual_dot": "4"
+    }
+  ],
+  "supplements": [
+    "5 DEMO Bomon",
+    "4 DEMO Dotdangky with synthetic schedules",
+    "45 DEMO Taikhoan for source teachers/students",
+    "1 extra TRUONGBOMON account 2001"
+  ],
+  "empty_tables": [
+    "nopbaocao",
+    "thongbao",
+    "emailketqua"
+  ],
+  "calendar": {
+    "timezone": "Asia/Bangkok (UTC+07:00)",
+    "review_reference": "2026-10-16 00:00:00",
+    "demo_publication_not_before": "2026-10-16 00:00:00",
+    "council_date_corrections": [
+      {
+        "council": "101",
+        "source_date": "2026-10-25 08:00:00",
+        "demo_date": "2026-10-12 08:00:00",
+        "reason": "Council meeting precedes demo publication on/after 2026-10-16"
+      },
+      {
+        "council": "102",
+        "source_date": "2026-10-26 08:00:00",
+        "demo_date": "2026-10-13 08:00:00",
+        "reason": "Council meeting precedes demo publication on/after 2026-10-16"
+      },
+      {
+        "council": "103",
+        "source_date": "2026-10-27 08:00:00",
+        "demo_date": "2026-10-14 08:00:00",
+        "reason": "Council meeting precedes demo publication on/after 2026-10-16"
+      }
+    ],
+    "published_result_5_preserved": "2026-10-10 08:00:00"
+  },
+  "schema_adjustments": [
+    {
+      "table": "phanconghoidong",
+      "constraint": "Fk_pchd_hoidong",
+      "change": "Omit ON DELETE RESTRICT ON UPDATE CASCADE; use default RESTRICT",
+      "reason": "MySQL 8 CHECK on Hoidongid is incompatible with ON UPDATE CASCADE",
+      "pending_V002_changed": false
+    }
+  ]
+}

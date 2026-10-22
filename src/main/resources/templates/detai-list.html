@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đề tài</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div class="app-shell">
+<div th:replace="~{fragments :: portalHeader}"></div>
+<div class="portal-body">
+<div th:replace="~{fragments :: sidebar('detai')}"></div>
+<main class="main-panel">
+<div class="page-heading">
+  <div><div class="breadcrumb">Cổng thông tin đào tạo / Đề tài</div><h1>ĐỀ TÀI</h1><p>Theo dõi đề tài theo đợt, bộ môn và trạng thái phê duyệt.</p></div>
+  <a th:if="${canProposeTopic}" class="btn btn-primary" th:href="@{/giai-doan-1/detai/tao}">+ Đề xuất đề tài</a>
+</div>
+<section class="panel-card"><p th:if="${successMessage}" style="color:green;padding:10px" th:text="${successMessage}"></p><p th:if="${errorMessage}" style="color:#b42318;padding:10px" th:text="${errorMessage}"></p>
+<div class="table-toolbar">
+  <form class="search-box" th:action="@{/detai}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đề tài</th><th>Đợt ID</th><th>Bộ môn ID</th><th>GV đề xuất ID</th><th>Trạng thái</th><th>Thao tác GĐ1</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendetai}">---</td><td th:text="${item.dotdangkyid}">---</td><td th:text="${item.bomonid}">---</td><td th:text="${item.giangviendexuatid}">---</td><td><span class="badge" th:text="${item.trangthai}">---</span></td><td style="min-width:250px">
+<a th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:href="@{/giai-doan-1/detai/{id}/sua(id=${item.id})}">Sửa</a>
+<form th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:action="@{/giai-doan-1/detai/{id}/xoa(id=${item.id})}" method="post" style="display:inline" onsubmit="return confirm('Xóa đề tài này?')"><button type="submit">Xóa</button></form>
+<form th:if="${(vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON') and item.trangthai.name() == 'CHODUYET'}" th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}" method="post" style="display:inline"><input type="hidden" name="chapnhan" value="true"><button type="submit">Duyệt</button></form>
+<form th:if="${(vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON') and item.trangthai.name() == 'CHODUYET'}" th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}" method="post" style="display:inline"><input type="hidden" name="chapnhan" value="false"><button type="submit">Từ chối</button></form>
+<form th:if="${(vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON') and item.trangthai.name() == 'DADUYET'}" th:action="@{/giai-doan-1/detai/{id}/congbo(id=${item.id})}" method="post" style="display:inline"><button type="submit">Công bố</button></form>
+</td></tr>
+<tr th:if="${#lists.isEmpty(items)}"><td colspan="7"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+</tbody></table></div>
+<nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+ <a th:if="${pageData.hasPrevious()}" th:href="@{/detai(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+ <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
+ <a th:if="${pageData.hasNext()}" th:href="@{/detai(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
+</nav>
+</section>
+</main></div></div><script th:src="@{/js/app.js}"></script></body></html>

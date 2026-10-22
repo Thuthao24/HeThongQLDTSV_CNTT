@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kết quả</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div class="app-shell">
+<div th:replace="~{fragments :: portalHeader}"></div>
+<div class="portal-body">
+<div th:replace="~{fragments :: sidebar('ketqua')}"></div>
+<main class="main-panel">
+<div class="page-heading">
+  <div><div class="breadcrumb">Cổng thông tin đào tạo / Kết quả</div><h1>KẾT QUẢ</h1><p>Điểm cuối của đề tài và trạng thái công bố.</p></div>
+</div>
+<div th:if="${successMessage}" class="publication-message success" role="status" th:text="${successMessage}"></div>
+<div th:if="${errorMessage}" class="publication-message error" role="alert" th:text="${errorMessage}"></div>
+<div th:if="${canManage and !emailEnabled}" class="publication-message info" role="status">Gửi email đang tắt. Yêu cầu gửi vẫn được lưu; email chờ gửi sẽ được xử lý khi dịch vụ email được bật.</div>
+<section class="panel-card">
+<div class="table-toolbar">
+  <div class="search-box"><span>⌕</span><input type="search" data-table-search placeholder="Tìm kiếm trong danh sách..."></div>
+  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Đăng ký ID</th><th>Điểm cuối</th><th>Trạng thái</th><th>Ngày công bố</th><th th:if="${canManage}">Hình thức đánh giá</th><th th:if="${canManage}">Công bố / email</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}">
+  <td th:text="${item.id}">---</td><td th:text="${item.dangkydetaiid}">---</td><td th:text="${item.diemcuoi}">---</td>
+  <td><span class="badge" th:classappend="${item.dacongbo == true} ? ' badge-success' : ' badge-muted'" th:text="${item.dacongbo == true} ? 'Đã công bố' : 'Chưa công bố'">---</span></td>
+  <td th:text="${item.ngaycongbo != null ? #temporals.format(item.ngaycongbo, 'dd/MM/yyyy HH:mm:ss') : '—'}">---</td>
+  <td th:if="${canManage}" class="publication-action" th:with="info=${publicationInfo[item.id]}">
+    <span th:if="${item.dacongbo == true}">Đã khóa sau công bố</span>
+    <th:block th:if="${info.canAssign}">
+      <p th:if="${info.assignment != null}">
+        <b th:text="${info.assignment.hinhthuc}"></b>
+        <span th:if="${info.assignment.hoidongid != null}" th:text="' · Hội đồng ID ' + ${info.assignment.hoidongid}"></span>
+      </p>
+      <form th:if="${info.allowNoCouncil}" th:action="@{/ketqua/{id}/phancong(id=${item.id})}" method="post">
+        <input type="hidden" name="hinhthuc" value="KHONGHOIDONG">
+        <button type="submit" class="btn">Xác nhận không hội đồng</button>
+      </form>
+      <form th:action="@{/ketqua/{id}/phancong(id=${item.id})}" method="post" class="council-form">
+        <input type="hidden" name="hinhthuc" value="COHOIDONG">
+        <label th:for="'council-' + ${item.id}">Chọn hội đồng cùng đợt</label>
+        <select name="hoidongid" th:id="'council-' + ${item.id}" required>
+          <option value="">— Chọn hội đồng cụ thể —</option>
+          <option th:each="council : ${info.councils}" th:value="${council.id}" th:text="${council.tenhoidong}" th:selected="${info.assignment != null and info.assignment.hoidongid == council.id}"></option>
+        </select>
+        <button type="submit" class="btn">Lưu phân công hội đồng</button>
+      </form>
+    </th:block>
+  </td>
+  <td th:if="${canManage}" class="publication-action" th:with="info=${publicationInfo[item.id]}">
+    <span th:if="${item.dacongbo == true}" class="badge badge-success">Đã công bố</span>
+    <th:block th:if="${item.dacongbo != true}">
+      <form th:if="${#strings.isEmpty(info.reason)}" th:action="@{/ketqua/{id}/congbo(id=${item.id})}" method="post">
+        <button type="submit" class="btn btn-primary">Công bố kết quả</button>
+      </form>
+      <span th:unless="${#strings.isEmpty(info.reason)}" class="publication-reason" th:text="${info.reason}">Chưa đủ điều kiện.</span>
+    </th:block>
+    <details th:if="${emailStatuses.containsKey(item.id)}" class="email-details">
+      <summary>Trạng thái email từng sinh viên</summary>
+      <div th:each="email : ${emailStatuses[item.id]}" class="email-recipient">
+        <strong th:text="${recipientLabels[email.sinhvienid] != null ? recipientLabels[email.sinhvienid] : 'Sinh viên ID ' + email.sinhvienid}"></strong>
+        <span th:text="${email.email != null ? email.email : 'Thiếu email'}"></span>
+        <span class="badge" th:text="${email.trangthai.name()} + ' · ' + ${emailStatusLabels[email.trangthai.name()]}"></span>
+        <span th:text="'Số lần thử: ' + ${email.solanthu}"></span>
+        <span th:if="${email.lanthu != null}" th:text="'Lần thử: ' + ${#temporals.format(email.lanthu, 'dd/MM/yyyy HH:mm:ss')}"></span>
+        <span th:if="${email.ngaygui != null}" th:text="'Đã gửi: ' + ${#temporals.format(email.ngaygui, 'dd/MM/yyyy HH:mm:ss')}"></span>
+        <span th:if="${email.loi != null}" class="publication-reason" th:text="${email.loi}"></span>
+        <form th:if="${email.trangthai.name() == 'FAILED' or email.trangthai.name() == 'MISSING_EMAIL'}" th:action="@{/ketqua/email/{id}/thulai(id=${email.id})}" method="post">
+          <button type="submit" class="btn">Kiểm tra email và thử lại</button>
+        </form>
+        <form th:if="${email.trangthai.name() == 'UNCERTAIN'}" th:action="@{/ketqua/email/{id}/thulai(id=${email.id})}" method="post">
+          <input type="hidden" name="solanthu" th:value="${email.solanthu}">
+          <label class="email-confirm"><input type="checkbox" name="xacnhanChuaGui" value="true" required> Đã đối soát: SMTP chưa tiếp nhận thư này.</label>
+          <button type="submit" class="btn">Xác nhận và đưa vào hàng đợi</button>
+        </form>
+      </div>
+    </details>
+    <span th:if="${item.dacongbo == true and !emailStatuses.containsKey(item.id)}" class="publication-reason">Không có yêu cầu gửi email; không gửi lại tự động cho kết quả cũ.</span>
+  </td>
+</tr>
+<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${canManage ? 7 : 5}"><div class="empty-state"><strong>Chưa có kết quả để hiển thị</strong><span>Danh sách chỉ hiển thị kết quả bạn được phép xem. Sinh viên cần tham gia nhóm và có kết quả đã công bố.</span></div></td></tr>
+</tbody></table></div>
+<nav class="pagination"
+     th:if="${pageData.totalPages > 1}"
+     aria-label="Phân trang kết quả">
+
+    <a th:if="${pageData.hasPrevious()}"
+       th:href="@{/ketqua(page=${pageData.number - 1})}">
+        ← Trang trước
+    </a>
+
+    <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages}|">
+        Trang 1
+    </span>
+
+    <a th:if="${pageData.hasNext()}"
+       th:href="@{/ketqua(page=${pageData.number + 1})}">
+        Trang sau →
+    </a>
+
+</nav>
+</section>
+</main></div></div><script th:src="@{/js/app.js}"></script></body></html>

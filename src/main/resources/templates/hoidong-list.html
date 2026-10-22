@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hội đồng</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div class="app-shell">
+<div th:replace="~{fragments :: portalHeader}"></div>
+<div class="portal-body">
+<div th:replace="~{fragments :: sidebar('hoidong')}"></div>
+<main class="main-panel">
+<div class="page-heading">
+  <div><div class="breadcrumb">Cổng thông tin đào tạo / Hội đồng</div><h1>HỘI ĐỒNG</h1><p>Quản lý lịch, phòng và hội đồng đánh giá.</p></div>
+
+</div>
+<div th:if="${canManage}"><form method="post" th:action="@{/hoidong/tao}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:12px 0"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><label>ID đợt đăng ký <select name="dotdangkyid" required><option value="">Chọn đợt</option><option th:each="d : ${roundOptions}" th:value="${d.id}" th:text="${d.tendot}"></option></select></label> <label>Tên hội đồng <input name="tenhoidong" type="text" required ></label> <label>Phòng <input name="phong" type="text" ></label> <button type="submit" class="btn btn-primary">+ Lưu mới</button></form></div><div th:if="${errorMessage}" th:text="${errorMessage}" role="alert"></div><div th:if="${successMessage}" th:text="${successMessage}" role="status"></div>
+<section class="panel-card" th:if="${canManage}"><h3>Thêm thành viên hội đồng (3–5 giảng viên, 1 Chủ tịch, 1 Thư ký)</h3>
+<form method="post" th:action="@{/hoidong/thanhvien}">
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+<label>ID hội đồng <select name="hoidongid" required><option value="">Chọn hội đồng</option><option th:each="h : ${items}" th:value="${h.id}" th:text="${h.tenhoidong}"></option></select></label>
+<label>ID giảng viên <select name="giangvienid" required><option value="">Chọn giảng viên</option><option th:each="g : ${teacherOptions}" th:value="${g.id}" th:text="${(teacherLabels[g.taikhoanid] ?: g.magiangvien) + ' (' + g.magiangvien + ')'}"></option></select></label>
+<label>Vai trò <select name="vaitro"><option value="CHUTICH">Chủ tịch</option><option value="THUKY">Thư ký</option><option value="THANHVIEN">Thành viên</option></select></label>
+<button type="submit" class="btn btn-primary">Thêm thành viên</button></form>
+</section>
+<section class="panel-card"><h3>Danh sách thành viên theo hội đồng</h3><div class="council-roster">
+<div class="council-roster-card" th:each="council : ${items}"><h4 th:text="${council.tenhoidong}"></h4>
+<div class="council-member-row" th:each="member : ${roster[council.id]}"><span th:text="${(lecturerNames[member.giangvienid] ?: '—') + ' – ' + member.vaitro}"></span>
+<form th:if="${canManage}" method="post" th:action="@{/hoidong/thanhvien/xoa}" style="display:inline"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="hoidongid" th:value="${council.id}"/><input type="hidden" name="giangvienid" th:value="${member.giangvienid}"/><button type="submit">Xóa</button></form></div></div></div></section>
+<section class="panel-card">
+<div class="table-toolbar">
+  <div class="search-box"><span>⌕</span><input type="search" data-table-search placeholder="Tìm kiếm trong danh sách..."></div>
+  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên hội đồng</th><th>Đợt đăng ký</th><th>Ngày báo cáo</th><th>Phòng</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tenhoidong}">---</td><td th:text="${roundNames[item.dotdangkyid] ?: '—'}">---</td><td th:text="${item.ngaybaocao}">---</td><td th:text="${item.phong}">---</td></tr>
+<tr th:if="${#lists.isEmpty(items)}"><td colspan="5"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+</tbody></table></div>
+<nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+ <a th:if="${pageData.hasPrevious()}" th:href="@{/hoidong(page=${pageData.number - 1})}">← Trang trước</a>
+ <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
+ <a th:if="${pageData.hasNext()}" th:href="@{/hoidong(page=${pageData.number + 1})}">Trang sau →</a>
+</nav>
+</section>
+</main></div></div><script th:src="@{/js/app.js}"></script></body></html>

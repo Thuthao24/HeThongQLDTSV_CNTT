@@ -1,0 +1,10 @@
+target/
+.git/
+.idea/
+.vscode/
+*.log
+*.bak
+*.zip
+.env
+.env.*
+uploads/
