@@ -67,7 +67,11 @@ public class GlobalModelAttributes implements WebMvcConfigurer, HandlerIntercept
             return;
         }
         try {
-            modelAndView.addObject("headerThongbaos", thongbaoService.findLatestForHeader());
+            long start = System.nanoTime();
+            var notices = thongbaoService.findLatestForHeader();
+            log.info("PERF_HEADER_MS={}",
+            (System.nanoTime() - start) / 1_000_000);
+            modelAndView.addObject("headerThongbaos", notices);
         } catch (DataAccessException ex) {
             // An optional header must not prevent the page or a validated CRUD form from rendering.
             log.warn("Unable to load notices for the portal header");
@@ -81,11 +85,13 @@ public class GlobalModelAttributes implements WebMvcConfigurer, HandlerIntercept
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             return;
         }
-
+        long start = System.nanoTime();
         taikhoanService.layTheoTenDangNhap(authentication.getName()).ifPresent(tk -> {
             model.addAttribute("hoten", tk.getHoten());
             model.addAttribute("tendangnhap", tk.getTendangnhap());
             model.addAttribute("vaitro", tk.getVaitro().name());
         });
+        log.info("PERF_USER_MS={}",
+        (System.nanoTime() - start) / 1_000_000);
     }
 }
