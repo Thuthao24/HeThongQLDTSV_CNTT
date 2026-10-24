@@ -1,12 +1,3 @@
--- =========================================================
--- HE THONG QUAN LY DE TAI SINH VIEN - BAN CO NHIEU DU LIEU MAU
--- Ten bang/cot: Tieng Viet khong dau
--- Quy tac: chi ky tu dau viet hoa, cac ky tu sau viet thuong
--- MySQL 8+
--- Mat khau mau cho tat ca tai khoan: Abc@12345
--- QUY TAC DANG NHAP: Sinh vien dang nhap bang Ma sinh vien (Masinhvien).
--- Tendangnhap cua tai khoan SINHVIEN phai trung voi Sinhvien.Masinhvien.
--- =========================================================
 
 DROP DATABASE IF EXISTS Quanlydetaisinhvien;
 CREATE DATABASE Quanlydetaisinhvien
