@@ -1,5 +1,4 @@
 
-DROP DATABASE IF EXISTS Quanlydetaisinhvien;
 CREATE DATABASE Quanlydetaisinhvien
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE Quanlydetaisinhvien;
