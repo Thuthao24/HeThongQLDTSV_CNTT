@@ -1,14 +1,4 @@
--- =========================================================
--- HE THONG QUAN LY DE TAI SINH VIEN - BAN CO NHIEU DU LIEU MAU
--- Ten bang/cot: Tieng Viet khong dau
--- Quy tac: chi ky tu dau viet hoa, cac ky tu sau viet thuong
--- MySQL 8+
--- Mat khau mau cho tat ca tai khoan: Abc@12345
--- QUY TAC DANG NHAP: Sinh vien dang nhap bang Ma sinh vien (Masinhvien).
--- Tendangnhap cua tai khoan SINHVIEN phai trung voi Sinhvien.Masinhvien.
--- =========================================================
 
-DROP DATABASE IF EXISTS Quanlydetaisinhvien;
 CREATE DATABASE Quanlydetaisinhvien
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE Quanlydetaisinhvien;
@@ -503,28 +493,6 @@ INSERT INTO Dangkydetai(Id,Nhomid,Detaiid,Trangthai,Ngaydangky) VALUES
 (18,18,18,'DADUYET','2026-09-02 09:00:00'),
 (19,19,19,'DADUYET','2026-09-03 09:00:00'),
 (20,20,20,'DADUYET','2026-09-04 09:00:00');
-
-INSERT INTO Nopbaocao(Id,Dangkydetaiid,Sinhvienid,Duongdanfile,Ngaynop) VALUES
-(1,1,1,'/uploads/nhom1/baocao.pdf','2026-10-01 20:00:00'),
-(2,2,4,'/uploads/nhom2/baocao.pdf','2026-10-01 20:00:00'),
-(3,3,7,'/uploads/nhom3/baocao.pdf','2026-10-01 20:00:00'),
-(4,4,10,'/uploads/nhom4/baocao.pdf','2026-10-01 20:00:00'),
-(5,5,13,'/uploads/nhom5/baocao.pdf','2026-10-01 20:00:00'),
-(6,6,16,'/uploads/nhom6/baocao.pdf','2026-10-01 20:00:00'),
-(7,7,19,'/uploads/nhom7/baocao.pdf','2026-10-01 20:00:00'),
-(8,8,22,'/uploads/nhom8/baocao.pdf','2026-10-01 20:00:00'),
-(9,9,25,'/uploads/nhom9/baocao.pdf','2026-10-01 20:00:00'),
-(10,10,28,'/uploads/nhom10/baocao.pdf','2026-10-01 20:00:00'),
-(11,11,31,'/uploads/nhom11/baocao.pdf','2026-10-01 20:00:00'),
-(12,12,34,'/uploads/nhom12/baocao.pdf','2026-10-01 20:00:00'),
-(13,13,37,'/uploads/nhom13/baocao.pdf','2026-10-01 20:00:00'),
-(14,14,40,'/uploads/nhom14/baocao.pdf','2026-10-01 20:00:00'),
-(15,15,43,'/uploads/nhom15/baocao.pdf','2026-10-01 20:00:00'),
-(16,16,46,'/uploads/nhom16/baocao.pdf','2026-10-01 20:00:00'),
-(17,17,49,'/uploads/nhom17/baocao.pdf','2026-10-01 20:00:00'),
-(18,18,52,'/uploads/nhom18/baocao.pdf','2026-10-01 20:00:00'),
-(19,19,55,'/uploads/nhom19/baocao.pdf','2026-10-01 20:00:00'),
-(20,20,58,'/uploads/nhom20/baocao.pdf','2026-10-01 20:00:00');
 
 INSERT INTO Hoidong(Id,Dotdangkyid,Tenhoidong,Ngaybaocao,Phong) VALUES
 (1,1,'Hoi dong 01','2026-12-11 08:00:00','A201'),

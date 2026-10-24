@@ -90,19 +90,62 @@ public List<Dotdangky> dsDotChoices() {
         return allowed;
     }
 
-    private void validTimes(DotForm f){
-        if(f.getTendot()==null||f.getTendot().isBlank()||f.getTendot().length()>200||f.getLoaidot()==null)
-            throw new NghiepvuException("Tên đợt hoặc loại đợt chưa hợp lệ");
-        LocalDateTime g1=f.getBatdaugiangvien(), g2=f.getKetthucgiangvien();
-        LocalDateTime s1=f.getBatdausinhvien(), s2=f.getKetthucsinhvien();
-        if(g1==null||g2==null||s1==null||s2==null||!g1.isBefore(g2)||!s1.isBefore(s2)||s1.isBefore(g2))
-            throw new NghiepvuException("Thời gian phải theo thứ tự: GV bắt đầu < GV kết thúc <= SV bắt đầu < SV kết thúc");
-        if(f.getHanchamphanbien()!=null && f.getHanchamphanbien().isBefore(s2))
-            throw new NghiepvuException("Hạn chấm phản biện phải sau ngày kết thúc đăng ký SV");
-        if(f.getNgaybaocaohoidong()!=null && f.getHanchamphanbien()!=null
-                && f.getNgaybaocaohoidong().isBefore(f.getHanchamphanbien()))
-            throw new NghiepvuException("Ngày báo cáo hội đồng không được trước hạn chấm phản biện");
+    
+private void validTimes(DotForm f) {
+    if (f == null || f.getTendot() == null || f.getTendot().isBlank()
+            || f.getTendot().length() > 200 || f.getLoaidot() == null) {
+        throw new NghiepvuException("Tên đợt hoặc loại đợt chưa hợp lệ");
     }
+
+    LocalDateTime g1 = f.getBatdaugiangvien();
+    LocalDateTime g2 = f.getKetthucgiangvien();
+    LocalDateTime s1 = f.getBatdausinhvien();
+    LocalDateTime s2 = f.getKetthucsinhvien();
+
+    if (g1 == null || g2 == null || s1 == null || s2 == null) {
+        throw new NghiepvuException(
+            "Vui lòng nhập đầy đủ bốn mốc thời gian đăng ký của giảng viên và sinh viên");
+    }
+
+    if (!g1.isBefore(g2) || !s1.isBefore(s2) || s1.isBefore(g2)) {
+        throw new NghiepvuException(
+            "Thời gian phải theo thứ tự: GV bắt đầu < GV kết thúc <= SV bắt đầu < SV kết thúc");
+    }
+
+    Loaidot loai = f.getLoaidot();
+    LocalDateTime hanPB = f.getHanchamphanbien();
+    LocalDateTime ngayHD = f.getNgaybaocaohoidong();
+
+    if ((loai == Loaidot.TLCN || loai == Loaidot.KLTN) && hanPB == null) {
+        throw new NghiepvuException(
+            "Tiểu luận chuyên ngành và khóa luận tốt nghiệp bắt buộc nhập hạn chấm phản biện");
+    }
+
+    if (loai == Loaidot.KLTN && ngayHD == null) {
+        throw new NghiepvuException(
+            "Khóa luận tốt nghiệp bắt buộc nhập ngày báo cáo hội đồng");
+    }
+
+    if ((loai == Loaidot.MONHOC || loai == Loaidot.NCKH) && hanPB != null) {
+        throw new NghiepvuException(
+            "Môn học và nghiên cứu khoa học không có hạn chấm phản biện");
+    }
+
+    if (loai != Loaidot.KLTN && ngayHD != null) {
+        throw new NghiepvuException(
+            "Chỉ khóa luận tốt nghiệp được nhập ngày báo cáo hội đồng");
+    }
+
+    if (hanPB != null && !hanPB.isAfter(s2)) {
+        throw new NghiepvuException(
+            "Hạn chấm phản biện phải sau thời gian kết thúc đăng ký sinh viên");
+    }
+
+    if (ngayHD != null && hanPB != null && ngayHD.isBefore(hanPB)) {
+        throw new NghiepvuException(
+            "Ngày báo cáo hội đồng không được trước hạn chấm phản biện");
+    }
+}
     public Dotdangky saveDot(Long id, DotForm f, String username){
         khoa(username); validTimes(f);
         Dotdangky d=id==null?new Dotdangky():dot(id);
@@ -150,7 +193,15 @@ public List<Dotdangky> dsDotChoices() {
         if(f.getGvhd1()==null)throw new NghiepvuException("Cần ít nhất một giảng viên hướng dẫn");
         List<Long> g=new ArrayList<>();g.add(f.getGvhd1());
         if(f.getGvhd2()!=null){if(f.getGvhd2().equals(f.getGvhd1()))throw new NghiepvuException("Hai GVHD phải khác nhau"); g.add(f.getGvhd2());}
-        for(Long id:g)if(!gv.existsById(id))throw new NghiepvuException("GVHD không tồn tại: " + id);
+        for(Long id:g)if(!gv.existsById(id))throw new NghiepvuException("GVHD không tồn tại: " + id);for (Long id : g) {
+            Giangvien teacher = gv.findById(id)
+                .orElseThrow(() -> new NghiepvuException(
+                    "Giảng viên hướng dẫn không tồn tại"));
+            if (!teacher.getBomonid().equals(f.getBomonid())) {
+                    throw new NghiepvuException(
+                         "GVHD phải thuộc đúng bộ môn của đề tài");
+        }
+    }
         return g;
     }
     public Detai saveDetai(Long id,DeTaiForm f,String username){
@@ -184,13 +235,9 @@ public List<Dotdangky> dsDotChoices() {
         activeProposal(dot(e.getDotdangkyid()));
         huongdans.deleteByDetaiid(id);huongdans.flush();detais.delete(e);
     }
-    private void xetDuyetPermission(Detai e,String username){
-        Taikhoan a=user(username);
-        if(a.getVaitro()==Vaitro.TRUONGKHOA)return;
-        if(a.getVaitro()!=Vaitro.TRUONGBOMON)throw new AccessDeniedException("Chỉ trưởng bộ môn hoặc trưởng khoa xét duyệt");
-        Giangvien teacher=currentTeacher(username);
-        if(!teacher.getBomonid().equals(e.getBomonid()))throw new AccessDeniedException("Không được duyệt đề tài của bộ môn khác");
-        if(teacher.getId().equals(e.getGiangviendexuatid()))throw new AccessDeniedException("Không tự duyệt đề tài của mình");
+    private void xetDuyetPermission(
+        Detai e, String username) {
+    khoa(username);
     }
     public Detai duyet(Long id,boolean accept,String username){
         Detai e=detai(id); xetDuyetPermission(e,username);

@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -297,7 +297,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
 
         try {
-            Path uploadDir = Paths.get("uploads", "baocao");
+            Path uploadDir = Paths.get(uploadDirectory).toAbsolutePath().normalize();
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
@@ -379,4 +379,6 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
         return sv;
     }
+    @Value("${app.upload.dir:uploads/baocao}")
+        private String uploadDirectory;
 }

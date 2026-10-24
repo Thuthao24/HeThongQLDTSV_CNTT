@@ -249,16 +249,26 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             throw new NghiepvuException("Nhóm phải có từ 3 đến 5 thành viên mới được đăng ký đề tài");
         }
 
-        // 7. Kiểm tra quyền của người dùng đăng nhập
-        if (currentUsername != null) {
-            Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElse(null);
-            if (tk != null && tk.getVaitro() == Vaitro.SINHVIEN) {
-                Sinhvien sv = sinhvienRepository.findByMasinhvien(currentUsername).orElse(null);
-                if (sv == null || !sv.getId().equals(nhom.getNhomtruongid())) {
-                    throw new NghiepvuException("Chỉ nhóm trưởng mới được đăng ký đề tài cho nhóm");
-                }
-            }
+        
+        if (currentUsername == null || currentUsername.isBlank()) {
+            throw new NghiepvuException( "Vui lòng đăng nhập trước khi đăng ký đề tài");
         }
+
+        Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElseThrow(() -> new NghiepvuException(
+            "Không tìm thấy tài khoản"));
+
+        if (tk.getVaitro() != Vaitro.SINHVIEN) { throw new NghiepvuException("Chỉ sinh viên là nhóm trưởng mới được đăng ký");
+        }
+
+        Sinhvien sv = sinhvienRepository.findByTaikhoanid(tk.getId()) .orElseThrow(() -> new NghiepvuException( "Không tìm thấy thông tin sinh viên"));
+
+        if (!sv.getId().equals(nhom.getNhomtruongid())) {  throw new NghiepvuException(  "Chỉ nhóm trưởng mới được đăng ký đề tài");
+        }
+
+        if (!thanhviennhomRepository.existsByNhomidAndSinhvienid( nhom.getId(), sv.getId())) { throw new NghiepvuException(
+        "Nhóm trưởng phải thuộc danh sách thành viên nhóm");
+        }
+
 
         Dangkydetai dk = new Dangkydetai();
         dk.setNhomid(nhom.getId());
@@ -303,29 +313,65 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         repository.deleteById(dangkydetaiid);
     }
 
-    @Override
-    public Dangkydetai duyetDangky(Long dangkydetaiid, boolean chapNhan, String currentUsername) {
-        Dangkydetai dk = repository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
 
-        Taikhoan approvingAccount = currentUsername == null ? null :
-                taikhoanRepository.findByTendangnhap(currentUsername).orElse(null);
-        if (approvingAccount == null || approvingAccount.getVaitro() != Vaitro.TRUONGKHOA) {
+    @Override
+    public Dangkydetai duyetDangky(
+            Long dangkydetaiid,
+            boolean chapNhan,
+            String currentUsername) {
+
+        Taikhoan approvingAccount = currentUsername == null
+                ? null
+                : taikhoanRepository.findByTendangnhap(currentUsername)
+                        .orElse(null);
+
+        if (approvingAccount == null
+                || approvingAccount.getVaitro() != Vaitro.TRUONGKHOA) {
             throw new org.springframework.security.access.AccessDeniedException(
-                    "Chỉ trưởng khoa được duyệt hoặc từ chối đăng ký đề tài");
+                    "Chỉ Trưởng khoa được duyệt hoặc từ chối đăng ký đề tài");
         }
+
+        // Lấy ID đề tài trước khi khóa giao dịch.
+        Long detaiId = repository.findDetaiIdByRegistrationId(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException(
+                        "Không tìm thấy đăng ký đề tài"));
+
+        // Khóa đề tài để các yêu cầu duyệt cùng đề tài được xử lý lần lượt.
+        detaiRepository.findByIdForUpdate(detaiId)
+                .orElseThrow(() -> new NghiepvuException(
+                        "Không tìm thấy đề tài"));
+
+        Dangkydetai dk = repository.findByIdForUpdate(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException(
+                        "Không tìm thấy đăng ký đề tài"));
+
+        if (!detaiId.equals(dk.getDetaiid())) {
+            throw new NghiepvuException(
+                    "Thông tin đề tài đăng ký không hợp lệ");
+        }
+
         if (dk.getTrangthai() != TrangthaiDangkydetai.CHODUYET) {
-            throw new NghiepvuException("Chỉ xử lý đăng ký đang chờ duyệt");
+            throw new NghiepvuException(
+                    "Chỉ xử lý đăng ký đang chờ duyệt");
         }
 
         if (chapNhan) {
-            boolean daCoNhomKhacDuyet = repository.existsByDetaiidAndTrangthaiAndIdNot(dk.getDetaiid(), TrangthaiDangkydetai.DADUYET, dangkydetaiid);
-            if (daCoNhomKhacDuyet) {
-                throw new NghiepvuException("Đề tài này đã được duyệt cho một nhóm khác rồi!");
+            boolean daCoNhomKhac = repository.findApprovedForUpdate(
+                    detaiId, TrangthaiDangkydetai.DADUYET)
+                    .stream()
+                    .anyMatch(x -> !x.getId().equals(dangkydetaiid));
+
+            if (daCoNhomKhac) {
+                throw new NghiepvuException(
+                        "Đề tài này đã được duyệt cho nhóm khác");
             }
         }
 
-        dk.setTrangthai(chapNhan ? TrangthaiDangkydetai.DADUYET : TrangthaiDangkydetai.TUCHOI);
+        dk.setTrangthai(chapNhan
+                ? TrangthaiDangkydetai.DADUYET
+                : TrangthaiDangkydetai.TUCHOI);
+
         return repository.save(dk);
     }
 }
+
