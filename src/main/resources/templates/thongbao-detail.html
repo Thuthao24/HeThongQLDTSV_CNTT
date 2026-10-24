@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title != null ? title : (item != null ? item.tieude : 'Chi tiết thông báo')}">Chi tiết thông báo</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/thongbao.css}">
 </head>
 <body>
 <div class="app-shell">
@@ -20,7 +21,6 @@
                         <span>Chi tiết</span>
                     </div>
                     <h1>CHI TIẾT THÔNG BÁO</h1>
-                    <p>Nội dung thông báo chính thức được đăng trên cổng thông tin.</p>
                 </div>
                 <div>
                     <a th:href="@{/thongbao}" class="btn btn-secondary" title="Quay về danh sách thông báo">← Danh sách thông báo</a>
@@ -33,16 +33,18 @@
 
             <section class="notice-detail-card" th:if="${item != null}">
                 <h2 class="notice-detail-title" th:text="${item.tieude != null ? item.tieude : '---'}">Tiêu đề thông báo</h2>
+                <p th:if="${canManage}" class="notice-recipient-label"
+                   th:text="|Đối tượng nhận: ${item.recipientLabels}|">Đối tượng nhận</p>
                 
                 <div class="notice-detail-meta">
                     <span class="notice-meta-item">
                         <span>👤</span>
-                        <span>Người gửi:</span>
+                        <span>Người đăng:</span>
                         <strong th:text="${item.nguoidangHoten != null and !#strings.isEmpty(item.nguoidangHoten) ? item.nguoidangHoten : 'Quản trị viên'}">Người gửi</strong>
                     </span>
                     <span class="notice-meta-item">
                         <span>🕒</span>
-                        <span>Thời gian:</span>
+                        <span>Ngày đăng (UTC+7):</span>
                         <strong th:text="${item.ngaydang != null ? #temporals.format(item.ngaydang, 'dd/MM/yyyy HH:mm') : '—'}">---</strong>
                     </span>
                 </div>
@@ -50,6 +52,9 @@
                 <div class="notice-detail-body" th:text="${item.noidung != null ? item.noidung : 'Không có nội dung.'}">
                     Nội dung thông báo chi tiết...
                 </div>
+                <form th:if="${!canManage and vaitro != 'TRUONGKHOA'}" id="noticeMarkReadForm"
+                      th:action="@{/thongbao/{id}/dadoc(id=${item.id})}" method="post" hidden></form>
+                <p id="noticeReadStatus" class="notice-read-status" role="status" hidden></p>
 
                 <div class="notice-detail-footer">
                     <div>

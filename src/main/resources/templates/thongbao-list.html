@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title != null ? title : 'Thông báo'}">Thông báo</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/thongbao.css}">
 </head>
 <body>
 <div class="app-shell">
@@ -16,7 +17,6 @@
                 <div>
                     <div class="breadcrumb">Cổng thông tin đào tạo / Thông báo</div>
                     <h1>THÔNG BÁO</h1>
-                    <p>Thông tin và thông báo chính thức từ Khoa và Nhà trường.</p>
                 </div>
                 <div th:if="${canManage}">
                     <a th:href="@{/thongbao/create}" class="btn btn-primary" title="Tạo thông báo mới">+ Thêm thông báo</a>
@@ -34,6 +34,7 @@
                             <span class="search-icon">⌕</span>
                             <input type="search"
                                    name="keyword"
+                                   aria-label="Từ khóa thông báo"
                                    th:value="${keyword}"
                                    placeholder="Tìm kiếm theo từ khóa tiêu đề hoặc nội dung..."
                                    autocomplete="off">
@@ -53,8 +54,8 @@
                             <tr>
                                 <th style="width: 60px;">STT</th>
                                 <th>Tiêu đề thông báo</th>
-                                <th style="width: 200px;">Người gửi</th>
-                                <th style="width: 160px;">Thời gian gửi</th>
+                                <th style="width: 200px;">Người đăng</th>
+                                <th style="width: 160px;">Ngày đăng (UTC+7)</th>
                                 <th style="width: 140px;" th:if="${canManage}">Thao tác</th>
                             </tr>
                         </thead>
@@ -65,6 +66,8 @@
                                     <a th:href="@{/thongbao/{id}(id=${item.id})}"
                                        class="notice-title-link"
                                        th:text="${item.tieude != null ? item.tieude : '---'}">Tiêu đề</a>
+                                    <small th:if="${canManage}" class="notice-recipient-label"
+                                           th:text="|Đối tượng: ${item.recipientLabels}|">Đối tượng nhận</small>
                                 </td>
                                 <td>
                                     <span th:text="${item.nguoidangHoten != null and !#strings.isEmpty(item.nguoidangHoten) ? item.nguoidangHoten : 'Quản trị viên'}">Người gửi</span>

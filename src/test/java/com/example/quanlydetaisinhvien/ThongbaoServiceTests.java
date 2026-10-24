@@ -1,5 +1,5 @@
 package com.example.quanlydetaisinhvien;
-
+import java.time.ZoneId;
 import com.example.quanlydetaisinhvien.dto.ThongbaoViewDTO;
 import com.example.quanlydetaisinhvien.entity.*;
 import com.example.quanlydetaisinhvien.exception.ThongbaoNotFoundException;
@@ -16,18 +16,32 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 
 class ThongbaoServiceTests extends ThongbaoTestSupport {
-    @Test void createsUsingAuthenticatedAccountAndServerTime() {
-        var before = LocalDateTime.now().minusSeconds(1);
-        var saved = service.create(form("  Lịch báo cáo  ", "Dòng 1\nDòng 2"));
-        em.clear();
-        var row = repository.findById(saved.id()).orElseThrow();
-        assertThat(row.getTieude()).isEqualTo("Lịch báo cáo");
-        assertThat(row.getNoidung()).isEqualTo("Dòng 1\nDòng 2");
-        assertThat(row.getNguoidangid()).isEqualTo(chief.getId());
-        assertThat(row.getNgaydang()).isBetween(before, LocalDateTime.now().plusSeconds(1));
-        assertThat(saved.nguoidangHoten()).isEqualTo(chief.getHoten());
-        assertThat(service.canManage()).isTrue();
-    }
+   
+@Test
+void createsUsingAuthenticatedAccountAndServerTime() {
+    ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    var before = LocalDateTime.now(vietnamZone).minusSeconds(1);
+
+    var saved = service.create(form("  Lịch báo cáo  ", "Dòng 1\nDòng 2"));
+
+    em.clear();
+    var row = repository.findById(saved.id()).orElseThrow();
+
+    assertThat(row.getTieude()).isEqualTo("Lịch báo cáo");
+    assertThat(row.getNoidung()).isEqualTo("Dòng 1\nDòng 2");
+    assertThat(row.getNguoidangid()).isEqualTo(chief.getId());
+
+    assertThat(row.getNgaydang())
+            .isBetween(
+                before,
+                LocalDateTime.now(vietnamZone).plusSeconds(1)
+            );
+
+    assertThat(saved.nguoidangHoten()).isEqualTo(chief.getHoten());
+    assertThat(service.canManage()).isTrue();
+}
+
 
     @Test void updatesAnotherAuthorsNoticePreservingOriginalMetadata() {
         var author = accounts.findByTendangnhap("notice-lecturer").orElseThrow();

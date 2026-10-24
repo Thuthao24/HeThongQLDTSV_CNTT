@@ -76,7 +76,7 @@ abstract class ThongbaoTestSupport {
     }
 
     ThongbaoFormDTO form(String title, String body) {
-        var form = new ThongbaoFormDTO(); form.setTieude(title); form.setNoidung(body); return form;
+        var form = new ThongbaoFormDTO(); form.setTieude(title); form.setNoidung(body); form.setRecipientRoles(DoituongThongbao.all()); return form;
     }
 
     void authenticate(String username, String role) {

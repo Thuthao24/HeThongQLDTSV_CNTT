@@ -2,11 +2,14 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
 <header th:fragment="portalHeader" class="portal-header">
+    <link rel="stylesheet" th:href="@{/css/thongbao-bell.css}">
+    <script defer th:src="@{/js/thongbao-bell.js}"></script>
     <button class="menu-toggle" type="button" id="menuToggle" aria-label="Mở menu" aria-controls="sidebar" aria-expanded="false">☰</button>
     <div class="portal-header-title">TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT TP.HCM</div>
-    <div class="portal-header-tools">
-        <span class="portal-tool" title="Ngôn ngữ">🇻🇳</span>
-        <div class="portal-header-notices" id="headerNoticesWrap">
+    <div class="portal-header-tools" th:if="${vaitro == 'SINHVIEN' or vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON'}">
+        <div class="portal-header-notices" id="headerNoticesWrap"
+             th:data-notice-feed-url="${vaitro != 'TRUONGKHOA'} ? @{/thongbao/chuong} : ${null}"
+             th:data-notice-detail-base="@{/thongbao/}">
             <button type="button"
                     class="portal-tool header-notice-btn"
                     id="headerNoticeBtn"
@@ -18,6 +21,10 @@
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
+                <span id="headerNoticeBadge" class="notice-unread-badge" aria-live="polite"
+                      th:hidden="${headerUnreadCount == null or headerUnreadCount == 0}"
+                      th:text="${headerUnreadCount != null and headerUnreadCount > 99 ? '99+' : headerUnreadCount}"
+                      th:aria-label="|${headerUnreadCount != null ? headerUnreadCount : 0} thông báo chưa đọc|">0</span>
             </button>
             <div class="header-notice-dropdown" id="headerNoticeDropdown" role="region" aria-label="Danh sách thông báo gần đây">
                 <div class="notice-dropdown-header">
@@ -33,7 +40,9 @@
                     <div th:if="${headerThongbaos != null and not #lists.isEmpty(headerThongbaos)}" class="notice-list">
                         <a th:each="tb : ${headerThongbaos}"
                            th:href="@{/thongbao/{id}(id=${tb.id})}"
-                           class="notice-item">
+                           class="notice-item" th:data-notice-id="${tb.id}"
+                           th:classappend="${headerUnreadIds != null and #sets.contains(headerUnreadIds,tb.id)} ? ' notice-item-unread' : ''"
+                           th:aria-label="|${tb.tieude} · ${headerUnreadIds != null and #sets.contains(headerUnreadIds,tb.id) ? 'Chưa đọc' : 'Đã xem hoặc thông báo lịch sử'}|">
                             <div class="notice-item-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -65,6 +74,7 @@
                         <p class="notice-empty-text">Chưa có thông báo nào</p>
                     </div>
                 </div>
+                <p id="headerNoticeLoadStatus" class="notice-load-status" role="status" hidden></p>
                 <div class="notice-dropdown-footer">
                     <a th:href="@{/thongbao}" class="notice-view-all-link">
                         <span>Xem tất cả thông báo</span>
@@ -73,14 +83,12 @@
                 </div>
             </div>
         </div>
-        <div class="header-avatar" th:text="${hoten != null && !#strings.isEmpty(hoten) ? #strings.substring(hoten,0,1) : 'U'}">U</div>
     </div>
 </header>
 
 <aside th:fragment="sidebar(active)" class="sidebar" id="sidebar" aria-label="Điều hướng theo vai trò">
     <div class="sidebar-brand">
         <img th:src="@{/images/hcmute-logo.png}" alt="HCMUTE">
-        <strong>HCM-UTE</strong>
     </div>
 
     <div class="sidebar-profile">
@@ -126,11 +134,6 @@
            th:href="@{/morong/thongke}"
            class="nav-item"
            th:classappend="${active == 'thongke'} ? ' active' : ''"><span class="nav-icon">📊</span>Thống kê & Báo cáo</a>
-        <a th:if="${vaitro == 'TRUONGKHOA'}"
-           th:href="@{/morong/email-thongbao/quanly}"
-           class="nav-item"
-           th:classappend="${active == 'emailthongbao'} ? ' active' : ''"><span class="nav-icon">✉</span>Giám sát Email</a>
-
         <div class="nav-section">TÀI KHOẢN</div>
         <a th:if="${vaitro == 'TRUONGKHOA'}" href="/taikhoan" class="nav-item" th:classappend="${active == 'taikhoan'} ? ' active' : ''"><span class="nav-icon">⚙</span>Tài khoản</a>
         <form th:action="@{/logout}" method="post" class="sidebar-logout-form">

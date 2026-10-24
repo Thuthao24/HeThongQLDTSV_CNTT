@@ -11,7 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.*;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
@@ -64,9 +64,10 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
     }
 
     @Test void chiefCreatesViaPostWithoutTrustingForgedMetadata() throws Exception {
-        var before = LocalDateTime.now().minusSeconds(1);
+        ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
+        var before = LocalDateTime.now(vietnamZone).minusSeconds(1);
         var response = mvc.perform(post("/thongbao").with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                .param("tieude", "  Thông báo mới  ").param("noidung", "Nội dung mới")
+                .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "  Thông báo mới  ").param("noidung", "Nội dung mới")
                 .param("id", existing.getId().toString()).param("nguoidangid", "999")
                 .param("ngaydang", "2000-01-01T00:00:00").param("nguoidangHoten", "Giả mạo"))
                 .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("successMessage")).andReturn();
@@ -76,7 +77,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         var saved = repository.findById(id).orElseThrow();
         assertThat(saved.getTieude()).isEqualTo("Thông báo mới");
         assertThat(saved.getNguoidangid()).isEqualTo(chief.getId());
-        assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now().plusSeconds(1));
+        assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now(vietnamZone).plusSeconds(1));
         assertThat(repository.findById(existing.getId()).orElseThrow().getTieude()).isEqualTo("Thông báo kiểm thử");
     }
 
@@ -85,7 +86,8 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         existing.setNguoidangid(author.getId()); em.flush();
         var other = notice("Không sửa", "Nội dung khác", chief.getId(), oldDate);
         mvc.perform(post("/thongbao/" + existing.getId() + "/edit").with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                .param("tieude", "Đã sửa").param("noidung", "Nội dung đã sửa")
+                .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Đã sửa").param("noidung", "Nội dung đã sửa")
+                .param("revision",com.example.quanlydetaisinhvien.service.ThongbaoRevision.digest(existing.getTieude(),existing.getNoidung()))
                 .param("id", other.getId().toString()).param("nguoidangid", chief.getId().toString())
                 .param("ngaydang", "2000-01-01T00:00:00"))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/thongbao/" + existing.getId()))
@@ -119,7 +121,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         for (boolean editing : new boolean[]{false, true}) {
             var request = post(editing ? "/thongbao/" + existing.getId() + "/edit" : "/thongbao")
                     .with(user("notice-chief").roles("TRUONGKHOA")).with(csrf());
-            if (!field.equals("tieude")) request.param("tieude", "Hợp lệ");
+            if (!field.equals("tieude")) request.param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Hợp lệ");
             if (!field.equals("noidung")) request.param("noidung", "Hợp lệ");
             if (invalid != null) request.param(field, invalid);
             mvc.perform(request).andExpect(status().isOk()).andExpect(view().name("thongbao-form"))
@@ -139,7 +141,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         }
         for (String url : writes()) {
             mvc.perform(post(url).with(user("forbidden").roles(role)).with(csrf())
-                    .param("tieude", "Giả mạo").param("noidung", "Không được lưu"))
+                    .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Giả mạo").param("noidung", "Không được lưu"))
                     .andExpect(status().isForbidden());
             assertThat(noticeSnapshot()).isEqualTo(before);
         }
@@ -150,7 +152,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         var before = noticeSnapshot();
         for (String url : writes()) {
             var request = post(url).with(user("notice-chief").roles("TRUONGKHOA"))
-                    .param("tieude", "Không được lưu").param("noidung", "Nội dung");
+                    .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Không được lưu").param("noidung", "Nội dung");
             if (invalidToken) request.with(csrf().useInvalidToken());
             mvc.perform(request).andExpect(status().isForbidden());
             assertThat(noticeSnapshot()).isEqualTo(before);
@@ -175,7 +177,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         mvc.perform(get("/thongbao/create").with(user("notice-chief").roles("TRUONGKHOA"))).andExpect(status().isForbidden());
         for (String url : writes()) {
             mvc.perform(post(url).with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                    .param("tieude", "Không được lưu").param("noidung", "Nội dung"))
+                    .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Không được lưu").param("noidung", "Nội dung"))
                     .andExpect(status().isForbidden());
             assertThat(noticeSnapshot()).isEqualTo(before);
         }
@@ -189,7 +191,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         }
         for (String suffix : List.of("/edit", "/delete")) {
             mvc.perform(post("/thongbao/" + Long.MAX_VALUE + suffix).with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                    .param("tieude", "Mới").param("noidung", "Nội dung"))
+                    .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Mới").param("noidung", "Nội dung"))
                     .andExpect(status().isNotFound());
         }
         assertThat(noticeSnapshot()).isEqualTo(before);
@@ -204,7 +206,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         }
         for (String suffix : List.of("/edit", "/delete")) {
             mvc.perform(post("/thongbao/" + id + suffix).with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                    .param("tieude", "Mới").param("noidung", "Nội dung"))
+                    .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Mới").param("noidung", "Nội dung"))
                     .andExpect(status().isBadRequest());
         }
         assertThat(noticeSnapshot()).isEqualTo(before);
@@ -226,7 +228,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         MockMvc isolated = MockMvcBuilders.standaloneSetup(new ThongbaoController(mocked))
                 .setViewResolvers(new BackendViews()).build();
         for (String url : List.of("/thongbao", "/thongbao/" + existing.getId() + "/edit")) {
-            var result = isolated.perform(post(url).param("tieude", "Giữ lại").param("noidung", "Nội dung người dùng"))
+            var result = isolated.perform(post(url).param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Giữ lại").param("noidung", "Nội dung người dùng").param("revision","a".repeat(64)))
                     .andExpect(status().isOk()).andExpect(view().name("thongbao-form"))
                     .andExpect(model().attributeHasErrors("thongbaoForm")).andReturn();
             var model = result.getModelAndView().getModel();

@@ -10,7 +10,7 @@ import java.net.URI;
 
 /** Fail before opening a connection if higher-priority settings make the demo unsafe. */
 @Configuration(proxyBeanMethods = false)
-@Profile({"demo", "demo-auto"})
+@Profile("demo")
 public class DemoDatabaseConfig {
     @Bean
     public HikariDataSource dataSource(Environment environment) {
