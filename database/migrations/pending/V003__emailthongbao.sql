@@ -1,4 +1,4 @@
-USE Quanlydetaisinhvien;
+
 CREATE TABLE emailthongbao (
     Id BIGINT NOT NULL AUTO_INCREMENT,
     Thongbaoid BIGINT NULL,
