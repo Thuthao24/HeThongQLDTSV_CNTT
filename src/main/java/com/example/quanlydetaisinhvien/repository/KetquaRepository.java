@@ -13,6 +13,7 @@ import java.util.Optional;
 import jakarta.persistence.LockModeType;
 
 public interface KetquaRepository extends JpaRepository<Ketqua, Long> {
+    boolean existsByDangkydetaiid(Long dangkydetaiid);
     boolean existsByDangkydetaiidAndDacongboTrue(Long dangkydetaiid);
     Optional<Ketqua> findByDangkydetaiid(Long dangkydetaiid);
 

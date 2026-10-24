@@ -65,6 +65,7 @@ class KetquaPublicationTests {
     @Autowired KetquaEmailWorker worker;
     @Autowired KetquaSchema schema;
     @Autowired FakeMail fake;
+    @Autowired org.springframework.context.ApplicationEventPublisher events;
     @Autowired WebApplicationContext webContext;
     TransactionTemplate tx;
     MockMvc mvc;
@@ -130,6 +131,52 @@ class KetquaPublicationTests {
         assertThatThrownBy(() -> service.phanCongHoiDong(f.result(), HinhthucDanhgia.KHONGHOIDONG, null))
                 .isInstanceOf(NghiepvuException.class).hasMessageContaining("đã được công bố");
         assertThat(publicationState()).isEqualTo(before);
+    }
+
+    @Test
+    void duplicatePublicationEventsDoNotCreateOrSendMoreMail() {
+        service.congboKetqua(f.result());
+        var before=publicationState();
+        tx.executeWithoutResult(s->{
+            events.publishEvent(new KetquaPublishedEvent(f.result()));
+            events.publishEvent(new KetquaPublishedEvent(f.result()));
+        });
+        assertThat(publicationState()).isEqualTo(before);
+        var publishedAt=results.findById(f.result()).orElseThrow().getNgaycongbo();
+        assertThat(emailRows()).hasSize(2).allMatch(e->e.getNgaytao().equals(publishedAt));
+        assertThat(fake.attempts).extracting(ResultMailSender.Message::to)
+                .containsExactlyInAnyOrder("student-a@example.test", "student-b@example.test");
+    }
+
+    @Test
+    void corruptPendingRecipientIsMissingEmailAndExplicitRetryUsesTheCurrentAccount() {
+        Long id=queuedWithoutEvent();
+        mutate(Emailketqua.class,id,e->e.setEmail("invalid email"));
+        worker.drain();
+        var missing=emails.findById(id).orElseThrow();
+        assertThat(missing.getTrangthai()).isEqualTo(TrangthaiEmailketqua.MISSING_EMAIL);
+        assertThat(missing.getSolanthu()).isZero(); assertThat(fake.attempts).isEmpty();
+        outbox.retry(id,false);
+        var delivered=emails.findById(id).orElseThrow();
+        assertThat(delivered.getTrangthai()).isEqualTo(TrangthaiEmailketqua.SENT);
+        assertThat(delivered.getNoidung()).isEqualTo(missing.getNoidung());
+        assertThat(delivered.getNgaytao()).isEqualTo(missing.getNgaytao());
+        assertThat(fake.attempts).hasSize(1);
+    }
+
+    @Test
+    void databaseFailureAfterSendingDoesNotAutomaticallyResendAcceptedResultMail() {
+        Long id=queuedWithoutEvent();
+        jdbc.execute("alter table emailketqua add constraint Reject_sent_write check (Trangthai <> 'SENT')");
+        try {
+            worker.drain();
+            assertThat(fake.attempts).hasSize(1);
+            assertThat(emails.findById(id).orElseThrow().getTrangthai()).isEqualTo(TrangthaiEmailketqua.SENDING);
+        } finally { jdbc.execute("alter table emailketqua drop constraint Reject_sent_write"); }
+        mutate(Emailketqua.class,id,e->e.setLanthu(LocalDateTime.now().minusHours(1)));
+        worker.drain(); worker.afterStartup();
+        assertThat(fake.attempts).hasSize(1);
+        assertThat(emails.findById(id).orElseThrow().getTrangthai()).isEqualTo(TrangthaiEmailketqua.UNCERTAIN);
     }
 
     @Test

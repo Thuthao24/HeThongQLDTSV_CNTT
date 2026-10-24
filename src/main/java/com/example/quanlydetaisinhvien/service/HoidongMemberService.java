@@ -14,11 +14,13 @@ public class HoidongMemberService {
     private final GiangvienRepository teachers;
     private final PhanconghoidongRepository assignments;
     private final KetquaRepository results;
+    private final DiemRepository scores;
 
     public HoidongMemberService(ThanhvienhoidongRepository members, HoidongRepository councils,
-             GiangvienRepository teachers, PhanconghoidongRepository assignments, KetquaRepository results) {
+             GiangvienRepository teachers, PhanconghoidongRepository assignments, KetquaRepository results,
+             DiemRepository scores) {
         this.members=members; this.councils=councils; this.teachers=teachers;
-        this.assignments=assignments; this.results=results;
+        this.assignments=assignments; this.results=results; this.scores=scores;
     }
 
     @Transactional(readOnly=true)
@@ -57,6 +59,11 @@ public class HoidongMemberService {
     @Transactional
     public void remove(Long councilId, Long lecturerId) {
         assertUnpublished(councilId);
+        for (var assignment : assignments.findByHoidongid(councilId)) {
+            if (scores.existsByDangkydetaiidAndGiangvienid(assignment.getDangkydetaiid(), lecturerId)) {
+                throw new NghiepvuException("Không thể xóa thành viên hội đồng đã nhập điểm cho đề tài.");
+            }
+        }
         members.deleteById(new ThanhvienhoidongId(councilId, lecturerId));
     }
 

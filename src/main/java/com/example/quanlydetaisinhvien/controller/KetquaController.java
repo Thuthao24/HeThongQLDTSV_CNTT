@@ -1,24 +1,25 @@
 package com.example.quanlydetaisinhvien.controller;
 
-import com.example.quanlydetaisinhvien.service.KetquaService;
 import com.example.quanlydetaisinhvien.entity.HinhthucDanhgia;
 import com.example.quanlydetaisinhvien.exception.NghiepvuException;
+import com.example.quanlydetaisinhvien.service.KetquaService;
 import com.example.quanlydetaisinhvien.service.mail.KetquaEmailOutbox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 @Controller
@@ -29,11 +30,24 @@ public class KetquaController {
     private final KetquaService service;
     private final KetquaEmailOutbox outbox;
     private final boolean emailEnabled;
+    private final com.example.quanlydetaisinhvien.repository.DangkydetaiRepository dangkydetaiRepository;
+    private final com.example.quanlydetaisinhvien.repository.DetaiRepository detaiRepository;
+    private final com.example.quanlydetaisinhvien.repository.NhomsinhvienRepository nhomsinhvienRepository;
+    private final com.example.quanlydetaisinhvien.repository.HoidongRepository hoidongRepository;
 
     public KetquaController(KetquaService service, KetquaEmailOutbox outbox,
-            @Value("${app.ketqua.email.enabled:false}") boolean emailEnabled) {
+            @Value("${app.ketqua.email.enabled:false}") boolean emailEnabled,
+            com.example.quanlydetaisinhvien.repository.DangkydetaiRepository dangkydetaiRepository,
+            com.example.quanlydetaisinhvien.repository.DetaiRepository detaiRepository,
+            com.example.quanlydetaisinhvien.repository.NhomsinhvienRepository nhomsinhvienRepository,
+            com.example.quanlydetaisinhvien.repository.HoidongRepository hoidongRepository) {
         this.service = service;
-        this.outbox = outbox; this.emailEnabled = emailEnabled;
+        this.outbox = outbox;
+        this.emailEnabled = emailEnabled;
+        this.dangkydetaiRepository = dangkydetaiRepository;
+        this.detaiRepository = detaiRepository;
+        this.nhomsinhvienRepository = nhomsinhvienRepository;
+        this.hoidongRepository = hoidongRepository;
     }
 
     @GetMapping
@@ -55,6 +69,33 @@ public class KetquaController {
                 .anyMatch(authority -> "ROLE_TRUONGKHOA".equals(authority.getAuthority()));
         model.addAttribute("items", items);
         model.addAttribute("canManage", canManage);
+
+        // Lookups for topic, group, and council names
+        Map<Long, com.example.quanlydetaisinhvien.entity.Dangkydetai> dkMap = dangkydetaiRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Dangkydetai::getId, dk -> dk, (a, b) -> a));
+        Map<Long, com.example.quanlydetaisinhvien.entity.Detai> dtMap = detaiRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Detai::getId, dt -> dt, (a, b) -> a));
+        Map<Long, com.example.quanlydetaisinhvien.entity.Nhomsinhvien> nhomMap = nhomsinhvienRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Nhomsinhvien::getId, nh -> nh, (a, b) -> a));
+        Map<Long, com.example.quanlydetaisinhvien.entity.Hoidong> hdMap = hoidongRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Hoidong::getId, hd -> hd, (a, b) -> a));
+
+        Map<Long, String> topicNames = new HashMap<>();
+        Map<Long, String> groupNames = new HashMap<>();
+        for (var entry : dkMap.entrySet()) {
+            var dt = dtMap.get(entry.getValue().getDetaiid());
+            if (dt != null) topicNames.put(entry.getKey(), dt.getTendetai());
+            var nh = nhomMap.get(entry.getValue().getNhomid());
+            if (nh != null) groupNames.put(entry.getKey(), nh.getTennhom());
+        }
+        Map<Long, String> councilNames = new HashMap<>();
+        for (var entry : hdMap.entrySet()) {
+            councilNames.put(entry.getKey(), entry.getValue().getTenhoidong());
+        }
+        model.addAttribute("topicNames", topicNames);
+        model.addAttribute("groupNames", groupNames);
+        model.addAttribute("councilNames", councilNames);
+
         if (canManage) {
             model.addAttribute("publicationInfo", service.publicationInfo(items));
             var emailStatuses = outbox.statuses(items.stream().map(item -> item.getId()).toList());
@@ -64,24 +105,48 @@ public class KetquaController {
                     "SENT", "Đã gửi", "MISSING_EMAIL", "Thiếu hoặc sai email", "FAILED", "Chưa gửi được",
                     "UNCERTAIN", "Cần đối soát trước khi gửi lại"));
             model.addAttribute("emailEnabled", emailEnabled);
+            model.addAttribute("doiChieuItems", service.findAllDoiChieuDto());
         }
         return "ketqua-list";
     }
 
     @PostMapping("/{id}/congbo")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
     public String publish(@PathVariable Long id, RedirectAttributes attributes) {
         return perform(attributes, () -> service.congboKetqua(id),
                 "Công bố kết quả thành công. Trạng thái email được ghi nhận riêng.");
     }
 
+    @PostMapping("/cong-bo/{id}")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
+    public String publishAlias(@PathVariable Long id, RedirectAttributes attributes) {
+        return publish(id, attributes);
+    }
+
     @PostMapping("/{id}/phancong")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
     public String assign(@PathVariable Long id, @RequestParam HinhthucDanhgia hinhthuc,
             @RequestParam(required = false) Long hoidongid, RedirectAttributes attributes) {
         return perform(attributes, () -> service.phanCongHoiDong(id, hinhthuc, hoidongid),
                 "Đã lưu xác nhận hình thức đánh giá và phân công hội đồng.");
     }
 
+    @PostMapping("/tinh-lai/{dangkydetaiid}")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
+    public String tinhLai(@PathVariable Long dangkydetaiid, RedirectAttributes attributes) {
+        return perform(attributes, () -> service.tinhLaiKetQua(dangkydetaiid),
+                "Đã cập nhật lại kết quả cho đề tài đăng ký #" + dangkydetaiid);
+    }
+
+    @PostMapping("/tinh-tat-ca")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
+    public String tinhTatCa(RedirectAttributes attributes) {
+        return perform(attributes, service::tinhLaiTatCaKetQua,
+                "Đã tính toán lại toàn bộ kết quả từ các điểm thành phần!");
+    }
+
     @PostMapping("/email/{id}/thulai")
+    @PreAuthorize("hasRole('TRUONGKHOA')")
     public String retry(@PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean xacnhanChuaGui,
             @RequestParam(required = false) Integer solanthu, RedirectAttributes attributes) {
