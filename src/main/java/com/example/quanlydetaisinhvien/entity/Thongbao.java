@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Thongbao")
+@Table(name = "thongbao")
 public class Thongbao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,9 +26,18 @@ public class Thongbao {
     // An empty collection denotes an unchanged historical notice: visible to all three recipient roles.
     @ElementCollection
     @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
-    @CollectionTable(name = "Thongbaodoituong", joinColumns = @JoinColumn(name = "Thongbaoid"),
-            uniqueConstraints = @UniqueConstraint(name = "Uk_thongbaodoituong_role", columnNames = {"Thongbaoid", "Vaitro"}),
-            indexes = @Index(name = "Ix_thongbaodoituong_role", columnList = "Vaitro,Thongbaoid"))
+    @CollectionTable(
+    name = "thongbaodoituong",
+    joinColumns = @JoinColumn(name = "Thongbaoid"),
+    uniqueConstraints = @UniqueConstraint(
+        name = "Uk_thongbaodoituong_role",
+        columnNames = {"Thongbaoid", "Vaitro"}
+    ),
+    indexes = @Index(
+        name = "Ix_thongbaodoituong_role",
+        columnList = "Vaitro,Thongbaoid"
+    )
+)
     @Enumerated(EnumType.STRING)
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     @Column(name = "Vaitro", nullable = false, length = 20)
