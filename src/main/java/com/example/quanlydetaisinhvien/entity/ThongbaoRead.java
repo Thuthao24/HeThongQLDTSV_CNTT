@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 /** Sparse per-account read receipt; creating a notice never creates these rows. */
 @Entity
-@Table(name = "Thongbaodadoc", indexes = @Index(name = "Ix_thongbaodadoc_notice", columnList = "Thongbaoid,Taikhoanid"))
+@Table(name = "thongbaodadoc", indexes = @Index(name = "Ix_thongbaodadoc_notice", columnList = "Thongbaoid,Taikhoanid"))
 public class ThongbaoRead {
     @EmbeddedId private ThongbaoReadId id;
     @Column(name = "Ngaydoc", nullable = false, updatable = false) private LocalDateTime readAt;
