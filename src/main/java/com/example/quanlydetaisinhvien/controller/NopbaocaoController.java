@@ -212,6 +212,4 @@ public class NopbaocaoController {
         }
         return "redirect:/nopbaocao";
     }
-    @Value("${app.upload.dir:uploads/baocao}")    
-        private String uploadDirectory;
 }
