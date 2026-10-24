@@ -1,7 +1,4 @@
--- REVIEW ONLY: do not run automatically or on quanlydetaisinhvien (original/shared DB).
--- Connect explicitly to an approved target. No USE, reset, backfill or Emailketqua mutation.
--- MySQL 8 / InnoDB; existing thongbao and sinhvien IDs are BIGINT signed.
--- Sinhvienid is a historical snapshot, deliberately NOT a student FK.
+
 CREATE TABLE emailthongbao (
     Id BIGINT NOT NULL AUTO_INCREMENT,
     Thongbaoid BIGINT NULL,

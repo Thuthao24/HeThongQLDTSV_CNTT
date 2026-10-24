@@ -1,25 +1,46 @@
+
 package com.example.quanlydetaisinhvien.repository;
 
 import com.example.quanlydetaisinhvien.entity.Dangkydetai;
 import com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai;
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.List;
-import java.util.Optional;
+
 import jakarta.persistence.LockModeType;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-public interface DangkydetaiRepository extends JpaRepository<Dangkydetai, Long> {
+
+import java.util.List;
+import java.util.Optional;
+
+public interface DangkydetaiRepository
+        extends JpaRepository<Dangkydetai, Long> {
 
     Optional<Dangkydetai> findByNhomid(Long nhomid);
-    List<Dangkydetai> findByNhomidIn(java.util.Collection<Long> nhomids);
+
+    List<Dangkydetai> findByNhomidIn(
+            java.util.Collection<Long> nhomids);
+
     boolean existsByNhomid(Long nhomid);
+
     boolean existsByDetaiid(Long detaiid);
-    boolean existsByDetaiidAndTrangthai(Long detaiid, TrangthaiDangkydetai trangthai);
-    boolean existsByDetaiidAndTrangthaiAndIdNot(Long detaiid, TrangthaiDangkydetai trangthai, Long id);
+
+    boolean existsByDetaiidAndTrangthai(
+            Long detaiid,
+            TrangthaiDangkydetai trangthai);
+
+    boolean existsByDetaiidAndTrangthaiAndIdNot(
+            Long detaiid,
+            TrangthaiDangkydetai trangthai,
+            Long id);
+
     List<Dangkydetai> findByDetaiid(Long detaiid);
+
     void deleteByNhomid(Long nhomid);
-    @org.springframework.data.jpa.repository.Query("""
+
+    // Danh sách đăng ký có thể chấm điểm
+    @Query("""
         select d.id, r.id, r.tendot, t.tendetai, n.tennhom
         from Dangkydetai d, Detai t, Dotdangky r,
              Nhomsinhvien n, Phanconghoidong p, Ketqua k
@@ -54,21 +75,40 @@ public interface DangkydetaiRepository extends JpaRepository<Dangkydetai, Long> 
           )
         order by r.id desc, d.id desc
         """)
-    java.util.List<Object[]> findAvailableGradesForLecturer(
-        @org.springframework.data.repository.query.Param("lecturerId")
-        Long lecturerId,
-        @org.springframework.data.repository.query.Param("approved")
-        TrangthaiDangkydetai approved);
-        
-    @Query("""select d.detaiid from Dangkydetai d  where d.id = :id """)
-    Optional<Long> findDetaiIdByRegistrationId( @Param("id") Long id);
+    List<Object[]> findAvailableGradesForLecturer(
+            @Param("lecturerId") Long lecturerId,
+            @Param("approved")
+            TrangthaiDangkydetai approved);
+
+    // Lấy ID đề tài từ đăng ký
+    @Query("""
+        select d.detaiid
+        from Dangkydetai d
+        where d.id = :id
+        """)
+    Optional<Long> findDetaiIdByRegistrationId(
+            @Param("id") Long id);
+
+    // Khóa đăng ký khi xử lý
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""select d from Dangkydetai d where d.id = :id """)
+    @Query("""
+        select d
+        from Dangkydetai d
+        where d.id = :id
+        """)
     Optional<Dangkydetai> findByIdForUpdate(
-        @Param("id") Long id);
+            @Param("id") Long id);
+
+    // Đọc các đăng ký đã duyệt có khóa
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""select d from Dangkydetai d  where d.detaiid = :detaiId and d.trangthai = :trangthai""")
+    @Query("""
+        select d
+        from Dangkydetai d
+        where d.detaiid = :detaiId
+          and d.trangthai = :trangthai
+        """)
     List<Dangkydetai> findApprovedForUpdate(
-        @Param("detaiId") Long detaiId,
-        @Param("trangthai") TrangthaiDangkydetai trangthai);
+            @Param("detaiId") Long detaiId,
+            @Param("trangthai")
+            TrangthaiDangkydetai trangthai);
 }

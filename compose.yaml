@@ -7,6 +7,8 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/Quanlydetaisinhvien.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/migrations/pending/V002__phanconghoidong_emailketqua.sql:/docker-entrypoint-initdb.d/02-v002.sql:ro
+      - ./database/migrations/pending/V003__emailthongbao.sql:/docker-entrypoint-initdb.d/03-v003.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
@@ -17,6 +19,8 @@ services:
     build: .
     ports:
       - "${APP_PORT:-8080}:8080"
+    volumes:
+      - uploads_data:/app/uploads
     environment:
       DB_URL: jdbc:mysql://db:3306/Quanlydetaisinhvien?useUnicode=true&characterEncoding=UTF-8&connectionTimeZone=Asia/Ho_Chi_Minh
       DB_USERNAME: root
@@ -25,9 +29,11 @@ services:
       KETQUA_EMAIL_ENABLED: "false"
       THONGBAO_EMAIL_DELIVERY_ENABLED: "false"
       THONGBAO_EMAIL_OUTBOX_ENABLED: "false"
+      UPLOAD_DIR: /app/uploads/baocao
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 volumes:
   mysql_data:
+  uploads_data:

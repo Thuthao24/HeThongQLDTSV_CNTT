@@ -1,6 +1,3 @@
--- REVIEW ONLY. Not run automatically and NOT approved for execution on live MySQL.
--- Adds two empty tables. No backfill, UPDATE, ALTER or modification of published results.
--- Confirm the target database and approve execution separately before using this file.
 
 CREATE TABLE phanconghoidong (
     Dangkydetaiid BIGINT NOT NULL,
