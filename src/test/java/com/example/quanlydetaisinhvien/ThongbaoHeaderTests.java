@@ -32,6 +32,7 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
         }
     }
 
+    @org.junit.jupiter.api.BeforeEach void recipientForHeader() { authenticate("notice-student","SINHVIEN"); }
     @AfterEach void clearSql() { SqlCapture.SQL.remove(); }
 
     @Test void latestFiveUseDateThenIdAndSqlLimitInsteadOfLoadingAllNotices() {
@@ -46,13 +47,13 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
 
         assertThat(service.findLatestForHeader()).extracting(ThongbaoViewDTO::id).containsExactly(
                 newest.getId(), sameTime.get(7), sameTime.get(6), sameTime.get(5), sameTime.get(4));
-        var noticeSql = SqlCapture.SQL.get().stream().filter(sql -> sql.contains(" from thongbao ")).toList();
+        var noticeSql = SqlCapture.SQL.get().stream().filter(sql -> sql.contains("fetch first")).toList();
         assertThat(noticeSql).hasSize(1);
         assertThat(noticeSql.getFirst())
                 .containsPattern("order by \\w+\\.ngaydang desc,\\s*\\w+\\.id desc")
                 .contains("fetch first ? rows only");
         // A single batch resolves the authors; no count query or query per notice.
-        assertThat(SqlCapture.SQL.get()).hasSize(2).allMatch(sql -> sql.startsWith("select "));
+        assertThat(SqlCapture.SQL.get()).hasSize(3).allMatch(sql -> sql.startsWith("select "));
     }
 
     @ParameterizedTest @ValueSource(ints = {0, 1, 4, 5, 6})
@@ -85,16 +86,18 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
     void allReadersReceiveHeaderDataAndCanFollowDetailAndViewAllLinks(String role) throws Exception {
         var row = notice("Thông báo chung", "Nội dung", chief.getId(), oldDate);
         authenticate("reader", role);
-        assertThat(service.findLatestForHeader()).extracting(ThongbaoViewDTO::id).containsExactly(row.getId());
+        if(role.equals("TRUONGKHOA")) assertThat(service.findLatestForHeader()).isEmpty();
+        else assertThat(service.findLatestForHeader()).extracting(ThongbaoViewDTO::id).containsExactly(row.getId());
         var expected = service.findLatestForHeader();
+        var detail=service.findById(row.getId());
         mvc.perform(get("/").with(user("reader").roles(role)))
                 .andExpect(status().isOk()).andExpect(model().attribute("headerThongbaos", expected));
         mvc.perform(get("/thongbao/" + row.getId()).with(user("reader").roles(role)))
                 .andExpect(status().isOk()).andExpect(model().attribute("headerThongbaos", expected))
-                .andExpect(model().attribute("item", expected.getFirst()));
+                .andExpect(model().attribute("item", detail));
         mvc.perform(get("/thongbao").with(user("reader").roles(role)))
                 .andExpect(status().isOk()).andExpect(model().attribute("headerThongbaos", expected))
-                .andExpect(model().attribute("items", expected));
+                .andExpect(model().attribute("items", List.of(detail)));
     }
 
     @Test void authenticatedHeaderReceivesAnEmptyListWhenNoNoticesExist() throws Exception {
@@ -110,13 +113,13 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
                         .with(user("notice-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk()).andReturn();
         assertThat((List<?>) result.getModelAndView().getModel().get("items")).hasSize(8);
-        assertThat((List<?>) result.getModelAndView().getModel().get("headerThongbaos")).hasSize(5);
+        assertThat((List<?>) result.getModelAndView().getModel().get("headerThongbaos")).hasSize(0);
     }
 
     @ParameterizedTest @ValueSource(strings = {"/detai", "/ketqua", "/thongbao/create",
             "/morong/timkiem/detai", "/morong/timkiem/dotdangky", "/morong/timkiem/ketqua"})
     void existingModulePagesAlsoReceiveTheSharedHeader(String path) throws Exception {
-        notice("Dữ liệu chung", "Nội dung", chief.getId(), oldDate);
+        notice("Dữ liệu chung", "Nội dung", chief.getId(), oldDate); authenticate("notice-chief","TRUONGKHOA");
         var expected = service.findLatestForHeader();
         mvc.perform(get(path).with(user("notice-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk())
@@ -148,7 +151,7 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
     @Test void successfulCrudRedirectDoesNotLoadHeaderData() throws Exception {
         SqlCapture.SQL.get().clear();
         mvc.perform(post("/thongbao").with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
-                        .param("tieude", "Thông báo mới").param("noidung", "Nội dung"))
+                        .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "Thông báo mới").param("noidung", "Nội dung"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(model().attributeDoesNotExist("headerThongbaos"));
         assertThat(SqlCapture.SQL.get()).noneMatch(sql -> sql.contains("fetch first"));

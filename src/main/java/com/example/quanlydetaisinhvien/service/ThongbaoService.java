@@ -5,7 +5,7 @@ import com.example.quanlydetaisinhvien.dto.ThongbaoViewDTO;
 import java.util.List;
 
 public interface ThongbaoService {
-    /** At most five latest notices for the shared header; requires notice read access. */
+    /** At most five latest notices after audience filtering; managers receive an empty list. */
     List<ThongbaoViewDTO> findLatestForHeader();
 
     List<ThongbaoViewDTO> findAll();

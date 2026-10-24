@@ -52,7 +52,7 @@ class NotificationEmailDisabledTests {
 
     @Test void absentMigrationDoesNotBreakExistingCrudWhenOutboxIsDisabled() {
         chief(); assertThat(schema.available()).isFalse();
-        var f=new ThongbaoFormDTO(); f.setTieude("Thông báo không cần email"); f.setNoidung("Dữ liệu");
+        var f=new ThongbaoFormDTO(); f.setTieude("Thông báo không cần email"); f.setNoidung("Dữ liệu"); f.setRecipientRoles(DoituongThongbao.all());
         var created=notices.create(f); f.setTieude("Đã chỉnh sửa"); notices.update(created.id(),f);
         assertThat(notices.findById(created.id()).tieude()).isEqualTo("Đã chỉnh sửa");
         worker.drain(); notices.deleteById(created.id()); assertThat(noticeRows.findById(created.id())).isEmpty();

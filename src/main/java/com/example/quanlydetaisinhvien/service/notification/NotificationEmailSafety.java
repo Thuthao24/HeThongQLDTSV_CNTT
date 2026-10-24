@@ -14,12 +14,8 @@ public class NotificationEmailSafety {
     public NotificationEmailSafety(NotificationEmailSettings settings, Environment environment) {
         this.settings = settings; this.environment = environment;
     }
-    public boolean deliveryAllowed() {
-        if (environment.matchesProfiles("notification-mail-test") && (settings.mode()!=NotificationEmailSettings.Mode.ALLOWLIST
-                || settings.studentId()<=0 || settings.noticeId()<=0 || settings.batchSize()!=1)) return false;
-        return settings.outboxEnabled() && settings.deliveryEnabled() && !environment.matchesProfiles("demo")
-                && (settings.mode() == NotificationEmailSettings.Mode.SYSTEM || !addresses().isEmpty());
-    }
+    /** Permanent business policy: Module 15 is website-only; legacy flags cannot re-enable mail. */
+    public boolean deliveryAllowed() { return false; }
     public Set<String> addresses() {
         var result = new HashSet<String>();
         for (String value : settings.allowlist()) {
@@ -28,13 +24,7 @@ public class NotificationEmailSafety {
         }
         return Set.copyOf(result);
     }
-    public boolean permitted(Long studentId, Long noticeId, String address) {
-        String valid = MailAddress.validOrNull(address);
-        return valid != null && (settings.studentId() == 0 || Objects.equals(studentId, settings.studentId()))
-                && (settings.noticeId() == 0 || Objects.equals(noticeId, settings.noticeId()))
-                && (settings.minNoticeId() == 0 || (noticeId != null && noticeId >= settings.minNoticeId()))
-                && (settings.mode() == NotificationEmailSettings.Mode.SYSTEM || addresses().contains(valid.toLowerCase(Locale.ROOT)));
-    }
+    public boolean permitted(Long studentId, Long noticeId, String address) { return false; }
     public String detailLink(Long id) {
         String configured = settings.baseUrl().strip();
         if (configured.isEmpty()) return "/thongbao/" + id;

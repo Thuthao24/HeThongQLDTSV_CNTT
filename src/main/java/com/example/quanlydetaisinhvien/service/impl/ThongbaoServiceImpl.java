@@ -3,6 +3,8 @@ package com.example.quanlydetaisinhvien.service.impl;
 import com.example.quanlydetaisinhvien.dto.*;
 import com.example.quanlydetaisinhvien.entity.*;
 import com.example.quanlydetaisinhvien.exception.ThongbaoNotFoundException;
+import com.example.quanlydetaisinhvien.exception.ThongbaoConflictException;
+import com.example.quanlydetaisinhvien.service.ThongbaoRevision;
 import com.example.quanlydetaisinhvien.repository.*;
 import com.example.quanlydetaisinhvien.service.ThongbaoService;
 import jakarta.validation.ConstraintViolationException;
@@ -28,12 +30,9 @@ public class ThongbaoServiceImpl implements ThongbaoService {
     private final ThongbaoRepository repository;
     private final TaikhoanRepository accounts;
     private final Validator validator;
-    private final com.example.quanlydetaisinhvien.service.notification.NotificationEmailOutbox emailOutbox;
 
-    public ThongbaoServiceImpl(ThongbaoRepository repository, TaikhoanRepository accounts, Validator validator,
-            com.example.quanlydetaisinhvien.service.notification.NotificationEmailOutbox emailOutbox) {
+    public ThongbaoServiceImpl(ThongbaoRepository repository, TaikhoanRepository accounts, Validator validator) {
         this.repository = repository; this.accounts = accounts; this.validator = validator;
-        this.emailOutbox = emailOutbox;
     }
 
     @Override
@@ -41,16 +40,17 @@ public class ThongbaoServiceImpl implements ThongbaoService {
 
     @Override
     public List<ThongbaoViewDTO> findLatestForHeader() {
-        requireReader();
-        return views(repository.findTop5ByOrderByNgaydangDescIdDesc());
+        var auth=requireReader();
+        if(hasManagerRole(auth)) return List.of();
+        return views(repository.visibleLatest(false,readerRole(auth),"%",
+                org.springframework.data.domain.PageRequest.of(0,5,NEWEST_FIRST)));
     }
 
     @Override
     public List<ThongbaoViewDTO> search(String keyword) {
-        requireReader();
+        var auth=requireReader();
         String query = keyword == null ? "" : keyword.strip();
-        var rows = query.isEmpty() ? repository.findAll(NEWEST_FIRST)
-                : repository.findByTieudeContainingIgnoreCaseOrNoidungContainingIgnoreCase(query, query, NEWEST_FIRST);
+        var rows = repository.visible(hasManagerRole(auth),readerRole(auth),pattern(query),NEWEST_FIRST);
         return views(rows);
     }
 
@@ -59,7 +59,7 @@ public class ThongbaoServiceImpl implements ThongbaoService {
             String keyword,
             org.springframework.data.domain.Pageable pageable) {
 
-        requireReader();
+        var auth=requireReader();
 
         String query = keyword == null ? "" : keyword.strip();
 
@@ -74,10 +74,13 @@ public class ThongbaoServiceImpl implements ThongbaoService {
                 NEWEST_FIRST
         );
 
-        var page = query.isEmpty()
-                ? repository.findAll(safePageable)
-                : repository.findByTieudeContainingIgnoreCaseOrNoidungContainingIgnoreCase(
-                        query, query, safePageable);
+        var page = repository.visible(hasManagerRole(auth),readerRole(auth),pattern(query),safePageable);
+
+        if(safePageable.getPageNumber()>0 && page.getContent().isEmpty()) {
+            int last=Math.max(0,page.getTotalPages()-1);
+            safePageable=org.springframework.data.domain.PageRequest.of(last,safePageable.getPageSize(),NEWEST_FIRST);
+            page=repository.visible(hasManagerRole(auth),readerRole(auth),pattern(query),safePageable);
+        }
 
         return new org.springframework.data.domain.PageImpl<>(
                 views(page.getContent()),
@@ -87,6 +90,7 @@ public class ThongbaoServiceImpl implements ThongbaoService {
     }
     private List<ThongbaoViewDTO> views(List<Thongbao> rows) {
         if (rows.isEmpty()) return List.of();
+        repository.withAudience(rows.stream().map(Thongbao::getId).toList());
         // One batch lookup avoids fetching an account for every notice.
         var ids = rows.stream().map(Thongbao::getNguoidangid).collect(Collectors.toSet());
         Map<Long, String> authors = new HashMap<>();
@@ -96,8 +100,12 @@ public class ThongbaoServiceImpl implements ThongbaoService {
 
     @Override
     public ThongbaoViewDTO findById(Long id) {
-        requireReader();
-        return view(existing(id));
+        var auth=requireReader();
+        var row=existing(id);
+        if(!hasManagerRole(auth) && !row.getRecipientRoles().isEmpty()
+                && !row.getRecipientRoles().contains(readerRole(auth)))
+            throw new ThongbaoNotFoundException(); // Same 404 as an absent ID: do not reveal another role's notice.
+        return view(row);
     }
 
     @Override
@@ -109,9 +117,9 @@ public class ThongbaoServiceImpl implements ThongbaoService {
         row.setTieude(form.getTieude().strip());
         row.setNoidung(form.getNoidung());
         row.setNguoidangid(author.getId());
-        row.setNgaydang(LocalDateTime.now().withNano(0));
+        row.setRecipientRoles(form.getRecipientRoles());
+        row.setNgaydang(LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).withNano(0));
         repository.saveAndFlush(row);
-        emailOutbox.enqueue(row, author.getHoten());
         return view(row, author.getHoten());
     }
 
@@ -119,10 +127,16 @@ public class ThongbaoServiceImpl implements ThongbaoService {
     @Transactional
     public ThongbaoViewDTO update(Long id, ThongbaoFormDTO form) {
         requireManager();
-        Thongbao row = existing(id);
+        Thongbao row = locked(id);
         validate(form);
+        // An identical POST replay is harmless. A stale edit with other content must not overwrite a newer save.
+        if(row.getTieude().equals(form.getTieude().strip()) && row.getNoidung().equals(form.getNoidung())
+                && effectiveRoles(row).equals(form.getRecipientRoles())) return view(row);
+        if(form.getRevision()!=null && !ThongbaoRevision.digest(row.getTieude(),row.getNoidung(),effectiveRoles(row)).equals(form.getRevision()))
+            throw new ThongbaoConflictException();
         row.setTieude(form.getTieude().strip());
         row.setNoidung(form.getNoidung());
+        row.setRecipientRoles(form.getRecipientRoles());
         // Keep original author/time even when a different dean edits the notice.
         repository.saveAndFlush(row);
         return view(row);
@@ -132,7 +146,7 @@ public class ThongbaoServiceImpl implements ThongbaoService {
     @Transactional
     public void deleteById(Long id) {
         requireManager();
-        repository.delete(existing(id));
+        repository.delete(locked(id));
         repository.flush();
     }
 
@@ -154,6 +168,17 @@ public class ThongbaoServiceImpl implements ThongbaoService {
             throw new AccessDeniedException("Bạn không có quyền xem thông báo.");
         }
         return authentication;
+    }
+
+    private DoituongThongbao readerRole(Authentication auth) {
+        return Arrays.stream(DoituongThongbao.values()).filter(role->auth.getAuthorities().stream()
+                .anyMatch(a->a.getAuthority().equals("ROLE_"+role.name()))).findFirst().orElse(DoituongThongbao.SINHVIEN);
+    }
+    private String pattern(String keyword) {
+        return "%"+keyword.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%";
+    }
+    private Set<DoituongThongbao> effectiveRoles(Thongbao row) {
+        return row.getRecipientRoles().isEmpty()?DoituongThongbao.all():Set.copyOf(row.getRecipientRoles());
     }
 
     private Taikhoan requireManager() {
@@ -179,6 +204,10 @@ public class ThongbaoServiceImpl implements ThongbaoService {
         if (id == null || id <= 0) throw new IllegalArgumentException("ID thông báo không hợp lệ.");
         return repository.findById(id).orElseThrow(ThongbaoNotFoundException::new);
     }
+    private Thongbao locked(Long id) {
+        if(id==null || id<=0) throw new IllegalArgumentException("ID thông báo không hợp lệ.");
+        return repository.findForUpdate(id).orElseThrow(ThongbaoNotFoundException::new);
+    }
 
     private void validate(ThongbaoFormDTO form) {
         if (form == null) throw new IllegalArgumentException("Biểu mẫu thông báo không hợp lệ.");
@@ -192,6 +221,6 @@ public class ThongbaoServiceImpl implements ThongbaoService {
 
     private ThongbaoViewDTO view(Thongbao row, String author) {
         return new ThongbaoViewDTO(row.getId(), row.getTieude(), row.getNoidung(),
-                author == null || author.isBlank() ? "Không xác định" : author, row.getNgaydang());
+                author == null || author.isBlank() ? "Không xác định" : author, row.getNgaydang(),effectiveRoles(row));
     }
 }

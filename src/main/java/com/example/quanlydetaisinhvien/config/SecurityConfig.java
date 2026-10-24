@@ -41,6 +41,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/ketqua", "/ketqua/**").hasAnyRole("SINHVIEN", "TRUONGKHOA")
                 .requestMatchers("/ketqua", "/ketqua/**").hasRole("TRUONGKHOA")
                 .requestMatchers("/thongbao/create", "/thongbao/*/edit").hasRole("TRUONGKHOA")
+                .requestMatchers(HttpMethod.POST, "/thongbao/*/dadoc")
+                    .hasAnyRole("SINHVIEN", "GIANGVIEN", "TRUONGBOMON")
                 .requestMatchers(HttpMethod.POST, "/thongbao", "/thongbao/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/thongbao", "/thongbao/**")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN", "SINHVIEN")

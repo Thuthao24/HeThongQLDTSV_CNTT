@@ -1,0 +1,23 @@
+/* Module 15 only; do not change shared dashboard or portal layout. */
+.notice-detail-title, .notice-meta-item strong, .delete-target-title { overflow-wrap: anywhere; min-width: 0; }
+.notice-table { min-width: 680px; }
+.notice-recipient-label { display: block; color: #53657a; margin-top: 6px; overflow-wrap: anywhere; }
+.notice-audience { border: 1px solid #b8c7d6; border-radius: 6px; padding: 14px; margin: 18px 0; min-width: 0; }
+.notice-audience legend { font-weight: 600; font-size: 15px; padding: 0 5px; }
+.notice-audience-option { display: inline-flex; align-items: center; gap: 8px; margin: 8px 20px 8px 0; cursor: pointer; }
+.notice-audience input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; }
+[data-notice-form] small { display: block; color: #53657a; margin-top: 6px; }
+[data-notice-form] .form-actions { flex-wrap: wrap; }
+.notice-audience-dialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+  border: 1px solid var(--portal-border); border-radius: 6px; padding: 22px; color: var(--ute-text); background: #fff;
+  box-shadow: 0 10px 32px rgba(0,0,0,.22); }
+.notice-audience-dialog:not([open]) { display: none; }
+.notice-audience-dialog::backdrop { background: rgba(0,0,0,.42); }
+.notice-audience-dialog h2 { margin: 0 0 14px; font-size: 18px; }
+.notice-audience-dialog p { margin: 0 0 20px; line-height: 1.6; }
+.notice-audience-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 560px) {
+  .notice-detail-meta { gap: 12px; }
+  .notice-meta-item { flex-wrap: wrap; }
+  .notice-toolbar .search-form { min-width: 0; }
+}

@@ -2,6 +2,7 @@ package com.example.quanlydetaisinhvien.controller;
 
 import com.example.quanlydetaisinhvien.service.TaikhoanService;
 import com.example.quanlydetaisinhvien.service.ThongbaoService;
+import com.example.quanlydetaisinhvien.service.ThongbaoReadService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -40,10 +41,12 @@ public class GlobalModelAttributes implements WebMvcConfigurer, HandlerIntercept
 
     private final TaikhoanService taikhoanService;
     private final ThongbaoService thongbaoService;
+    private final ThongbaoReadService noticeReads;
 
-    public GlobalModelAttributes(TaikhoanService taikhoanService, ThongbaoService thongbaoService) {
+    public GlobalModelAttributes(TaikhoanService taikhoanService, ThongbaoService thongbaoService, ThongbaoReadService noticeReads) {
         this.taikhoanService = taikhoanService;
         this.thongbaoService = thongbaoService;
+        this.noticeReads = noticeReads;
     }
 
     @Override
@@ -66,8 +69,23 @@ public class GlobalModelAttributes implements WebMvcConfigurer, HandlerIntercept
                     .noneMatch(a -> NOTICE_READ_ROLES.contains(a.getAuthority()))) {
             return;
         }
+        modelAndView.addObject("headerUnreadCount",0L);
+        modelAndView.addObject("headerUnreadIds",Set.of());
+        if (authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TRUONGKHOA".equals(a.getAuthority()))) {
+            modelAndView.addObject("headerThongbaos", List.of());
+            return; // Management is available via /thongbao; the dean is not a recipient.
+        }
         try {
-            modelAndView.addObject("headerThongbaos", thongbaoService.findLatestForHeader());
+            var latest=thongbaoService.findLatestForHeader();
+            modelAndView.addObject("headerThongbaos", latest);
+            try {
+                var state=noticeReads.headerState(latest);
+                modelAndView.addObject("headerUnreadCount",state.unreadCount());
+                modelAndView.addObject("headerUnreadIds",state.unreadIds());
+            } catch (DataAccessException | org.springframework.security.access.AccessDeniedException ex) {
+                // Read status is optional for page rendering; the API reports failure and never marks on GET.
+                log.warn("Unable to load per-account notice read status");
+            }
         } catch (DataAccessException ex) {
             // An optional header must not prevent the page or a validated CRUD form from rendering.
             log.warn("Unable to load notices for the portal header");

@@ -2,6 +2,10 @@ package com.example.quanlydetaisinhvien.controller;
 
 import com.example.quanlydetaisinhvien.dto.*;
 import com.example.quanlydetaisinhvien.exception.ThongbaoNotFoundException;
+import com.example.quanlydetaisinhvien.exception.ThongbaoConflictException;
+import com.example.quanlydetaisinhvien.service.ThongbaoRevision;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import com.example.quanlydetaisinhvien.service.ThongbaoService;
 import jakarta.validation.Valid;
 import jakarta.validation.ConstraintViolationException;
@@ -27,7 +31,7 @@ public class ThongbaoController {
 
     @InitBinder("thongbaoForm")
     void bindEditableFields(WebDataBinder binder) {
-        binder.setAllowedFields("tieude", "noidung");
+        binder.setAllowedFields("tieude", "noidung", "revision", "recipientRoles");
     }
 
     @GetMapping
@@ -49,21 +53,25 @@ public class ThongbaoController {
     }
 
     @GetMapping("/create")
-    public String createForm(Model model) {
+    public String createForm(Model model, HttpServletRequest request) {
         service.requireManageAccess();
         model.addAttribute("thongbaoForm", new ThongbaoFormDTO());
+        model.addAttribute("submissionToken",ThongbaoSubmissions.issue(request.getSession(),request.getUserPrincipal().getName()));
         return form(model, null);
     }
 
     @PostMapping
     public String create(@Valid @ModelAttribute("thongbaoForm") ThongbaoFormDTO input,
-            BindingResult errors, Model model, RedirectAttributes flash) {
+            BindingResult errors, Model model, RedirectAttributes flash, HttpServletRequest request,
+            @RequestParam(required=false) String submissionToken) {
         service.requireManageAccess();
+        model.addAttribute("submissionToken",submissionToken);
         if (errors.hasErrors()) return form(model, null);
         try {
-            var saved = service.create(input);
+            Long savedId=ThongbaoSubmissions.create(request.getSession(),request.getUserPrincipal()==null?"standalone":request.getUserPrincipal().getName(),
+                    submissionToken,input.getTieude(),input.getNoidung(),input.getRecipientRoles(),()->service.create(input));
             flash.addFlashAttribute("successMessage", "Đã tạo thông báo.");
-            return "redirect:/thongbao/" + saved.id();
+            return "redirect:/thongbao/" + savedId;
         } catch (DataAccessException ex) {
             saveError(errors, model);
             return form(model, null);
@@ -85,22 +93,38 @@ public class ThongbaoController {
         var input = new ThongbaoFormDTO();
         input.setTieude(existing.tieude());
         input.setNoidung(existing.noidung());
+        input.setRecipientRoles(existing.recipientRoles());
+        input.setRevision(ThongbaoRevision.of(existing));
         model.addAttribute("thongbaoForm", input);
+        model.addAttribute("originalRecipientRoles", originalRoles(existing.recipientRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.joining(","))));
         return form(model, id);
     }
 
     @PostMapping("/{id}/edit")
     public String update(@PathVariable Long id, @Valid @ModelAttribute("thongbaoForm") ThongbaoFormDTO input,
-            BindingResult errors, Model model, RedirectAttributes flash) {
+            BindingResult errors, Model model, RedirectAttributes flash, HttpServletResponse response,
+            @RequestParam(required=false) String originalRecipientRoles) {
         service.requireManageAccess();
+        // UI comparison metadata only. Never used for authorization, revision or the persisted audience.
+        // Carry it through validation/409 so a redisplayed form still compares with its original selection.
+        model.addAttribute("originalRecipientRoles",originalRoles(originalRecipientRoles));
         if (errors.hasErrors()) {
             service.findById(id); // Missing/invalid IDs still produce 404/400 on an invalid form.
             return form(model, id);
+        }
+        if(input.getRevision()==null || !input.getRevision().matches("[a-f0-9]{64}")) {
+            service.findById(id);
+            errors.reject("thongbao.revision","Biểu mẫu sửa đã hết hạn. Vui lòng mở lại bản mới nhất.");
+            response.setStatus(409);
+            return form(model,id);
         }
         try {
             var saved = service.update(id, input);
             flash.addFlashAttribute("successMessage", "Đã cập nhật thông báo.");
             return "redirect:/thongbao/" + saved.id();
+        } catch (ThongbaoConflictException ex) {
+            errors.reject("thongbao.conflict",ex.getMessage()); response.setStatus(409);
+            return form(model,id);
         } catch (DataAccessException ex) {
             saveError(errors, model);
             return form(model, id);
@@ -125,6 +149,13 @@ public class ThongbaoController {
         model.addAttribute("formAction", id == null ? "/thongbao" : "/thongbao/" + id + "/edit");
         if (id != null) model.addAttribute("thongbaoId", id);
         return "thongbao-form";
+    }
+
+    private String originalRoles(String value) {
+        var allowed=java.util.Arrays.stream(com.example.quanlydetaisinhvien.entity.DoituongThongbao.values())
+                .map(Enum::name).collect(java.util.stream.Collectors.toSet());
+        return java.util.Arrays.stream((value==null?"":value).split(",")).filter(allowed::contains)
+                .distinct().sorted().collect(java.util.stream.Collectors.joining(","));
     }
 
     private void saveError(BindingResult errors, Model model) {

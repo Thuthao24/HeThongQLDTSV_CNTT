@@ -25,13 +25,24 @@ import static org.mockito.Mockito.*;
 
 class GlobalModelAttributesTests {
     final ThongbaoService service = mock(ThongbaoService.class);
-    final GlobalModelAttributes attributes = new GlobalModelAttributes(mock(TaikhoanService.class), service);
+    final com.example.quanlydetaisinhvien.service.ThongbaoReadService reads=mock(com.example.quanlydetaisinhvien.service.ThongbaoReadService.class);
+    final GlobalModelAttributes attributes = new GlobalModelAttributes(mock(TaikhoanService.class), service, reads);
+    @org.junit.jupiter.api.BeforeEach void readStatus() {
+        when(reads.headerState(anyList())).thenReturn(new com.example.quanlydetaisinhvien.dto.ThongbaoBellDTO.State(0,java.util.Set.of()));
+    }
 
     @AfterEach void clearAuthentication() { SecurityContextHolder.clearContext(); }
 
     void reader() {
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
                 "reader", "unused", List.of(new SimpleGrantedAuthority("ROLE_SINHVIEN"))));
+    }
+
+    @Test void chiefIsManagerAndNeverReceivesHeaderNotices() {
+        SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                "chief", "unused", List.of(new SimpleGrantedAuthority("ROLE_TRUONGKHOA"))));
+        var view=new ModelAndView("thongbao-list");populate(view);
+        assertThat(view.getModel()).containsEntry("headerThongbaos",List.of());verifyNoInteractions(service);
     }
 
     void populate(ModelAndView view) {

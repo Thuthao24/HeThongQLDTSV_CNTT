@@ -109,25 +109,22 @@ class NotificationEmailPageTests {
                 .andExpect(model().attribute("hoten","Đặng Trưởng khoa"))
                 .andExpect(model().attribute("tendangnhap","page-chief"))
                 .andExpect(model().attribute("vaitro","TRUONGKHOA"))
-                .andExpect(model().attribute("headerThongbaos",hasSize(5))).andReturn();
+                .andExpect(model().attribute("headerThongbaos",hasSize(0))).andReturn();
     }
 
     String html(MvcResult result) throws Exception { return result.getResponse().getContentAsString(StandardCharsets.UTF_8); }
 
-    @Test void activeChiefGetsRealThymeleafWithPortalHeaderBellSidebarAndAccount() throws Exception {
+    @Test void activeChiefGetsTrimmedHeaderWithSidebarAccountAndNoRecipientBell() throws Exception {
         var result=page();
         assertThat(html(result)).contains("<!DOCTYPE html>","GIÁM SÁT EMAIL THÔNG BÁO",
-                "class=\"portal-header\"","id=\"headerNoticeBtn\"","id=\"headerNoticeDropdown\"",
+                "class=\"portal-header\"",
                 "id=\"sidebar\"","Đặng Trưởng khoa","page-chief","TRUONGKHOA")
-                .containsPattern("class=\"header-avatar\"[^>]*>Đ</div>")
+                .doesNotContain("id=\"headerNoticeBtn\"","id=\"headerNoticeDropdown\"","class=\"header-avatar\"")
                 .doesNotContain("th:replace=","th:href=","TemplateInputException");
         @SuppressWarnings("unchecked")
         var notices=(List<ThongbaoViewDTO>)result.getModelAndView().getModel().get("headerThongbaos");
-        assertThat(notices).extracting(ThongbaoViewDTO::id).isSortedAccordingTo(Comparator.reverseOrder());
-        assertThat(notices).extracting(ThongbaoViewDTO::tieude).containsExactly(
-                "Thông báo header 6","Thông báo header 5","Thông báo header 4","Thông báo header 3","Thông báo header 2");
-        assertThat(html(result)).contains("href=\"/thongbao/"+noticeId+"\"","href=\"/thongbao\"",
-                "16/10/2026 08:00").doesNotContain("Thông báo header 0","Thông báo header 1");
+        assertThat(notices).isEmpty();
+        assertThat(html(result)).contains("href=\"/thongbao\"").doesNotContain("Thông báo header 6","Thông báo header 0");
     }
 
     @Test void pageLoadsExistingSharedAndDedicatedStylesAndScripts() throws Exception {
@@ -190,7 +187,7 @@ class NotificationEmailPageTests {
         jdbc.execute("alter table emailthongbao rename to emailthongbao_unavailable");
         try {
             ReadOnlySqlInspector.statements.clear();
-            assertThat(html(page())).contains("id=\"schemaUnavailableAlert\"","id=\"sidebar\"","id=\"headerNoticeBtn\"");
+            assertThat(html(page())).contains("id=\"schemaUnavailableAlert\"","id=\"sidebar\"");
             mvc.perform(get(API).with(user("page-chief").roles("TRUONGKHOA")))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.schemaAvailable").value(false))
                     .andExpect(jsonPath("$.outboxEnabled").value(false)).andExpect(jsonPath("$.deliveryEnabled").value(false))
@@ -216,7 +213,7 @@ class NotificationEmailPageTests {
         });
         var result=mvc.perform(get(PAGE).with(user("page-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk()).andExpect(model().attribute("headerThongbaos",hasSize(0))).andReturn();
-        assertThat(html(result)).contains("Chưa có thông báo nào","id=\"sidebar\"","class=\"header-avatar\"");
+        assertThat(html(result)).contains("id=\"sidebar\"").doesNotContain("id=\"headerNoticeBtn\"","class=\"header-avatar\"");
     }
 
     Map<String,List<Map<String,Object>>> snapshots() {

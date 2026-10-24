@@ -23,6 +23,22 @@ public class Thongbao {
     @Column(name = "Ngaydang", nullable = false)
     private LocalDateTime ngaydang;
 
+    // An empty collection denotes an unchanged historical notice: visible to all three recipient roles.
+    @ElementCollection
+    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @CollectionTable(name = "Thongbaodoituong", joinColumns = @JoinColumn(name = "Thongbaoid"),
+            uniqueConstraints = @UniqueConstraint(name = "Uk_thongbaodoituong_role", columnNames = {"Thongbaoid", "Vaitro"}),
+            indexes = @Index(name = "Ix_thongbaodoituong_role", columnList = "Vaitro,Thongbaoid"))
+    @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
+    @Column(name = "Vaitro", nullable = false, length = 20)
+    private java.util.Set<DoituongThongbao> recipientRoles = new java.util.HashSet<>();
+
+    public java.util.Set<DoituongThongbao> getRecipientRoles() { return recipientRoles; }
+    public void setRecipientRoles(java.util.Set<DoituongThongbao> roles) {
+        recipientRoles.clear(); recipientRoles.addAll(roles);
+    }
+
     public Thongbao() {}
 
     public Long getId() { return id; }

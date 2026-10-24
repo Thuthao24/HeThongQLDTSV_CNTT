@@ -52,13 +52,11 @@ class NotificationEmailMissingSchemaTests {
         mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
 
-    @Test void enabledOutboxWithMissingSchemaReturnsFormErrorAndRollsBackCreate() throws Exception {
+    @Test void oldOutboxFlagsAndMissingEmailSchemaCannotBreakWebsiteOnlyCreate() throws Exception {
         mvc.perform(post("/thongbao").with(user("missing-chief").roles("TRUONGKHOA")).with(csrf())
-                        .param("tieude","Chưa triển khai bảng mới").param("noidung","Chỉ kiểm thử H2"))
-                .andExpect(status().isOk()).andExpect(view().name("thongbao-form"))
-                .andExpect(model().attributeHasErrors("thongbaoForm"))
-                .andExpect(model().attributeExists("errorMessage"));
-        assertThat(jdbc.queryForObject("select count(*) from thongbao",Long.class)).isZero();
+                        .param("recipientRoles","SINHVIEN").param("tieude","Chưa triển khai bảng mới").param("noidung","Chỉ kiểm thử H2"))
+                .andExpect(status().is3xxRedirection());
+        assertThat(jdbc.queryForObject("select count(*) from thongbao",Long.class)).isEqualTo(1);
         assertThat(fake.sent).isEmpty();
     }
 
