@@ -27,3 +27,4 @@ jobs:
       - name: Compile and run tests
         run: mvn -B -ntp clean verify
 # Trigger CI build verification
+# Verify CI trigger
