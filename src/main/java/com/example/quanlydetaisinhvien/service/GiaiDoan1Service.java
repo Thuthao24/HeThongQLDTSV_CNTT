@@ -227,13 +227,9 @@ private void validTimes(DotForm f) {
         activeProposal(dot(e.getDotdangkyid()));
         huongdans.deleteByDetaiid(id);huongdans.flush();detais.delete(e);
     }
-    private void xetDuyetPermission(Detai e,String username){
-        Taikhoan a=user(username);
-        if(a.getVaitro()==Vaitro.TRUONGKHOA)return;
-        if(a.getVaitro()!=Vaitro.TRUONGBOMON)throw new AccessDeniedException("Chỉ trưởng bộ môn hoặc trưởng khoa xét duyệt");
-        Giangvien teacher=currentTeacher(username);
-        if(!teacher.getBomonid().equals(e.getBomonid()))throw new AccessDeniedException("Không được duyệt đề tài của bộ môn khác");
-        if(teacher.getId().equals(e.getGiangviendexuatid()))throw new AccessDeniedException("Không tự duyệt đề tài của mình");
+    private void xetDuyetPermission(
+        Detai e, String username) {
+    khoa(username);
     }
     public Detai duyet(Long id,boolean accept,String username){
         Detai e=detai(id); xetDuyetPermission(e,username);
