@@ -52,8 +52,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/dotdangky").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/ketqua").hasAnyRole("TRUONGKHOA", "SINHVIEN")
                 .requestMatchers(HttpMethod.GET, "/morong/thongke").hasRole("TRUONGKHOA")
-                .requestMatchers(HttpMethod.GET, "/morong/email-thongbao", "/morong/email-thongbao/quanly")
-                    .hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/detai.xlsx", "/morong/xuat/detai.pdf")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/dotdangky.xlsx", "/morong/xuat/dotdangky.pdf",

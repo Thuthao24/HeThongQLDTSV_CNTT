@@ -32,7 +32,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.datasource.url=jdbc:h2:mem:module15-ui-2e;MODE=MySQL;DB_CLOSE_DELAY=-1",
     "spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=",
     "spring.jpa.hibernate.ddl-auto=create-drop","spring.sql.init.mode=never",
-    "app.thongbao.email.delivery-enabled=false","app.thongbao.email.schedule-enabled=false",
     "app.ketqua.email.enabled=false","app.ketqua.email.scheduling-enabled=false"})
 @Import(ThongbaoWorkflowTests.NoDelivery.class)
 class ThongbaoUiRefinementTests {
@@ -73,7 +72,7 @@ class ThongbaoUiRefinementTests {
                     .doesNotContain("<strong>HCM-UTE</strong>","Thông tin và thông báo chính thức từ Khoa và Nhà trường.","Nội dung thông báo chính thức được đăng trên cổng thông tin.");
         }
         if(!role.equals("TRUONGKHOA"))mvc.perform(get("/thongbao/chuong").with(user("ui-"+role).roles(role))).andExpect(status().isOk()).andExpect(jsonPath("$.unreadCount").value(1));
-        assertThat(jdbc.queryForObject("select count(*) from emailthongbao",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from emailketqua",Long.class)).isZero();
     }
     @Test void createAndEditFormsRemoveOnlyRequestedCopyAndRenderConfirmationOnlyForEdit() throws Exception {
         for(var url:List.of("/thongbao/create","/thongbao/"+notice.id()+"/edit")){

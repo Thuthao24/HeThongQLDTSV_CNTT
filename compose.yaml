@@ -23,8 +23,6 @@ services:
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
       PORT: 8080
       KETQUA_EMAIL_ENABLED: "false"
-      THONGBAO_EMAIL_DELIVERY_ENABLED: "false"
-      THONGBAO_EMAIL_OUTBOX_ENABLED: "false"
     depends_on:
       db:
         condition: service_healthy

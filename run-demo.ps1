@@ -30,8 +30,6 @@ Write-Host "  * Profile:            demo" -ForegroundColor Gray
 Write-Host "  * Database:           quanlydetaisinhvien_demo (127.0.0.1:3306)" -ForegroundColor Gray
 Write-Host "  * Database goc:       quanlydetaisinhvien (KHONG CHAM TOI)" -ForegroundColor Green
 Write-Host "  * Port:               $Port" -ForegroundColor Gray
-Write-Host "  * Email Delivery:     FALSE (Khong tu gui email)" -ForegroundColor Green
-Write-Host "  * Email Scheduler:    FALSE (Tat scheduler ngam)" -ForegroundColor Green
 Write-Host "  * Email Ket qua:      FALSE (Tat worker Module 16)" -ForegroundColor Green
 Write-Host "  * DDL Auto / Init:    NONE / NEVER (Khong chay migration)" -ForegroundColor Green
 Write-Host "----------------------------------------------------------" -ForegroundColor DarkGray
@@ -44,8 +42,8 @@ if ($listeners.Count -gt 0) {
         $testResp = Invoke-WebRequest -Uri "http://localhost:$Port/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
         Write-Host "Ung dung Demo HCMUTE da dang chay tren port $Port!" -ForegroundColor Green
         if (-not $NoBrowser) {
-            Write-Host "Dang mo trinh duyet den trang Giam sat Email..." -ForegroundColor Cyan
-            Start-Process "http://localhost:$Port/morong/email-thongbao/quanly"
+            Write-Host "Dang mo trinh duyet den trang dang nhap..." -ForegroundColor Cyan
+            Start-Process "http://localhost:$Port/login"
         }
         return
     } catch {
@@ -163,7 +161,7 @@ if (-not $NoBrowser) {
     $monitorScript = {
         param($TargetPort)
         $url = "http://localhost:$TargetPort"
-        $targetPage = "http://localhost:$TargetPort/morong/email-thongbao/quanly"
+        $targetPage = "http://localhost:$TargetPort/login"
         for ($i = 0; $i -lt 120; $i++) {
             Start-Sleep -Seconds 1
             try {
@@ -177,7 +175,7 @@ if (-not $NoBrowser) {
         }
     }
     Start-Job -ScriptBlock $monitorScript -ArgumentList $Port | Out-Null
-    Write-Host "Trinh duyet se tu dong mo trang Giam sat Email khi ung dung khoi dong xong." -ForegroundColor Cyan
+    Write-Host "Trinh duyet se tu dong mo trang dang nhap khi ung dung khoi dong xong." -ForegroundColor Cyan
 }
 
 # 6. Tim lenh Maven
@@ -196,15 +194,6 @@ $springArgs = @(
     '--spring.jpa.hibernate.ddl-auto=none',
     '--spring.jpa.generate-ddl=false',
     '--spring.sql.init.mode=never',
-    '--app.thongbao.email.outbox-enabled=true',
-    '--app.thongbao.email.delivery-enabled=false',
-    '--app.thongbao.email.schedule-enabled=false',
-    '--app.thongbao.email.max-recipients-per-notice=1000',
-    "--app.thongbao.email.base-url=http://localhost:$Port",
-    '--app.thongbao.email.smtp.host=',
-    '--app.thongbao.email.smtp.username=',
-    '--app.thongbao.email.smtp.password=',
-    '--app.thongbao.email.smtp.from=',
     '--app.ketqua.email.enabled=false',
     '--app.ketqua.email.scheduling-enabled=false',
     '--spring.mail.test-connection=false',

@@ -134,11 +134,6 @@
            th:href="@{/morong/thongke}"
            class="nav-item"
            th:classappend="${active == 'thongke'} ? ' active' : ''"><span class="nav-icon">📊</span>Thống kê & Báo cáo</a>
-        <a th:if="${vaitro == 'TRUONGKHOA'}"
-           th:href="@{/morong/email-thongbao/quanly}"
-           class="nav-item"
-           th:classappend="${active == 'emailthongbao'} ? ' active' : ''"><span class="nav-icon">✉</span>Giám sát Email</a>
-
         <div class="nav-section">TÀI KHOẢN</div>
         <a th:if="${vaitro == 'TRUONGKHOA'}" href="/taikhoan" class="nav-item" th:classappend="${active == 'taikhoan'} ? ' active' : ''"><span class="nav-icon">⚙</span>Tài khoản</a>
         <form th:action="@{/logout}" method="post" class="sidebar-logout-form">

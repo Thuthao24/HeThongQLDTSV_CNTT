@@ -34,7 +34,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.datasource.url=jdbc:h2:mem:module15-read;MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=5000",
     "spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=",
     "spring.jpa.hibernate.ddl-auto=create-drop","spring.sql.init.mode=never",
-    "app.thongbao.email.outbox-enabled=true","app.thongbao.email.delivery-enabled=true","app.thongbao.email.schedule-enabled=true",
     "app.ketqua.email.enabled=false","app.ketqua.email.scheduling-enabled=false"})
 @Import(ThongbaoWorkflowTests.NoDelivery.class)
 class ThongbaoReadTests {
@@ -52,7 +51,7 @@ class ThongbaoReadTests {
         try(var c=data.getConnection()){assertThat(c.getMetaData().getURL()).startsWith("jdbc:h2:mem:module15-read");}
         tx=new TransactionTemplate(transactions);
         tx.executeWithoutResult(s->{
-            for(String type:List.of("ThongbaoRead","ThongbaoReadActivation","Emailthongbao","Thongbao","Taikhoan")) em.createQuery("delete from "+type).executeUpdate();
+            for(String type:List.of("ThongbaoRead","ThongbaoReadActivation","Thongbao","Taikhoan")) em.createQuery("delete from "+type).executeUpdate();
             account("read-chief",Vaitro.TRUONGKHOA);account("read-student",Vaitro.SINHVIEN);account("read-student2",Vaitro.SINHVIEN);
             account("read-lecturer",Vaitro.GIANGVIEN);account("read-head",Vaitro.TRUONGBOMON);
             var old=new Thongbao();old.setTieude("Lịch sử");old.setNoidung("Không tính chưa đọc");old.setNguoidangid(accountId("read-chief"));old.setNgaydang(LocalDateTime.of(2025,1,1,8,0));em.persist(old);em.flush();historical=old.getId();
@@ -73,7 +72,7 @@ class ThongbaoReadTests {
         assertThat(count("read-lecturer","GIANGVIEN")).isEqualTo((mask&2)!=0?1:0);
         assertThat(count("read-head","TRUONGBOMON")).isEqualTo((mask&4)!=0?1:0);
         auth("read-chief","TRUONGKHOA");assertThat(reads.bell()).isEqualTo(new ThongbaoBellDTO(0,List.of()));
-        assertThat(jdbc.queryForObject("select count(*) from emailthongbao",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from emailketqua",Long.class)).isZero();
     }
     @Test void independentAccountsDropdownAndDetailGetNeverWriteButPostDecrementsExactlyOnce() throws Exception {
         var notice=create(5);var role=user("read-student").roles("SINHVIEN");

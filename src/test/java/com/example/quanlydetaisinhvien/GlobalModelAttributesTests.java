@@ -52,8 +52,7 @@ class GlobalModelAttributesTests {
     @ParameterizedTest @ValueSource(strings = {"index", "taikhoan-list", "bomon-list", "detai-list",
             "dotdangky-list", "giangvien-list", "sinhvien-list", "nhom-list", "dangkydetai-list",
             "hoidong-list", "diem-list", "ketqua-list", "thongbao-list", "thongbao-detail", "thongbao-form",
-            "morong/timkiem-detai", "morong/timkiem-dotdangky", "morong/timkiem-ketqua", "morong/thongke",
-            "morong/email-thongbao"})
+            "morong/timkiem-detai", "morong/timkiem-dotdangky", "morong/timkiem-ketqua", "morong/thongke"})
     void everyExistingPortalViewUsesTheSameHeaderAttribute(String name) {
         reader();
         when(service.findLatestForHeader()).thenReturn(List.of());

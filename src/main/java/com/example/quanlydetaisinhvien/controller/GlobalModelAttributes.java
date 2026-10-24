@@ -34,8 +34,7 @@ public class GlobalModelAttributes implements WebMvcConfigurer, HandlerIntercept
             "giangvien-list", "sinhvien-list", "nhom-list", "dangkydetai-list",
             "hoidong-list", "diem-list", "ketqua-list",
             "thongbao-list", "thongbao-detail", "thongbao-form",
-            "morong/timkiem-detai", "morong/timkiem-dotdangky", "morong/timkiem-ketqua", "morong/thongke",
-            "morong/email-thongbao");
+            "morong/timkiem-detai", "morong/timkiem-dotdangky", "morong/timkiem-ketqua", "morong/thongke");
     private static final Set<String> NOTICE_READ_ROLES = Set.of(
             "ROLE_TRUONGKHOA", "ROLE_TRUONGBOMON", "ROLE_GIANGVIEN", "ROLE_SINHVIEN");
 

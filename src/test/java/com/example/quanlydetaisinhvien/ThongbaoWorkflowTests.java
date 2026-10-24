@@ -5,7 +5,6 @@ import com.example.quanlydetaisinhvien.entity.*;
 import com.example.quanlydetaisinhvien.repository.*;
 import com.example.quanlydetaisinhvien.service.*;
 import com.example.quanlydetaisinhvien.service.mail.ResultMailSender;
-import com.example.quanlydetaisinhvien.service.notification.NotificationMailSender;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,12 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.url=jdbc:h2:mem:module15-workflow;MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=5000",
         "spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=",
         "spring.jpa.hibernate.ddl-auto=create-drop","spring.sql.init.mode=never",
-        "app.thongbao.email.outbox-enabled=true","app.thongbao.email.delivery-enabled=false","app.thongbao.email.schedule-enabled=false",
         "app.ketqua.email.enabled=false","app.ketqua.email.scheduling-enabled=false"})
 @Import(ThongbaoWorkflowTests.NoDelivery.class)
 class ThongbaoWorkflowTests {
     @TestConfiguration(proxyBeanMethods=false) static class NoDelivery {
-        @Bean @Primary NotificationMailSender noNotificationDelivery() { return message->{throw new AssertionError("No real email allowed in Module 15 tests");}; }
         @Bean @Primary ResultMailSender noResultDelivery() { return message->{throw new AssertionError("No result email allowed");}; }
     }
     @Autowired WebApplicationContext context;
@@ -47,7 +44,7 @@ class ThongbaoWorkflowTests {
     @Autowired PlatformTransactionManager transactions;
     @Autowired ThongbaoService service;
     @Autowired ThongbaoRepository notices;
-    @Autowired EmailthongbaoRepository emails;
+    @Autowired EmailketquaRepository emails;
     @Autowired JdbcTemplate jdbc;
     @Autowired DataSource source;
     MockMvc mvc; TransactionTemplate tx;
@@ -55,7 +52,7 @@ class ThongbaoWorkflowTests {
         try(var connection=source.getConnection()) { assertThat(connection.getMetaData().getURL()).startsWith("jdbc:h2:mem:module15-workflow"); }
         tx=new TransactionTemplate(transactions);
         tx.executeWithoutResult(s->{
-            for(String entity:List.of("Emailthongbao","Thongbao","Sinhvien","Taikhoan")) em.createQuery("delete from "+entity).executeUpdate();
+            for(String entity:List.of("Emailketqua","Thongbao","Sinhvien","Taikhoan")) em.createQuery("delete from "+entity).executeUpdate();
             account("m15-chief",Vaitro.TRUONGKHOA);
             var a=account("m15-student",Vaitro.SINHVIEN);
             var student=new Sinhvien(); student.setTaikhoanid(a.getId()); student.setBomonid(1L); student.setMasinhvien("M15-TEST"); em.persist(student);
@@ -68,7 +65,7 @@ class ThongbaoWorkflowTests {
     }
     void authenticate() { SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated("m15-chief",null,List.of(new SimpleGrantedAuthority("ROLE_TRUONGKHOA")))); }
     ThongbaoFormDTO form(String title) { var f=new ThongbaoFormDTO(); f.setTieude(title); f.setNoidung("Nội dung <script>alert('x')</script>\nTiếng Việt"); f.setRecipientRoles(DoituongThongbao.all()); return f; }
-    @Test void parallelHttpCreateWithOneTokenCommitsOneNoticeAndOneRecipientSet() throws Exception {
+    @Test void parallelHttpCreateWithOneTokenCommitsOneNoticeAndNoResultEmail() throws Exception {
         var session=new MockHttpSession();
         var get=mvc.perform(get("/thongbao/create").session(session).with(user("m15-chief").roles("TRUONGKHOA"))).andReturn();
         String token=(String)get.getModelAndView().getModel().get("submissionToken");
@@ -137,7 +134,7 @@ class ThongbaoWorkflowTests {
         assertThat(edit(created.id(),ThongbaoRevision.of(created),"Không khôi phục")).isEqualTo(404);
         assertThat(notices.count()).isZero(); assertThat(emails.count()).isZero();
     }
-    @Test void simultaneousEditAndDeleteCannotResurrectTheNoticeOrDuplicateOutbox() throws Exception {
+    @Test void simultaneousEditAndDeleteCannotResurrectTheNoticeOrCreateResultEmail() throws Exception {
         var created=service.create(form("Đồng thời sửa và xóa"));
         Callable<Integer> update=()->edit(created.id(),ThongbaoRevision.of(created),"Đã sửa");
         Callable<Integer> delete=()->mvc.perform(post("/thongbao/"+created.id()+"/delete").with(user("m15-chief").roles("TRUONGKHOA")).with(csrf()))
