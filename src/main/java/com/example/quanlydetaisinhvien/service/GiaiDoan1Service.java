@@ -193,7 +193,15 @@ private void validTimes(DotForm f) {
         if(f.getGvhd1()==null)throw new NghiepvuException("Cần ít nhất một giảng viên hướng dẫn");
         List<Long> g=new ArrayList<>();g.add(f.getGvhd1());
         if(f.getGvhd2()!=null){if(f.getGvhd2().equals(f.getGvhd1()))throw new NghiepvuException("Hai GVHD phải khác nhau"); g.add(f.getGvhd2());}
-        for(Long id:g)if(!gv.existsById(id))throw new NghiepvuException("GVHD không tồn tại: " + id);
+        for(Long id:g)if(!gv.existsById(id))throw new NghiepvuException("GVHD không tồn tại: " + id);for (Long id : g) {
+            Giangvien teacher = gv.findById(id)
+                .orElseThrow(() -> new NghiepvuException(
+                    "Giảng viên hướng dẫn không tồn tại"));
+            if (!teacher.getBomonid().equals(f.getBomonid())) {
+                    throw new NghiepvuException(
+                         "GVHD phải thuộc đúng bộ môn của đề tài");
+        }
+    }
         return g;
     }
     public Detai saveDetai(Long id,DeTaiForm f,String username){
