@@ -77,9 +77,8 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         var saved = repository.findById(id).orElseThrow();
         assertThat(saved.getTieude()).isEqualTo("Thông báo mới");
         assertThat(saved.getNguoidangid()).isEqualTo(chief.getId());
-        assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now().plusSeconds(1));
+        assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now(vietnamZone).plusSeconds(1));
         assertThat(repository.findById(existing.getId()).orElseThrow().getTieude()).isEqualTo("Thông báo kiểm thử");
-       assertThat(row.getNgaydang()).isBetween(before,LocalDateTime.now( ZoneId.of("Asia/Ho_Chi_Minh" ).plusSeconds(1));
     }
 
     @Test void chiefEditsOnlyPathIdAndPreservesOriginalAuthorAndDate() throws Exception {
