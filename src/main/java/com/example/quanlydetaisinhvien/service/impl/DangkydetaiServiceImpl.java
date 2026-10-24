@@ -303,29 +303,75 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         repository.deleteById(dangkydetaiid);
     }
 
-    @Override
-    public Dangkydetai duyetDangky(Long dangkydetaiid, boolean chapNhan, String currentUsername) {
-        Dangkydetai dk = repository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+    
+@Override
+public Dangkydetai duyetDangky(
+        Long dangkydetaiid,
+        boolean chapNhan,
+        String currentUsername) {
 
-        Taikhoan approvingAccount = currentUsername == null ? null :
-                taikhoanRepository.findByTendangnhap(currentUsername).orElse(null);
-        if (approvingAccount == null || approvingAccount.getVaitro() != Vaitro.TRUONGKHOA) {
-            throw new org.springframework.security.access.AccessDeniedException(
+    Taikhoan approvingAccount = currentUsername == null
+            ? null
+            : taikhoanRepository
+                .findByTendangnhap(currentUsername)
+                .orElse(null);
+
+    if (approvingAccount == null
+            || approvingAccount.getVaitro() != Vaitro.TRUONGKHOA) {
+        throw new org.springframework.security.access
+                .AccessDeniedException(
                     "Chỉ trưởng khoa được duyệt hoặc từ chối đăng ký đề tài");
-        }
-        if (dk.getTrangthai() != TrangthaiDangkydetai.CHODUYET) {
-            throw new NghiepvuException("Chỉ xử lý đăng ký đang chờ duyệt");
-        }
-
-        if (chapNhan) {
-            boolean daCoNhomKhacDuyet = repository.existsByDetaiidAndTrangthaiAndIdNot(dk.getDetaiid(), TrangthaiDangkydetai.DADUYET, dangkydetaiid);
-            if (daCoNhomKhacDuyet) {
-                throw new NghiepvuException("Đề tài này đã được duyệt cho một nhóm khác rồi!");
-            }
-        }
-
-        dk.setTrangthai(chapNhan ? TrangthaiDangkydetai.DADUYET : TrangthaiDangkydetai.TUCHOI);
-        return repository.save(dk);
     }
+
+    // Xác định đề tài cần xử lý.
+    Long detaiId = repository
+            .findDetaiIdByRegistrationId(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đăng ký đề tài"));
+
+    // Khóa đề tài để các yêu cầu duyệt cùng đề tài
+    // phải được xử lý lần lượt.
+    detaiRepository.findByIdForUpdate(detaiId)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đề tài"));
+
+    // Đọc trạng thái đăng ký mới nhất sau khi có khóa.
+    Dangkydetai dk = repository
+            .findByIdForUpdate(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đăng ký đề tài"));
+
+    if (!detaiId.equals(dk.getDetaiid())) {
+        throw new NghiepvuException(
+                "Thông tin đề tài đăng ký không hợp lệ");
+    }
+
+    if (dk.getTrangthai()
+            != TrangthaiDangkydetai.CHODUYET) {
+        throw new NghiepvuException(
+                "Chỉ xử lý đăng ký đang chờ duyệt");
+    }
+
+    if (chapNhan) {
+        boolean daCoNhomKhac = repository
+                .findApprovedForUpdate(
+                    detaiId,
+                    TrangthaiDangkydetai.DADUYET)
+                .stream()
+                .anyMatch(x -> !x.getId()
+                        .equals(dangkydetaiid));
+
+        if (daCoNhomKhac) {
+            throw new NghiepvuException(
+                "Đề tài này đã được duyệt cho nhóm khác");
+        }
+    }
+
+    dk.setTrangthai(chapNhan
+            ? TrangthaiDangkydetai.DADUYET
+            : TrangthaiDangkydetai.TUCHOI);
+
+    return repository.save(dk);
+}
+
 }
