@@ -1,4 +1,4 @@
-USE Quanlydetaisinhvien;
+
 CREATE TABLE phanconghoidong (
     Dangkydetaiid BIGINT NOT NULL,
     Hinhthuc ENUM('COHOIDONG', 'KHONGHOIDONG') NOT NULL,
