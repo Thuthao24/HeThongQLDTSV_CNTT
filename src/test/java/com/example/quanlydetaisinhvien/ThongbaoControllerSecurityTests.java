@@ -11,7 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.*;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
@@ -79,7 +79,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         assertThat(saved.getNguoidangid()).isEqualTo(chief.getId());
         assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now().plusSeconds(1));
         assertThat(repository.findById(existing.getId()).orElseThrow().getTieude()).isEqualTo("Thông báo kiểm thử");
-        assertThat(row.getNgaydang()).isBetween(before,LocalDateTime.now(vietnamZone).plusSeconds(1)
+       assertThat(row.getNgaydang()).isBetween(before,LocalDateTime.now( ZoneId.of("Asia/Ho_Chi_Minh" ).plusSeconds(1));
     }
 
     @Test void chiefEditsOnlyPathIdAndPreservesOriginalAuthorAndDate() throws Exception {
