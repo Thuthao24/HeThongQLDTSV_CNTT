@@ -17,6 +17,8 @@ services:
     build: .
     ports:
       - "${APP_PORT:-8080}:8080"
+    volumes:
+      - uploads_data:/app/uploads
     environment:
       DB_URL: jdbc:mysql://db:3306/Quanlydetaisinhvien?useUnicode=true&characterEncoding=UTF-8&connectionTimeZone=Asia/Ho_Chi_Minh
       DB_USERNAME: root
@@ -25,9 +27,11 @@ services:
       KETQUA_EMAIL_ENABLED: "false"
       THONGBAO_EMAIL_DELIVERY_ENABLED: "false"
       THONGBAO_EMAIL_OUTBOX_ENABLED: "false"
+      UPLOAD_DIR: /app/uploads/baocao
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 volumes:
   mysql_data:
+  uploads_data:
