@@ -1,6 +1,7 @@
 
 name: Java 26 Build and Test
 
+
 on:
   push:
     branches:
@@ -8,6 +9,8 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
 
 jobs:
   build:
