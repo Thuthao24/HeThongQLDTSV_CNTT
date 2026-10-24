@@ -5,7 +5,10 @@ import com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
-
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 public interface DangkydetaiRepository extends JpaRepository<Dangkydetai, Long> {
 
     Optional<Dangkydetai> findByNhomid(Long nhomid);
@@ -56,4 +59,16 @@ public interface DangkydetaiRepository extends JpaRepository<Dangkydetai, Long> 
         Long lecturerId,
         @org.springframework.data.repository.query.Param("approved")
         TrangthaiDangkydetai approved);
+        
+    @Query("""select d.detaiid from Dangkydetai d  where d.id = :id """)
+    Optional<Long> findDetaiIdByRegistrationId( @Param("id") Long id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""select d from Dangkydetai d where d.id = :id """)
+    Optional<Dangkydetai> findByIdForUpdate(
+        @Param("id") Long id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""select d from Dangkydetai d  where d.detaiid = :detaiId and d.trangthai = :trangthai""")
+    List<Dangkydetai> findApprovedForUpdate(
+        @Param("detaiId") Long detaiId,
+        @Param("trangthai") TrangthaiDangkydetai trangthai);
 }
