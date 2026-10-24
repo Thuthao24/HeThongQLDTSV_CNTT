@@ -64,7 +64,8 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
     }
 
     @Test void chiefCreatesViaPostWithoutTrustingForgedMetadata() throws Exception {
-        var before = LocalDateTime.now().minusSeconds(1);
+        ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
+        var before = LocalDateTime.now(vietnamZone).minusSeconds(1);
         var response = mvc.perform(post("/thongbao").with(user("notice-chief").roles("TRUONGKHOA")).with(csrf())
                 .param("recipientRoles","SINHVIEN","GIANGVIEN","TRUONGBOMON").param("tieude", "  Thông báo mới  ").param("noidung", "Nội dung mới")
                 .param("id", existing.getId().toString()).param("nguoidangid", "999")
@@ -78,6 +79,7 @@ class ThongbaoControllerSecurityTests extends ThongbaoTestSupport {
         assertThat(saved.getNguoidangid()).isEqualTo(chief.getId());
         assertThat(saved.getNgaydang()).isBetween(before, LocalDateTime.now().plusSeconds(1));
         assertThat(repository.findById(existing.getId()).orElseThrow().getTieude()).isEqualTo("Thông báo kiểm thử");
+        assertThat(row.getNgaydang()).isBetween(before,LocalDateTime.now(vietnamZone).plusSeconds(1)
     }
 
     @Test void chiefEditsOnlyPathIdAndPreservesOriginalAuthorAndDate() throws Exception {
