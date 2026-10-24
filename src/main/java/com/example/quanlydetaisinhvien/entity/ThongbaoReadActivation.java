@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "thongbaodocmoc")
 public class ThongbaoReadActivation {
     @Id @Column(name = "Id") private Integer id;
-    @Column(name = "thongbaoidmoc", nullable = false, updatable = false) private Long noticeBoundary;
+    @Column(name = "Thongbaoidmoc", nullable = false, updatable = false) private Long noticeBoundary;
     @Column(name = "Ngaykichhoat", nullable = false, updatable = false) private LocalDateTime activatedAt;
     protected ThongbaoReadActivation() {}
     public ThongbaoReadActivation(long boundary, LocalDateTime at) { id=1;noticeBoundary=boundary;activatedAt=at; }
