@@ -13,7 +13,7 @@
 </div>
 <section class="panel-card">
 <div class="table-toolbar">
-  <form class="search-box" th:action="@{/taikhoan}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+  <form class="search-box"th:action="@{/taikhoan/quanly}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
 </div>
 <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đăng nhập</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody data-table-body>
@@ -21,9 +21,9 @@
 <tr th:if="${#lists.isEmpty(items)}"><td colspan="6"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
 </tbody></table></div>
 <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
- <a th:if="${pageData.hasPrevious()}" th:href="@{/taikhoan(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+ <a th:if="${pageData.hasPrevious()}" th:href="@{/taikhoan/quanly(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
  <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
- <a th:if="${pageData.hasNext()}" th:href="@{/taikhoan(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
+ <a th:if="${pageData.hasNext()}" th:href="@{/taikhoan/quanly(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
 </nav>
 </section>
 </main></div></div><script th:src="@{/js/app.js}"></script></body></html>
