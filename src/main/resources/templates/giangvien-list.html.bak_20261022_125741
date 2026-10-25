@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Giảng viên</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div class="app-shell">
+<div th:replace="~{fragments :: portalHeader}"></div>
+<div class="portal-body">
+<div th:replace="~{fragments :: sidebar('giangvien')}"></div>
+<main class="main-panel">
+<div class="page-heading">
+  <div><div class="breadcrumb">Cổng thông tin đào tạo / Giảng viên</div><h1>GIẢNG VIÊN</h1><p>Danh sách giảng viên và bộ môn trực thuộc.</p></div>
+  <a th:if="${vaitro == 'TRUONGKHOA'}" class="btn btn-primary" th:href="@{/quanly/danhmuc/giangvien/tao}">+ Thêm giảng viên</a>
+</div>
+<section class="panel-card"><p th:if="${successMessage}" style="color:green;padding:10px" th:text="${successMessage}"></p><p th:if="${errorMessage}" style="color:#b42318;padding:10px" th:text="${errorMessage}"></p>
+<div class="table-toolbar">
+  <form class="search-box" th:action="@{/giangvien}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã GV</th><th>Họ tên / Tài khoản</th><th>Bộ môn</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.magiangvien}">---</td><td th:text="${accountNames[item.taikhoanid] ?: "—"}">---</td><td th:text="${departmentNames[item.bomonid] ?: "—"}">---</td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:115px"><a th:href="@{/quanly/danhmuc/giangvien/{id}/sua(id=${item.id})}">Sửa</a> <form style="display:inline" th:action="@{/quanly/danhmuc/giangvien/{id}/xoa(id=${item.id})}" method="post" onsubmit="return confirm('Xác nhận xóa?')"><button type="submit">Xóa</button></form></td></tr>
+<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 5 : 4}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+</tbody></table></div>
+<nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+ <a th:if="${pageData.hasPrevious()}" th:href="@{/giangvien(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+ <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
+ <a th:if="${pageData.hasNext()}" th:href="@{/giangvien(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
+</nav>
+</section>
+</main></div></div><script th:src="@{/js/app.js}"></script></body></html>

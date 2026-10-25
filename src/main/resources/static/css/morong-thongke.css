@@ -1,0 +1,711 @@
+/* ==========================================================================
+   MODULE 17: GIAI ĐOẠN 2 - DASHBOARD THỐNG KÊ (HCMUTE PORTAL STYLES)
+   Namespace: .morong-thongke-*
+   Tương thích chuẩn HCMUTE Portal, responsive desktop/tablet/mobile
+   ========================================================================== */
+
+/* ===== Header & Export Button ===== */
+.morong-thongke-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.morong-thongke-export-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.morong-thongke-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.morong-thongke-export-btn.disabled,
+.morong-thongke-export-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+
+.morong-thongke-export-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+  min-width: 170px;
+  z-index: 100;
+  display: none;
+  overflow: hidden;
+}
+
+.morong-thongke-export-wrap:hover .morong-thongke-export-menu,
+.morong-thongke-export-wrap.is-open .morong-thongke-export-menu {
+  display: block;
+}
+
+.morong-thongke-export-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #263550;
+  text-decoration: none;
+  transition: background .12s ease;
+}
+
+.morong-thongke-export-item:hover {
+  background: #f0f7fb;
+  color: #06649a;
+}
+
+.morong-thongke-export-item .export-icon {
+  font-size: 13px;
+}
+
+/* ===== Filter Card ===== */
+.morong-thongke-filter {
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.morong-thongke-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.morong-thongke-filter-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1c365d;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: .02em;
+}
+
+.morong-thongke-filter-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.morong-thongke-filter-field {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.morong-thongke-filter-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2b4263;
+}
+
+.morong-thongke-filter-control {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid #c2cfdc;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #263550;
+  background: #fff;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  box-sizing: border-box;
+}
+
+.morong-thongke-filter-control:focus {
+  border-color: #06649a;
+  box-shadow: 0 0 0 2px rgba(6, 100, 154, .12);
+}
+
+.morong-thongke-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.morong-thongke-filter-hint {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ===== KPI Cards Grid ===== */
+.morong-thongke-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.morong-thongke-kpi-card {
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid #06649a;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.morong-thongke-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .1);
+}
+
+.morong-thongke-kpi-card.blue   { border-left-color: #06649a; }
+.morong-thongke-kpi-card.teal   { border-left-color: #0d9488; }
+.morong-thongke-kpi-card.purple { border-left-color: #7c3aed; }
+.morong-thongke-kpi-card.orange { border-left-color: #ea580c; }
+.morong-thongke-kpi-card.green  { border-left-color: #16a34a; }
+.morong-thongke-kpi-card.amber  { border-left-color: #d97706; }
+
+.morong-thongke-kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.morong-thongke-kpi-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.morong-thongke-kpi-value {
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #1c365d;
+  font-variant-numeric: tabular-nums;
+  margin: 3px 0;
+}
+
+.morong-thongke-kpi-card.blue   .morong-thongke-kpi-value { color: #06649a; }
+.morong-thongke-kpi-card.teal   .morong-thongke-kpi-value { color: #0d9488; }
+.morong-thongke-kpi-card.purple .morong-thongke-kpi-value { color: #7c3aed; }
+.morong-thongke-kpi-card.orange .morong-thongke-kpi-value { color: #ea580c; }
+.morong-thongke-kpi-card.green  .morong-thongke-kpi-value { color: #16a34a; }
+.morong-thongke-kpi-card.amber  .morong-thongke-kpi-value { color: #d97706; }
+
+.morong-thongke-kpi-note {
+  font-size: 10px;
+  color: #78889b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.morong-thongke-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.morong-thongke-kpi-card.blue   .morong-thongke-kpi-icon { background: #e0f2fe; color: #0284c7; }
+.morong-thongke-kpi-card.teal   .morong-thongke-kpi-icon { background: #ccfbf1; color: #0f766e; }
+.morong-thongke-kpi-card.purple .morong-thongke-kpi-icon { background: #ede9fe; color: #6d28d9; }
+.morong-thongke-kpi-card.orange .morong-thongke-kpi-icon { background: #ffedd5; color: #c2410c; }
+.morong-thongke-kpi-card.green  .morong-thongke-kpi-icon { background: #dcfce7; color: #15803d; }
+.morong-thongke-kpi-card.amber  .morong-thongke-kpi-icon { background: #fef3c7; color: #b45309; }
+
+/* ===== In-Depth / Anomaly Metrics Grid ===== */
+.morong-thongke-sub-section {
+  margin-bottom: 22px;
+}
+
+.morong-thongke-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.morong-thongke-sub-title {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.morong-thongke-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.morong-thongke-sub-card {
+  background: #fbfcfe;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-left: 3px solid #94a3b8;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.morong-thongke-sub-card:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.morong-thongke-sub-card.warning {
+  border-left-color: #f59e0b;
+  background: #fffdfa;
+}
+
+.morong-thongke-sub-card.info {
+  border-left-color: #0284c7;
+  background: #f8fafc;
+}
+
+.morong-thongke-sub-card.notice {
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.morong-thongke-sub-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.morong-thongke-sub-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.morong-thongke-sub-value {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0;
+}
+
+.morong-thongke-sub-card.warning .morong-thongke-sub-value { color: #d97706; }
+.morong-thongke-sub-card.info .morong-thongke-sub-value { color: #0284c7; }
+.morong-thongke-sub-card.notice .morong-thongke-sub-value { color: #475569; }
+
+.morong-thongke-sub-note {
+  font-size: 9.5px;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.morong-thongke-sub-icon {
+  font-size: 18px;
+  opacity: 0.8;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ===== Charts Grid ===== */
+.morong-thongke-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.morong-thongke-chart-card {
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.morong-thongke-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.morong-thongke-chart-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c365d;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.morong-thongke-chart-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+.morong-thongke-chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+/* Horizontal Bar Item */
+.morong-thongke-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.morong-thongke-bar-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.morong-thongke-bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #2b4263;
+}
+
+.morong-thongke-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.morong-thongke-dot.blue    { background: #06649a; }
+.morong-thongke-dot.green   { background: #16a34a; }
+.morong-thongke-dot.amber   { background: #f59e0b; }
+.morong-thongke-dot.red     { background: #dc2626; }
+.morong-thongke-dot.teal    { background: #0d9488; }
+.morong-thongke-dot.purple  { background: #7c3aed; }
+.morong-thongke-dot.muted   { background: #94a3b8; }
+
+.morong-thongke-bar-stat {
+  font-size: 11px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.morong-thongke-bar-stat b {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.morong-thongke-bar-track {
+  width: 100%;
+  height: 9px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.morong-thongke-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .4s ease;
+  min-width: 2px;
+}
+
+.morong-thongke-bar-fill.blue    { background: linear-gradient(90deg, #0284c7, #06649a); }
+.morong-thongke-bar-fill.green   { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.morong-thongke-bar-fill.amber   { background: linear-gradient(90deg, #fbbf24, #d97706); }
+.morong-thongke-bar-fill.red     { background: linear-gradient(90deg, #f87171, #dc2626); }
+.morong-thongke-bar-fill.teal    { background: linear-gradient(90deg, #2dd4bf, #0d9488); }
+.morong-thongke-bar-fill.purple  { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+
+/* Comparative Ratio Meter (Đã công bố vs Chưa công bố) */
+.morong-thongke-ratio-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.morong-thongke-ratio-meter {
+  width: 100%;
+  height: 14px;
+  background: #e2e8f0;
+  border-radius: 7px;
+  overflow: hidden;
+  display: flex;
+}
+
+.morong-thongke-ratio-segment {
+  height: 100%;
+  transition: width .4s ease;
+}
+
+.morong-thongke-ratio-segment.published {
+  background: #16a34a;
+}
+
+.morong-thongke-ratio-segment.unpublished {
+  background: #f59e0b;
+}
+
+.morong-thongke-ratio-legend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.morong-thongke-ratio-card {
+  padding: 10px 12px;
+  border-radius: 3px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.morong-thongke-ratio-card.published {
+  border-left: 3px solid #16a34a;
+}
+
+.morong-thongke-ratio-card.unpublished {
+  border-left: 3px solid #f59e0b;
+}
+
+.morong-thongke-ratio-title {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.morong-thongke-ratio-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.morong-thongke-ratio-percent {
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* Empty State for Charts */
+.morong-thongke-chart-empty {
+  padding: 30px 16px;
+  text-align: center;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.morong-thongke-chart-empty-icon {
+  font-size: 26px;
+  opacity: 0.6;
+}
+
+.morong-thongke-chart-empty p {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ===== Table Card ===== */
+.morong-thongke-table-card {
+  background: #fff;
+  border: 1px solid #d5d5d5;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.morong-thongke-table-header {
+  padding: 14px 18px;
+  background: #fbfcfd;
+  border-bottom: 1px solid #edf2f7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.morong-thongke-table-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1c365d;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: .02em;
+}
+
+.morong-thongke-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.morong-thongke-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.morong-thongke-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #cbd5e1;
+  font-size: 10px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.morong-thongke-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #263550;
+  vertical-align: middle;
+}
+
+.morong-thongke-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.morong-thongke-table tbody tr:hover {
+  background: #edf5fa;
+}
+
+.morong-thongke-table .num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.morong-thongke-table th.num-col {
+  text-align: right;
+}
+
+.morong-thongke-table .center-col {
+  text-align: center;
+}
+
+.morong-thongke-table th.center-col {
+  text-align: center;
+}
+
+.morong-thongke-table tfoot td {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+  border-top: 2px solid #cbd5e1;
+}
+
+/* ===== Responsive Breakpoints ===== */
+@media (max-width: 1100px) {
+  .morong-thongke-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .morong-thongke-sub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .morong-thongke-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .morong-thongke-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .morong-thongke-sub-grid {
+    grid-template-columns: 1fr;
+  }
+  .morong-thongke-filter-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .morong-thongke-filter-actions {
+    justify-content: flex-start;
+  }
+  .morong-thongke-ratio-legend {
+    grid-template-columns: 1fr;
+  }
+}

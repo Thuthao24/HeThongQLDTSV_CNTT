@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tổng quan - Quản lý đề tài</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('dashboard')}"></div>
+        <main class="main-panel">
+            <div class="role-hero">
+                <div>
+                    <div class="breadcrumb">HCMUTE / Không gian làm việc</div>
+                    <p class="role-eyebrow" th:text="${vaitro == 'TRUONGKHOA' ? 'QUẢN TRỊ KHOA' : (vaitro == 'TRUONGBOMON' ? 'QUẢN LÝ BỘ MÔN' : (vaitro == 'GIANGVIEN' ? 'GIẢNG VIÊN' : 'SINH VIÊN'))}">KHÔNG GIAN LÀM VIỆC</p>
+                    <h1 th:text="${vaitro == 'TRUONGKHOA' ? 'Tổng quan quản lý khoa' : (vaitro == 'TRUONGBOMON' ? 'Điều hành bộ môn' : (vaitro == 'GIANGVIEN' ? 'Công việc giảng viên' : 'Học tập và đề tài của tôi'))}">Tổng quan</h1>
+                    <p th:text="${vaitro == 'TRUONGKHOA' ? 'Theo dõi đợt đăng ký, đề tài, hội đồng và kết quả.' : (vaitro == 'TRUONGBOMON' ? 'Theo dõi đề tài, giảng viên, sinh viên và công tác đánh giá.' : (vaitro == 'GIANGVIEN' ? 'Đề xuất đề tài, xem hội đồng và chấm điểm khi được phân công.' : 'Quản lý nhóm, đăng ký đề tài, nộp báo cáo và tra cứu kết quả.'))}">Các chức năng phù hợp quyền truy cập.</p>
+                </div>
+                <div class="role-hero-mark" aria-hidden="true">HCMUTE</div>
+            </div>
+
+            <section class="workspace-section" aria-label="Truy cập công việc">
+                <div class="workspace-heading"><h2>Chức năng của bạn</h2><p>Chọn công việc cần thực hiện</p></div>
+                <div class="role-actions">
+                    <a th:if="${vaitro == 'TRUONGKHOA'}" th:href="@{/dotdangky}" class="role-action"><span class="role-action-icon">▦</span><strong>Quản lý đợt</strong><small>Thời gian & trạng thái</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/detai}" class="role-action"><span class="role-action-icon">▤</span><strong>Đề tài</strong><small>Danh sách & quy trình</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/dangkydetai}" class="role-action"><span class="role-action-icon">✓</span><strong>Duyệt sinh viên</strong><small>Xét duyệt đăng ký</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" th:href="@{/giangvien}" class="role-action"><span class="role-action-icon">♙</span><strong>Giảng viên</strong><small>Tra cứu danh mục</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" th:href="@{/sinhvien}" class="role-action"><span class="role-action-icon">♧</span><strong>Sinh viên</strong><small>Hồ sơ sinh viên</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/hoidong}" class="role-action"><span class="role-action-icon">◎</span><strong>Hội đồng</strong><small>Danh sách hội đồng</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/diem}" class="role-action"><span class="role-action-icon">★</span><strong>Chấm điểm</strong><small>Theo phân công</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA'}" th:href="@{/ketqua}" class="role-action"><span class="role-action-icon">✓</span><strong>Công bố kết quả</strong><small>Quản lý kết quả</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA'}" th:href="@{/morong/thongke}" class="role-action"><span class="role-action-icon">▥</span><strong>Thống kê</strong><small>Báo cáo tổng hợp</small></a>
+                    <a th:if="${vaitro == 'SINHVIEN'}" th:href="@{/nhom}" class="role-action"><span class="role-action-icon">♧</span><strong>Nhóm của tôi</strong><small>Thành viên & nhóm trưởng</small></a>
+                    <a th:if="${vaitro == 'SINHVIEN'}" th:href="@{/dangkydetai}" class="role-action"><span class="role-action-icon">▤</span><strong>Đăng ký đề tài</strong><small>Đăng ký giai đoạn 2</small></a>
+                    <a th:if="${vaitro == 'SINHVIEN'}" th:href="@{/nopbaocao}" class="role-action"><span class="role-action-icon">⇧</span><strong>Nộp báo cáo</strong><small>Nhóm trưởng thực hiện</small></a>
+                    <a th:if="${vaitro == 'SINHVIEN'}" th:href="@{/ketqua}" class="role-action"><span class="role-action-icon">✓</span><strong>Kết quả của tôi</strong><small>Tra cứu điểm đã công bố</small></a>
+                    <a th:href="@{/thongbao}" class="role-action"><span class="role-action-icon">◉</span><strong>Thông báo</strong><small>Tin từ Khoa</small></a>
+                </div>
+            </section>
+
+            <section class="workspace-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}">
+                <div class="workspace-heading"><h2>Số liệu tổng quan</h2><p>Thống kê toàn hệ thống, không phải số liệu cá nhân</p></div>
+                <div class="stats-grid">
+                    <a class="stat-card" th:href="@{/detai}"><span>ĐỀ TÀI</span><strong th:text="${soDetai}">0</strong><small>Danh sách đề tài</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" class="stat-card" th:href="@{/sinhvien}"><span>SINH VIÊN</span><strong th:text="${soSinhvien}">0</strong><small>Hồ sơ toàn hệ thống</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" class="stat-card" th:href="@{/giangvien}"><span>GIẢNG VIÊN</span><strong th:text="${soGiangvien}">0</strong><small>Danh mục giảng viên</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA'}" class="stat-card" th:href="@{/dotdangky}"><span>ĐỢT ĐĂNG KÝ</span><strong th:text="${soDotdangky}">0</strong><small>Môn học · NCKH · TLCN · KLTN</small></a>
+                    <a class="stat-card" th:href="@{/hoidong}"><span>HỘI ĐỒNG</span><strong th:text="${soHoidong}">0</strong><small>Danh sách hội đồng</small></a>
+                </div>
+            </section>
+            <section class="workspace-section" th:if="${vaitro == 'SINHVIEN'}">
+                <div class="student-notice"><strong>Quy trình thực hiện đề tài</strong><p>1. Tạo hoặc tham gia nhóm 3–5 sinh viên → 2. Nhóm trưởng đăng ký đề tài đã công bố → 3. Nộp báo cáo → 4. Xem kết quả.</p><small>Chỉ nhóm trưởng được thực hiện đăng ký và nộp báo cáo theo quy định.</small></div>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Giảng viên phản biện</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .alert-box {
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .alert-success { background: #edf8f3; color: #1e7e54; border: 1px solid #c3e6d6; }
+        .alert-danger { background: #fdf0f0; color: #cb2d3e; border: 1px solid #f8c9cd; }
+        .gvhd-tag {
+            display: inline-block;
+            font-size: 11px;
+            background: #fff8e1;
+            color: #b78103;
+            border: 1px solid #ffe082;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .gvpb-tag {
+            display: inline-block;
+            font-size: 11px;
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        .valid-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .btn-sm { padding: 4px 8px; font-size: 10px; min-height: 24px; border-radius: 2px; text-decoration: none; display: inline-block; }
+        .btn-delete { background: #feebe8; color: #c9361a; border: 1px solid #f9c2b9; cursor: pointer; }
+        .btn-delete:hover { background: #c9361a; color: #fff; }
+        .action-cell { white-space: nowrap; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('phanbien')}"></div>
+        <main class="main-panel">
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">Cổng thông tin đào tạo / Quản lý đề tài / Giảng viên phản biện</div>
+                    <h1>GIẢNG VIÊN PHẢN BIỆN</h1>
+                    <p>Phân công giảng viên phản biện cho các đề tài đăng ký.</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a th:href="@{/phanbien/them}" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center;">
+                        + Phân công GVPB mới
+                    </a>
+                    <a th:href="@{/dangkydetai}" class="btn" style="background:#fff; color:#06649a; border:1px solid #7cbfe6; text-decoration:none; display:inline-flex; align-items:center;">
+                        Xem Đăng ký đề tài
+                    </a>
+                </div>
+            </div>
+
+            <!-- Thông báo flash -->
+            <div th:if="${successMessage}" class="alert-box alert-success" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="alert-box alert-danger" th:text="${errorMessage}"></div>
+
+            <section class="panel-card">
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <span>🔍</span>
+                        <input type="search" data-table-search placeholder="Tìm kiếm theo đề tài, nhóm, GVHD, GVPB...">
+                    </div>
+                    <div class="record-count">
+                        <b th:text="${#lists.size(items)}">0</b> lượt phân công
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 50px;">ID</th>
+                            <th>Tên đề tài & Đợt</th>
+                            <th>Nhóm SV</th>
+                            <th>Giảng viên hướng dẫn (GVHD)</th>
+                            <th>Giảng viên phản biện (GVPB)</th>
+                            <th style="width: 100px;">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody data-table-body>
+                        <tr th:each="item : ${items}">
+                            <td th:text="${item.id}">1</td>
+                            <td>
+                                <strong th:text="${item.tendetai != null ? item.tendetai : ('Đề tài ĐK #' + item.dangkydetaiid)}">Tên đề tài</strong>
+                                <div style="font-size: 11px; color: #64748b;" th:if="${item.tendot}" th:text="'Đợt: ' + ${item.tendot}">Đợt KLTN</div>
+                            </td>
+                            <td>
+                                <span class="badge" th:text="${item.tennhom != null ? item.tennhom : '---'}">Nhóm</span>
+                            </td>
+                            <td>
+                                <span class="gvhd-tag" th:text="${item.danhsachGvhd != null && !item.danhsachGvhd.isBlank() ? item.danhsachGvhd : 'Chưa có GVHD'}">GVHD</span>
+                            </td>
+                            <td>
+                                <span class="gvpb-tag" th:text="${item.tengiangvien != null ? item.tengiangvien + ' (' + item.magiangvien + ')' : item.magiangvien}">GVPB</span>
+                                <div style="font-size: 11px; color: #64748b;" th:if="${item.email}" th:text="${item.email}">email</div>
+                            </td>
+                            <td class="action-cell">
+                                <th:block th:if="${!item.daCoDiem and !item.daCongBo}">
+                                    <form th:action="@{/phanbien/xoa/{id}(id=${item.id})}" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phân công phản biện này không?');" style="display:inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                        <button type="submit" class="btn-sm btn-delete">Xóa</button>
+                                    </form>
+                                </th:block>
+                                <span th:if="${item.daCongBo}" class="badge badge-muted" style="font-size:10px;">Đã công bố</span>
+                                <span th:if="${!item.daCongBo and item.daCoDiem}" class="badge badge-muted" style="font-size:10px;">Đã có điểm</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(items)}">
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <strong>Chưa có phân công phản biện</strong>
+                                    <span>Danh sách hiện chưa có bản ghi phân công phản biện nào.</span>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

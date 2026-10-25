@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title>Thông tin cá nhân</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .profile-card {
+            padding: 24px;
+        }
+        .profile-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .profile-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 16px;
+        }
+        .profile-item strong {
+            display: block;
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .profile-item span {
+            font-weight: 600;
+            color: #1e293b;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <div th:replace="~{fragments :: sidebar('canhan')}">
+        </div>
+
+        <main class="main-panel">
+
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo / Tài khoản
+                    </div>
+
+                    <h1>THÔNG TIN CÁ NHÂN</h1>
+
+                    <p>
+                        Thông tin của tài khoản đang đăng nhập.
+                    </p>
+                </div>
+            </div>
+
+            <section class="panel-card profile-card">
+
+                <div class="profile-grid">
+
+                    <div class="profile-item">
+                        <strong>Mã tài khoản</strong>
+                        <span th:text="${profile.id}">—</span>
+                    </div>
+
+                    <div class="profile-item">
+                        <strong>Họ và tên</strong>
+                        <span th:text="${profile.hoten}">—</span>
+                    </div>
+
+                    <div class="profile-item">
+                        <strong>Tên đăng nhập</strong>
+                        <span th:text="${profile.tendangnhap}">—</span>
+                    </div>
+
+                    <div class="profile-item">
+                        <strong>Email</strong>
+                        <span th:text="${profile.email ?: 'Chưa cập nhật'}">
+                            —
+                        </span>
+                    </div>
+
+                    <div class="profile-item">
+                        <strong>Vai trò</strong>
+
+                        <span th:switch="${profile.vaitro}">
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).TRUONGKHOA}">
+                                Trưởng khoa
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).TRUONGBOMON}">
+                                Trưởng bộ môn
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).GIANGVIEN}">
+                                Giảng viên
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).SINHVIEN}">
+                                Sinh viên
+                            </span>
+                            <span th:case="*">Chưa xác định</span>
+                        </span>
+                    </div>
+
+                    <div class="profile-item">
+                        <strong>Trạng thái</strong>
+                        <span th:text="${profile.kichhoat == true
+                            ? 'Đang hoạt động'
+                            : 'Tạm khóa'}">
+                            —
+                        </span>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>
+
