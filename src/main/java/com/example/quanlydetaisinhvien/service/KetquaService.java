@@ -16,6 +16,7 @@ public interface KetquaService extends CrudService<Ketqua, Long> {
     void phanCongHoiDong(Long ketquaid, HinhthucDanhgia hinhthuc, Long hoidongid);
     Map<Long, KetquaPublicationInfo> publicationInfo(List<Ketqua> results);
 
+    List<KetquaDoiChieuDto> findDoiChieuDto(List<Ketqua> results);
     List<KetquaDoiChieuDto> findAllDoiChieuDto();
     void tinhLaiKetQua(Long dangkydetaiid);
     void tinhLaiTatCaKetQua();

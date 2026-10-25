@@ -149,14 +149,52 @@ public class KetquaServiceImpl implements KetquaService {
     @Transactional(readOnly = true)
     public List<KetquaDoiChieuDto> findAllDoiChieuDto() {
         requireTruongKhoa();
-        List<Ketqua> ketquas = repository.findAll();
+        return findDoiChieuDto(repository.findAll());
+    }
 
-        Map<Long, Dangkydetai> dkMap = dangkydetaiRepository.findAll().stream()
+    @Override
+    @Transactional(readOnly = true)
+    public List<KetquaDoiChieuDto> findDoiChieuDto(List<Ketqua> ketquas) {
+        requireTruongKhoa();
+        if (ketquas == null || ketquas.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> dkIds = ketquas.stream()
+                .map(Ketqua::getDangkydetaiid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Dangkydetai> dangKyList = dkIds.isEmpty() ? List.of() : dangkydetaiRepository.findAllById(dkIds);
+        Map<Long, Dangkydetai> dkMap = dangKyList.stream()
                 .collect(Collectors.toMap(Dangkydetai::getId, dk -> dk, (a, b) -> a));
-        Map<Long, Detai> dtMap = detaiRepository.findAll().stream()
+
+        Set<Long> dtIds = dangKyList.stream()
+                .map(Dangkydetai::getDetaiid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Detai> dtMap = dtIds.isEmpty() ? Map.of() : detaiRepository.findAllById(dtIds).stream()
                 .collect(Collectors.toMap(Detai::getId, dt -> dt, (a, b) -> a));
-        Map<Long, Nhomsinhvien> nhomMap = nhomsinhvienRepository.findAll().stream()
+
+        Set<Long> nhomIds = dangKyList.stream()
+                .map(Dangkydetai::getNhomid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Nhomsinhvien> nhomMap = nhomIds.isEmpty() ? Map.of() : nhomsinhvienRepository.findAllById(nhomIds).stream()
                 .collect(Collectors.toMap(Nhomsinhvien::getId, nh -> nh, (a, b) -> a));
+
+        // Batch query diem theo cac dangkydetaiid voi chunk size toi da 500
+        List<Diem> allDiems = new ArrayList<>();
+        if (!dkIds.isEmpty()) {
+            List<Long> idList = new ArrayList<>(dkIds);
+            int batchSize = 500;
+            for (int i = 0; i < idList.size(); i += batchSize) {
+                List<Long> batch = idList.subList(i, Math.min(i + batchSize, idList.size()));
+                allDiems.addAll(diemRepository.findByDangkydetaiidIn(batch));
+            }
+        }
+        Map<Long, List<Diem>> diemByDkMap = allDiems.stream()
+                .collect(Collectors.groupingBy(Diem::getDangkydetaiid));
 
         List<KetquaDoiChieuDto> dtos = new ArrayList<>();
 
@@ -180,7 +218,7 @@ public class KetquaServiceImpl implements KetquaService {
                 dto.setTennhom("---");
             }
 
-            List<Diem> dsDiem = diemRepository.findByDangkydetaiid(kq.getDangkydetaiid());
+            List<Diem> dsDiem = diemByDkMap.getOrDefault(kq.getDangkydetaiid(), List.of());
             dto.setSodiemthanhphan(dsDiem.size());
             if (!dsDiem.isEmpty()) {
                 BigDecimal tong = dsDiem.stream()
