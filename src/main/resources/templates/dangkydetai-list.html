@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng ký đề tài</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+  <div th:replace="~{fragments :: portalHeader}"></div>
+  <div class="portal-body">
+    <div th:replace="~{fragments :: sidebar('dangkydetai')}"></div>
+    <main class="main-panel">
+
+      <div class="page-heading">
+        <div>
+          <div class="breadcrumb">Cổng thông tin đào tạo / Đăng ký đề tài</div>
+          <h1>ĐĂNG KÝ ĐỀ TÀI</h1>
+          <p>Nhóm sinh viên đăng ký đề tài đã công bố trong đợt đăng ký. Mỗi nhóm chỉ được đăng ký 01 đề tài.</p>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <div th:if="${successMessage}" class="alert-box alert-success">
+        <span th:text="${successMessage}">Thao tác thành công!</span>
+      </div>
+      <div th:if="${errorMessage}" class="alert-box alert-error">
+        <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+      </div>
+
+      <!-- TRƯỜNG HỢP 1: Sinh viên chưa có nhóm -->
+      <div th:if="${vaitro == 'SINHVIEN' && !daCoNhom}" class="panel-card" style="margin-bottom: 20px; padding: 24px; text-align: center;">
+        <div class="empty-state">
+          <strong style="font-size: 16px; color: #1e293b;">Bạn chưa tham gia nhóm sinh viên nào</strong>
+          <span style="display: block; margin: 8px 0 16px 0; color: #64748b;">
+            Theo quy định, bạn cần tham gia một nhóm sinh viên (từ 3 đến 5 thành viên) trước khi có thể đăng ký đề tài.
+          </span>
+          <a th:href="@{/nhom}" class="btn btn-primary" style="text-decoration: none;">Tạo hoặc tham gia nhóm ngay</a>
+        </div>
+      </div>
+
+      <!-- TRƯỜNG HỢP 2: Sinh viên đã có nhóm và nhóm ĐÃ ĐĂNG KÝ ĐỀ TÀI -->
+      <section class="panel-card" th:if="${vaitro == 'SINHVIEN' && daCoNhom && dangKyCuaNhom != null}" style="margin-bottom: 20px; border-left: 4px solid #05659a;">
+        <div class="panel-heading">
+          <h3>ĐỀ TÀI ĐÃ ĐĂNG KÝ CỦA NHÓM</h3>
+          <div th:if="${laNhomTruong && dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}">
+            <form th:action="@{'/dangkydetai/' + ${dangKyCuaNhom.id} + '/huy'}" method="post"
+                  data-confirm="Bạn có chắc chắn muốn hủy đăng ký đề tài này cho nhóm?"
+                  data-modal-title="Thông báo"
+                  style="margin: 0;">
+              <button type="submit" class="btn btn-danger btn-sm">Hủy đăng ký</button>
+            </form>
+          </div>
+          <div th:if="${laNhomTruong && dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI}">
+            <form th:action="@{'/dangkydetai/' + ${dangKyCuaNhom.id} + '/huy'}" method="post"
+                  data-confirm="Xác nhận xóa lượt đăng ký bị từ chối để nhóm chọn và đăng ký đề tài khác?"
+                  data-modal-title="Thông báo"
+                  style="margin: 0;">
+              <button type="submit" class="btn btn-warning btn-sm">Hủy để đăng ký đề tài khác</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="nhom-info-grid" style="padding: 16px;">
+          <div class="nhom-info-item span-topic">
+            <span class="nhom-info-label">Tên đề tài đã đăng ký</span>
+            <span class="nhom-info-value" style="font-size: 16px; color: #05659a; font-weight: 600;"
+                  th:text="${dangKyCuaNhom.tendetai != null ? dangKyCuaNhom.tendetai : ('Đề tài #' + dangKyCuaNhom.detaiid)}">Đề tài ABC</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Nhóm sinh viên</span>
+            <span class="nhom-info-value"><strong th:text="${dangKyCuaNhom.tennhom}">Nhóm 01</strong></span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Đợt đăng ký</span>
+            <span class="nhom-info-value" th:text="${dangKyCuaNhom.tendot != null ? dangKyCuaNhom.tendot : ('Đợt #' + dangKyCuaNhom.dotdangkyid)}">Đợt KLTN</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Ngày gửi đăng ký</span>
+            <span class="nhom-info-value" th:text="${#temporals.format(dangKyCuaNhom.ngaydangky, 'dd/MM/yyyy HH:mm')}">01/10/2026 08:00</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Trạng thái xét duyệt</span>
+            <span class="nhom-info-value">
+              <span class="status-badge"
+                    th:classappend="${dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET ? 'badge-success' : (dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI ? 'badge-danger' : 'badge-warning')}"
+                    th:text="${dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET ? 'ĐÃ DUYỆT' : (dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHỜ DUYỆT</span>
+            </span>
+          </div>
+        </div>
+
+        <div style="padding: 0 16px 16px 16px;">
+          <div th:if="${dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET}">
+            <p style="color: #16a34a; font-weight: 500; margin-bottom: 8px;">✓ Đề tài đã được phê duyệt chính thức. Nhóm có thể chuẩn bị và nộp báo cáo nghiệm thu.</p>
+            <a th:href="@{/nopbaocao}" class="btn btn-primary" style="text-decoration: none;">Đến trang nộp báo cáo</a>
+          </div>
+          <div th:if="${dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}">
+            <p style="color: #d97706; margin: 0;">⏳ Đề tài đang chờ Bộ môn xét duyệt. Nhóm trưởng có thể hủy đăng ký nếu muốn đổi đề tài khác.</p>
+          </div>
+          <div th:if="${dangKyCuaNhom.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI}">
+            <p style="color: #dc2626; margin: 0;">✕ Đề tài không được duyệt. Nhóm trưởng vui lòng bấm "Hủy để đăng ký đề tài khác" ở trên để làm mới lượt đăng ký.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRƯỜNG HỢP 3: Sinh viên đã có nhóm nhưng CHƯA ĐĂNG KÝ ĐỀ TÀI -->
+      <!-- Chỉ Nhóm trưởng mới thấy Form đăng ký -->
+      <section class="panel-card" th:if="${(vaitro == 'TRUONGKHOA') || (vaitro == 'SINHVIEN' && daCoNhom && dangKyCuaNhom == null && laNhomTruong)}" style="margin-bottom: 20px;">
+        <div class="panel-heading">
+          <h3>+ ĐĂNG KÝ ĐỀ TÀI CHO NHÓM</h3>
+          <p>Chọn đề tài đã công bố trong đợt của nhóm để gửi yêu cầu đăng ký</p>
+        </div>
+        <div class="form-card">
+          <form th:action="@{/dangkydetai/dangky}" th:object="${dangKyRequest}" method="post"
+                data-confirm="Bạn có chắc chắn muốn gửi yêu cầu đăng ký đề tài đã chọn cho nhóm không?"
+                data-modal-title="Thông báo">
+            <div class="form-grid">
+              <!-- Nếu là Trưởng khoa: Cho chọn nhóm từ danh sách -->
+              <div class="form-field" th:if="${vaitro == 'TRUONGKHOA'}">
+                <label for="nhomid_admin">Chọn nhóm sinh viên *</label>
+                <select id="nhomid_admin" th:field="*{nhomid}" required>
+                  <option value="">-- Chọn nhóm sinh viên --</option>
+                  <option th:each="n : ${dsNhom}" th:value="${n.id}"
+                          th:text="${n.tennhom + ' (Đợt #' + n.dotdangkyid + ')'}"></option>
+                </select>
+              </div>
+
+              <!-- Nếu là Sinh viên: Cố định nhóm của sinh viên -->
+              <div class="form-field" th:if="${vaitro == 'SINHVIEN'}">
+                <label>Nhóm đăng ký *</label>
+                <input type="hidden" th:field="*{nhomid}">
+                <input type="text" readonly
+                       th:value="${nhomCuaToi.tennhom + ' (' + (nhomCuaToi.tendot != null ? nhomCuaToi.tendot : ('Đợt #' + nhomCuaToi.dotdangkyid)) + ')'}"
+                       style="background-color: #f1f5f9; font-weight: 600;">
+              </div>
+
+              <!-- Danh sách đề tài đã công bố thuộc đợt -->
+              <div class="form-field" style="flex: 2; min-width: 320px;">
+                <label for="detaiid">Chọn đề tài đã công bố trong đợt *</label>
+                <select id="detaiid" th:field="*{detaiid}" required>
+                  <option value="">-- Chọn đề tài công bố --</option>
+                  <option th:each="dt : ${dsDetaiCongBo}" th:value="${dt.id}"
+                          th:text="${dt.tendetai}"></option>
+                </select>
+                <small th:if="${#lists.isEmpty(dsDetaiCongBo)}" style="color: #ef4444; margin-top: 4px;">
+                  Hiện chưa có đề tài nào được công bố trong đợt của nhóm bạn.
+                </small>
+              </div>
+
+              <div>
+                <button type="submit" class="btn btn-primary" style="height: 34px;"
+                        th:disabled="${#lists.isEmpty(dsDetaiCongBo)}">Xác nhận đăng ký đề tài</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Trường hợp là thành viên thường (không phải nhóm trưởng) và nhóm chưa đăng ký -->
+      <div th:if="${vaitro == 'SINHVIEN' && daCoNhom && dangKyCuaNhom == null && !laNhomTruong}"
+           class="alert-box alert-info" style="margin-bottom: 20px;">
+        <span>Nhóm của bạn (<strong><span th:text="${nhomCuaToi.tennhom}">Nhóm</span></strong>) chưa đăng ký đề tài. Chức năng gửi đăng ký đề tài dành cho nhóm trưởng (<strong th:text="${nhomCuaToi.tenNhomtruong}">Nhóm trưởng</strong>).</span>
+      </div>
+
+      <!-- Danh sách đề tài đã đăng ký: Chỉ dành cho Trưởng khoa quản lý duyệt/từ chối -->
+      <section class="panel-card" th:if="${vaitro == 'TRUONGKHOA'}">
+        <div class="panel-heading" style="padding-bottom: 8px;">
+          <h3>TẤT CẢ CÁC ĐĂNG KÝ ĐỀ TÀI</h3>
+        </div>
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span>⌕</span>
+            <input type="search" data-table-search placeholder="Tìm kiếm theo nhóm, đề tài, đợt...">
+          </div>
+          <div class="record-count"><b th:text="${#lists.size(items)}">0</b> lượt đăng ký</div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nhóm sinh viên</th>
+                <th>Đợt đăng ký</th>
+                <th>Đề tài đăng ký</th>
+                <th>Ngày đăng ký</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody data-table-body>
+              <tr th:each="item : ${items}">
+                <td th:text="${item.id}">1</td>
+                <td>
+                  <strong th:text="${item.tennhom}">Nhóm 01</strong>
+                  <div style="font-size: 11px; color: #64748b;" th:if="${item.tenNhomtruong != null}">
+                    Nhóm trưởng: <span th:text="${item.tenNhomtruong}">Nguyễn Văn A</span>
+                  </div>
+                </td>
+                <td th:text="${item.tendot != null ? item.tendot : ('Đợt #' + item.dotdangkyid)}">Đợt 1</td>
+                <td>
+                  <strong style="color: #05659a;" th:text="${item.tendetai != null ? item.tendetai : ('Đề tài #' + item.detaiid)}">Hệ thống ABC</strong>
+                </td>
+                <td th:text="${#temporals.format(item.ngaydangky, 'dd/MM/yyyy HH:mm')}">01/10/2026 08:00</td>
+                <td>
+                  <span class="status-badge"
+                        th:classappend="${item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET ? 'badge-success' : (item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI ? 'badge-danger' : 'badge-warning')}"
+                        th:text="${item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET ? 'ĐÃ DUYỆT' : (item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHODUYET</span>
+                </td>
+                <td>
+                  <div th:if="${vaitro == 'TRUONGKHOA' and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" style="display: flex; gap: 4px;">
+                    <!-- Duyệt / Từ chối: chỉ quản trị và đăng ký đang chờ -->
+                    <form th:action="@{'/dangkydetai/' + ${item.id} + '/duyet'}" method="post"
+                          data-confirm="Xác nhận duyệt đề tài cho nhóm này?"
+                          data-modal-title="Thông báo"
+                          style="margin: 0;">
+                      <input type="hidden" name="chapnhan" value="true">
+                      <button type="submit" class="btn btn-success btn-sm">Duyệt</button>
+                    </form>
+                    <form th:action="@{'/dangkydetai/' + ${item.id} + '/duyet'}" method="post"
+                          data-confirm="Xác nhận từ chối đăng ký đề tài của nhóm này?"
+                          data-modal-title="Thông báo"
+                          style="margin: 0;">
+                      <input type="hidden" name="chapnhan" value="false">
+                      <button type="submit" class="btn btn-danger btn-sm">Từ chối</button>
+                    </form>
+                  </div>
+                  <span th:unless="${vaitro == 'TRUONGKHOA' and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" class="badge">Không có thao tác</span>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(items)}">
+                <td colspan="7">
+                  <div class="empty-state">
+                    <strong>Chưa có thông tin đăng ký đề tài</strong>
+                    <span>Chưa có nhóm nào gửi đăng ký đề tài trong hệ thống.</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal xác nhận chung -->
+<div class="ute-modal-backdrop" id="confirmModal" aria-hidden="true">
+  <div class="ute-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="ute-modal-header">
+      <h4 class="ute-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
+      <button type="button" class="ute-modal-close" data-modal-cancel aria-label="Đóng">×</button>
+    </div>
+    <div class="ute-modal-body">
+      <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+    </div>
+    <div class="ute-modal-footer">
+      <button type="button" class="btn btn-secondary" data-modal-cancel>Hủy</button>
+      <button type="button" class="btn btn-primary" id="confirmModalAccept">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+
+<div th:if="${page != null and vaitro == 'TRUONGKHOA'}" style="margin:16px 0;display:flex;gap:12px;align-items:center">
+  <a th:if="${page > 0}" th:href="@{/dangkydetai(page=${page - 1})}">← Trang trước</a>
+  <span th:text="'Trang ' + ${page + 1}"></span>
+  <a th:if="${items != null and items.size() == 50}" th:href="@{/dangkydetai(page=${page + 1})}">Trang sau →</a>
+</div>
+</body>
+</html>

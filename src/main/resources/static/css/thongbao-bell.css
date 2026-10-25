@@ -1,0 +1,10 @@
+/* Module 15 read status only; shared header layout and dropdown keyboard behavior stay unchanged. */
+.header-notice-btn { position: relative; }
+/* With the avatar/language tools removed, align the dropdown to the remaining bell. */
+.portal-header-notices .header-notice-dropdown { right: 0; }
+.notice-unread-badge { position: absolute; top: -7px; right: -10px; min-width: 18px; padding: 1px 4px;
+    border-radius: 12px; background: #b42318; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+.notice-unread-badge[hidden], .notice-load-status[hidden], .notice-read-status[hidden] { display: none; }
+.notice-item.notice-item-unread { background: #eef6ff; border-left: 3px solid #1766a5; }
+.notice-item.notice-item-unread .notice-item-title { font-weight: 800; }
+.notice-load-status, .notice-read-status { padding: 8px 12px; font-size: 12px; color: #8a3710; }

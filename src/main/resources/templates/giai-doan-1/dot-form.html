@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đợt đăng ký</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body><div class="app-shell"><div th:replace="~{fragments :: portalHeader}"></div><div class="portal-body"><div th:replace="~{fragments :: sidebar('dotdangky')}"></div><main class="main-panel">
+<div class="page-heading"><div><div class="breadcrumb">Quản lý đợt / Giai đoạn 1</div><h1 th:text="${title}">Đợt đăng ký</h1><p>Thời gian GV phải kết thúc trước khi SV bắt đầu.</p></div><a class="btn" th:href="@{/dotdangky}">← Danh sách</a></div>
+<section class="panel-card" style="padding:24px;max-width:880px">
+<p style="color:#b42318" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+<form th:action="@{/giai-doan-1/dot/luu}" th:object="${form}" method="post">
+<input type="hidden" name="id" th:if="${id != null}" th:value="${id}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px">
+<label>Tên đợt <input required maxlength="200" th:field="*{tendot}" class="form-control" style="width:100%"></label>
+<label>Loại đợt <select required th:field="*{loaidot}" class="form-control" style="width:100%"><option value="">Chọn loại</option><option th:each="loai : ${loaidots}" th:value="${loai}" th:text="${loai}"></option></select></label>
+<label>GV bắt đầu <input required type="datetime-local" th:field="*{batdaugiangvien}" class="form-control" style="width:100%"></label>
+<label>GV kết thúc <input required type="datetime-local" th:field="*{ketthucgiangvien}" class="form-control" style="width:100%"></label>
+<label>SV bắt đầu <input required type="datetime-local" th:field="*{batdausinhvien}" class="form-control" style="width:100%"></label>
+<label>SV kết thúc <input required type="datetime-local" th:field="*{ketthucsinhvien}" class="form-control" style="width:100%"></label>
+<label>Hạn chấm phản biện <input type="datetime-local" th:field="*{hanchamphanbien}" class="form-control" style="width:100%"></label>
+<label>Ngày báo cáo hội đồng <input type="datetime-local" th:field="*{ngaybaocaohoidong}" class="form-control" style="width:100%"></label>
+</div><div style="margin-top:18px"><button class="btn btn-primary" type="submit">Lưu đợt đăng ký</button></div>
+</form></section></main></div></div><script th:src="@{/js/app.js}"></script></body></html>

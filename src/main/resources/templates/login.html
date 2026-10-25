@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ thống quản lý đề tài</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body class="login-page">
+
+    <div class="ute-school-header">
+
+        <img th:src="@{/images/hcmute-logo.png}"
+             class="ute-school-logo"
+             alt="HCMUTE">
+
+        <div class="ute-school-name">
+            TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT<br>
+            TP.HCM
+        </div>
+
+    </div>
+
+    <main class="ute-login-shell">
+
+        <section class="ute-login-card">
+
+            <h1>ĐĂNG NHẬP</h1>
+
+            <p class="subtitle">
+                Hệ thống quản lý đề tài sinh viên
+            </p>
+
+            <div th:if="${param.logout}"
+                 class="ute-message success">
+                Bạn đã đăng xuất khỏi hệ thống.
+            </div>
+
+            <div th:if="${param.error}"
+                 class="ute-message error">
+                Tên đăng nhập hoặc mật khẩu không đúng.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+
+                <div class="ute-form-group">
+                    <label for="login-username">Mã số / Tên đăng nhập</label>
+                    <input id="login-username" type="text"
+                           name="username"
+                           placeholder="Mã số sinh viên / Tên đăng nhập"
+                           autocomplete="username"
+                           required
+                           autofocus>
+                </div>
+
+                <div class="ute-form-group">
+                    <label for="login-password">Mật khẩu</label>
+                    <div class="ute-password-wrap">
+<input id="login-password" type="password"
+                           name="password"
+                           placeholder="Mật khẩu"
+                           autocomplete="current-password"
+                           required>
+<button type="button"
+        id="utePasswordToggle"
+        class="ute-password-eye"
+        aria-label="Hiện mật khẩu"
+        aria-pressed="false">
+    Hiện
+</button>
+</div>
+                </div>
+
+                <button class="ute-login-btn"
+                        type="submit">
+                    Đăng nhập
+                </button>
+
+            </form>
+
+        </section>
+
+    </main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("login-password");
+    const button = document.getElementById("utePasswordToggle");
+
+    if (!input || !button) return;
+
+    button.addEventListener("click", function () {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        button.textContent = show ? "Ẩn" : "Hiện";
+        button.setAttribute("aria-pressed", String(show));
+        button.setAttribute(
+            "aria-label",
+            show ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+        );
+    });
+});
+</script>
+</body>
+</html>

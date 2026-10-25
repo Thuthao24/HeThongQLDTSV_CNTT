@@ -1,0 +1,15 @@
+target/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.env.*
+uploads/
+**/uploads/
+.backup_*/
+*.bak
+*.pem
+*.key
+*.p12
+*.pfx

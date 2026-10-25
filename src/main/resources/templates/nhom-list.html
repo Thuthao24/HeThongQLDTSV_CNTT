@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nhóm sinh viên</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+  <div th:replace="~{fragments :: portalHeader}"></div>
+  <div class="portal-body">
+    <div th:replace="~{fragments :: sidebar('nhom')}"></div>
+    <main class="main-panel">
+
+      <div class="page-heading">
+        <div>
+          <div class="breadcrumb">Cổng thông tin đào tạo / Nhóm sinh viên</div>
+          <h1>NHÓM SINH VIÊN</h1>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <div th:if="${successMessage}" class="alert-box alert-success">
+        <span th:text="${successMessage}">Thao tác thành công!</span>
+      </div>
+      <div th:if="${errorMessage}" class="alert-box alert-error">
+        <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+      </div>
+
+      <!-- Khu vực Nhóm của bạn (Dành cho Sinh viên đã có nhóm) -->
+      <section class="panel-card" th:if="${vaitro == 'SINHVIEN' && daCoNhom}" style="margin-bottom: 20px; border-left: 4px solid #05659a;">
+        <div class="panel-heading">
+          <h3>NHÓM CỦA BẠN</h3>
+          <p>Thông tin nhóm sinh viên bạn đang tham gia trong đợt đăng ký</p>
+        </div>
+        <div class="nhom-info-grid" style="padding: 16px;">
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Tên nhóm</span>
+            <span class="nhom-info-value"><strong th:text="${nhomCuaToi.tennhom}">Nhóm 01</strong></span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Đợt đăng ký</span>
+            <span class="nhom-info-value" th:text="${nhomCuaToi.tendot != null ? nhomCuaToi.tendot : ('Đợt #' + nhomCuaToi.dotdangkyid)}">Đợt KLTN</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Nhóm trưởng</span>
+            <span class="nhom-info-value leader-highlight" th:text="${nhomCuaToi.tenNhomtruong != null ? nhomCuaToi.tenNhomtruong : ('SV #' + nhomCuaToi.nhomtruongid)}">Nguyễn Văn An</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Số thành viên</span>
+            <span class="nhom-info-value">
+              <span class="badge" th:classappend="${nhomCuaToi.soThanhvien >= 5 ? 'badge-warning' : 'badge-info'}"
+                    th:text="${nhomCuaToi.soThanhvien + '/5 thành viên'}">3/5 thành viên</span>
+            </span>
+          </div>
+          <div class="nhom-info-item span-topic">
+            <span class="nhom-info-label">Đề tài đăng ký</span>
+            <div class="nhom-info-value nhom-topic-inline">
+              <span th:if="${nhomCuaToi.tendetai != null}" th:text="${nhomCuaToi.tendetai}">Đề tài ABC</span>
+              <span th:if="${nhomCuaToi.trangthaiDangky != null}"
+                    class="status-badge"
+                    th:classappend="${nhomCuaToi.trangthaiDangky == 'DADUYET' ? 'badge-success' : (nhomCuaToi.trangthaiDangky == 'TUCHOI' ? 'badge-danger' : 'badge-warning')}"
+                    th:text="${nhomCuaToi.trangthaiDangky == 'DADUYET' ? 'ĐÃ DUYỆT' : (nhomCuaToi.trangthaiDangky == 'TUCHOI' ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHỜ DUYỆT</span>
+              <span th:if="${nhomCuaToi.tendetai == null}" class="empty-text">Chưa đăng ký đề tài</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding: 0 16px 16px 16px;">
+          <a th:href="@{'/nhom/' + ${nhomCuaToi.id}}" class="btn btn-primary" style="text-decoration: none;">Xem chi tiết & Quản lý nhóm</a>
+        </div>
+      </section>
+
+      <!-- Thông báo khi sinh viên đã có nhóm và không được tạo thêm -->
+      <div th:if="${vaitro == 'SINHVIEN' && daCoNhom}" class="alert-box alert-info" style="margin-bottom: 20px;">
+        <span>Bạn đã tham gia nhóm <strong><span th:text="${nhomCuaToi.tennhom}">Nhóm</span></strong> trong đợt này.</span>
+      </div>
+
+      <!-- Card Tạo nhóm mới (Chỉ hiển thị khi chưa có nhóm hoặc là Trưởng khoa) -->
+      <section class="panel-card" th:if="${!daCoNhom || vaitro == 'TRUONGKHOA'}" style="margin-bottom: 20px;">
+        <div class="panel-heading">
+          <h3>+ TẠO NHÓM MỚI</h3>
+          <p>Nhóm trưởng tạo nhóm và mời các thành viên tham gia khóa luận</p>
+        </div>
+        <div class="form-card">
+          <form th:action="@{/nhom/tao}" th:object="${taoNhomRequest}" method="post">
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="tennhom">Tên nhóm sinh viên *</label>
+                <input type="text" id="tennhom" th:field="*{tennhom}" placeholder="Ví dụ: Nhóm Nghiên Cứu AI 01" required maxlength="100">
+              </div>
+              <div class="form-field">
+                <label for="dotdangkyid">Đợt đăng ký *</label>
+                <select id="dotdangkyid" th:field="*{dotdangkyid}" required>
+                  <option value="">-- Chọn đợt đăng ký --</option>
+                  <option th:each="dot : ${dotdangkyList}" th:value="${dot.id}" th:text="${dot.tendot + ' (' + dot.trangthai + ')'}"></option>
+                </select>
+              </div>
+              <div class="form-field" th:if="${vaitro == 'TRUONGKHOA'}">
+                <label for="masinhvienNhomtruong">MSSV Nhóm trưởng (Quản trị viên chỉ định)</label>
+                <input type="text" id="masinhvienNhomtruong" th:field="*{masinhvienNhomtruong}" placeholder="Nhập MSSV ví dụ: 23110001">
+              </div>
+              <div>
+                <button type="submit" class="btn btn-primary" style="height: 34px;">Xác nhận tạo nhóm</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Danh sách nhóm sinh viên -->
+      <section class="panel-card">
+        <div class="panel-heading" style="padding-bottom: 8px;">
+          <h3 th:text="${vaitro == 'TRUONGKHOA' ? 'TẤT CẢ CÁC NHÓM TRONG HỆ THỐNG' : 'DANH SÁCH NHÓM CỦA BẠN'}">DANH SÁCH NHÓM</h3>
+        </div>
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span>⌕</span>
+            <input type="search" data-table-search placeholder="Tìm kiếm theo tên nhóm, nhóm trưởng, đợt...">
+          </div>
+          <div class="record-count"><b th:text="${#lists.size(items)}">0</b> nhóm</div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên nhóm</th>
+                <th>Đợt đăng ký</th>
+                <th>Nhóm trưởng</th>
+                <th>Số TV</th>
+                <th>Đề tài đăng ký</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody data-table-body>
+              <tr th:each="item : ${items}">
+                <td th:text="${item.id}">1</td>
+                <td>
+                  <strong th:text="${item.tennhom}">Tên nhóm</strong>
+                </td>
+                <td th:text="${item.tendot != null ? item.tendot : ('Đợt #' + item.dotdangkyid)}">Đợt 1</td>
+                <td>
+                  <span th:text="${item.tenNhomtruong != null ? item.tenNhomtruong : ('SV #' + item.nhomtruongid)}">Nguyễn Văn A</span>
+                </td>
+                <td>
+                  <span class="badge" th:classappend="${item.soThanhvien >= 5 ? 'badge-warning' : 'badge-info'}"
+                        th:text="${item.soThanhvien + '/5 SV'}">3/5 SV</span>
+                </td>
+                <td>
+                  <div th:if="${item.tendetai != null}">
+                    <span th:text="${item.tendetai}">Đề tài ABC</span>
+                    <span class="badge" th:classappend="${item.trangthaiDangky == 'DADUYET' ? 'badge-success' : (item.trangthaiDangky == 'TUCHOI' ? 'badge-danger' : 'badge-warning')}"
+                          th:text="${item.trangthaiDangky == 'DADUYET' ? 'ĐÃ DUYỆT' : (item.trangthaiDangky == 'TUCHOI' ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHỜ DUYỆT</span>
+                  </div>
+                  <span th:if="${item.tendetai == null}" style="color: #94a3b8; font-style: italic;">Chưa đăng ký</span>
+                </td>
+                <td>
+                  <a th:href="@{'/nhom/' + ${item.id}}" class="btn btn-primary btn-sm" style="text-decoration: none;">Xem chi tiết & Quản lý</a>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(items)}">
+                <td colspan="7">
+                  <div class="empty-state">
+                    <strong>Chưa có dữ liệu nhóm</strong>
+                    <span th:if="${vaitro == 'SINHVIEN'}">Bạn chưa tham gia nhóm nào. Hãy tạo nhóm mới ở trên hoặc nhờ nhóm trưởng thêm bạn vào nhóm bằng MSSV.</span>
+                    <span th:if="${vaitro != 'SINHVIEN'}">Chưa có nhóm sinh viên nào được tạo trong hệ thống.</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
+
+<div th:if="${page != null and vaitro == 'TRUONGKHOA'}" style="margin:16px 0;display:flex;gap:12px;align-items:center">
+  <a th:if="${page > 0}" th:href="@{/nhom(page=${page - 1})}">← Trang trước</a>
+  <span th:text="'Trang ' + ${page + 1}"></span>
+  <a th:if="${items != null and items.size() == 50}" th:href="@{/nhom(page=${page + 1})}">Trang sau →</a>
+</div>
+</body>
+</html>
