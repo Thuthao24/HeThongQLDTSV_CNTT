@@ -26,12 +26,30 @@ public class SecurityConfig {
             .userDetailsService(userDetailsService)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/login", "/403").permitAll()
-                .requestMatchers("/taikhoan/**", "/bomon/**", "/quanly/danhmuc/**").hasAnyRole("TRUONGKHOA")
+
+
+.requestMatchers(
+        HttpMethod.GET,
+        "/taikhoan",
+        "/taikhoan/canhan"
+).authenticated()
+.requestMatchers(
+        "/bomon/**",
+        "/quanly/danhmuc/**"
+).hasRole("TRUONGKHOA")
+
+
+.requestMatchers("/taikhoan/**").denyAll()
+
                 .requestMatchers("/giai-doan-1/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")
                 .requestMatchers("/detai/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
                 // Duyệt đăng ký đề tài sinh viên: Giảng viên hướng dẫn, Trưởng bộ môn, Trưởng khoa
+                // Chỉ sinh viên được gửi yêu cầu hủy đăng ký.
+// Service sẽ kiểm tra có đúng nhóm trưởng hay không.
+.requestMatchers(HttpMethod.POST, "/dangkydetai/*/huy")
+    .hasRole("SINHVIEN")
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/dangkydetai", "/dangkydetai/**").hasAnyRole("SINHVIEN", "TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/nhom/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
@@ -52,15 +70,13 @@ public class SecurityConfig {
                 .requestMatchers("/thongbao", "/thongbao/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/detai")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
-                .requestMatchers(HttpMethod.GET, "/morong/timkiem/dotdangky").hasRole("TRUONGKHOA")
-                .requestMatchers(HttpMethod.GET, "/morong/timkiem/ketqua").hasAnyRole("TRUONGKHOA", "SINHVIEN")
+                // Unmapped legacy search URLs reach MVC's 404; no retired lookup is exposed.
+                .requestMatchers(HttpMethod.GET, "/morong/timkiem/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/morong/thongke").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/detai.xlsx", "/morong/xuat/detai.pdf")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
-                .requestMatchers(HttpMethod.GET, "/morong/xuat/dotdangky.xlsx", "/morong/xuat/dotdangky.pdf",
-                        "/morong/xuat/thongke.xlsx", "/morong/xuat/thongke.pdf").hasRole("TRUONGKHOA")
-                .requestMatchers(HttpMethod.GET, "/morong/xuat/ketqua.xlsx", "/morong/xuat/ketqua.pdf")
-                    .hasAnyRole("TRUONGKHOA", "SINHVIEN")
+                .requestMatchers(HttpMethod.GET, "/morong/xuat/thongke.xlsx", "/morong/xuat/thongke.pdf")
+                    .hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/**").authenticated()
                 .requestMatchers("/morong", "/morong/**").denyAll()
                 .requestMatchers("/").authenticated()

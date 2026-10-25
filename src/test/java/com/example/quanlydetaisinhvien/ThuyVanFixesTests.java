@@ -332,4 +332,108 @@ class ThuyVanFixesTests {
         );
         assertTrue(exDelete.getMessage().contains("đã có điểm đánh giá"));
     }
+
+    @Test
+    @DisplayName("Khóa nộp báo cáo riêng biệt cho từng đăng ký đề tài (không khóa nhầm đăng ký khác)")
+    void testReportLockIsPerRegistration() {
+        Sinhvien svA = taoSinhVien("SV_TV_20");
+        Nhomsinhvien nhomA = new Nhomsinhvien();
+        nhomA.setTennhom("Nhóm A - Có Điểm");
+        nhomA.setDotdangkyid(dot.getId());
+        nhomA.setNhomtruongid(svA.getId());
+        em.persist(nhomA);
+        em.persist(new Thanhviennhom(nhomA.getId(), svA.getId()));
+
+        Dangkydetai dkA = new Dangkydetai();
+        dkA.setNhomid(nhomA.getId());
+        dkA.setDetaiid(dt.getId());
+        dkA.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkA.setNgaydangky(LocalDateTime.now());
+        em.persist(dkA);
+
+        // Nhóm A có điểm
+        Diem dA = new Diem();
+        dA.setDangkydetaiid(dkA.getId());
+        dA.setGiangvienid(gv.getId());
+        dA.setDiemso(new BigDecimal("9.0"));
+        em.persist(dA);
+
+        // Nhóm B chưa có điểm
+        Sinhvien svB = taoSinhVien("SV_TV_21");
+        Nhomsinhvien nhomB = new Nhomsinhvien();
+        nhomB.setTennhom("Nhóm B - Chưa Có Điểm");
+        nhomB.setDotdangkyid(dot.getId());
+        nhomB.setNhomtruongid(svB.getId());
+        em.persist(nhomB);
+        em.persist(new Thanhviennhom(nhomB.getId(), svB.getId()));
+
+        Dangkydetai dkB = new Dangkydetai();
+        dkB.setNhomid(nhomB.getId());
+        dkB.setDetaiid(dt.getId());
+        dkB.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkB.setNgaydangky(LocalDateTime.now());
+        em.persist(dkB);
+        em.flush();
+
+        // Nhóm A bị khóa, Nhóm B KHÔNG bị khóa
+        assertTrue(nopbaocaoService.kiemTraDaKhoaNopBaoCao(dkA.getId()));
+        assertFalse(nopbaocaoService.kiemTraDaKhoaNopBaoCao(dkB.getId()));
+
+        // Nhóm B nộp thành công
+        byte[] validPdf = "%PDF-1.4 sample content".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "baocao_b.pdf", "application/pdf", validPdf);
+        assertDoesNotThrow(() -> nopbaocaoService.nopBaocaoVoiUpload(dkB.getId(), file, svB.getMasinhvien()));
+    }
+
+    @Test
+    @DisplayName("Xác minh chỉ nhóm trưởng đúng nhóm mới được nộp hoặc xóa báo cáo")
+    void testOnlyGroupLeaderCanSubmitOrDeleteReport() {
+        Sinhvien svLeader = taoSinhVien("SV_TV_30");
+        Sinhvien svMember = taoSinhVien("SV_TV_31");
+        Sinhvien svOutsider = taoSinhVien("SV_TV_32");
+
+        Nhomsinhvien nhom = new Nhomsinhvien();
+        nhom.setTennhom("Nhóm Quyền Nộp");
+        nhom.setDotdangkyid(dot.getId());
+        nhom.setNhomtruongid(svLeader.getId());
+        em.persist(nhom);
+        em.persist(new Thanhviennhom(nhom.getId(), svLeader.getId()));
+        em.persist(new Thanhviennhom(nhom.getId(), svMember.getId()));
+
+        Dangkydetai dk = new Dangkydetai();
+        dk.setNhomid(nhom.getId());
+        dk.setDetaiid(dt.getId());
+        dk.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dk.setNgaydangky(LocalDateTime.now());
+        em.persist(dk);
+        em.flush();
+
+        byte[] validPdf = "%PDF-1.4 sample content".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "baocao.pdf", "application/pdf", validPdf);
+
+        // Thành viên thường cố nộp -> Từ chối
+        assertThrows(NghiepvuException.class, () ->
+                nopbaocaoService.nopBaocaoVoiUpload(dk.getId(), file, svMember.getMasinhvien())
+        );
+
+        // Người ngoài nhóm cố nộp -> Từ chối
+        assertThrows(NghiepvuException.class, () ->
+                nopbaocaoService.nopBaocaoVoiUpload(dk.getId(), file, svOutsider.getMasinhvien())
+        );
+
+        // Nhóm trưởng nộp -> Thành công
+        Nopbaocao nb = assertDoesNotThrow(() ->
+                nopbaocaoService.nopBaocaoVoiUpload(dk.getId(), file, svLeader.getMasinhvien())
+        );
+
+        // Thành viên thường cố xóa -> Từ chối
+        assertThrows(NghiepvuException.class, () ->
+                nopbaocaoService.xoaBaocao(nb.getId(), svMember.getMasinhvien())
+        );
+
+        // Nhóm trưởng xóa -> Thành công
+        assertDoesNotThrow(() ->
+                nopbaocaoService.xoaBaocao(nb.getId(), svLeader.getMasinhvien())
+        );
+    }
 }

@@ -96,11 +96,13 @@ public class HoidongController {
         tk.setVaitro(VaitroHoidong.THUKY);
         thanhviens.add(tk);
 
-        for (int i = 0; i < 3; i++) {
-            ThanhvienHoidongItemDto tv = new ThanhvienHoidongItemDto();
-            tv.setVaitro(VaitroHoidong.THANHVIEN);
-            thanhviens.add(tv);
-        }
+        
+for (int i = 0; i < 1; i++) {
+    ThanhvienHoidongItemDto tv = new ThanhvienHoidongItemDto();
+    tv.setVaitro(VaitroHoidong.THANHVIEN);
+    thanhviens.add(tv);
+}
+
 
         form.setThanhviens(thanhviens);
         model.addAttribute("form", form);

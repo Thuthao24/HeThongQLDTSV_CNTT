@@ -18,8 +18,6 @@ public class MorongFilterValidator {
         if (filter == null) throw new IllegalArgumentException("Thiếu bộ lọc.");
         if (!(switch (dataset) {
             case DETAI -> filter instanceof DetaiFilterDTO;
-            case DOTDANGKY -> filter instanceof DotdangkyFilterDTO;
-            case KETQUA -> filter instanceof KetquaFilterDTO;
         })) throw new IllegalArgumentException("Sai loại bộ lọc.");
         var violations = validator.validate(filter);
         if (!violations.isEmpty()) throw new ConstraintViolationException(violations);
@@ -47,8 +45,6 @@ public class MorongFilterValidator {
     private List<String> fields(Dataset dataset) {
         return switch (dataset) {
             case DETAI -> List.of("id", "tendetai", "tendot", "trangthai");
-            case DOTDANGKY -> List.of("id", "tendot", "batdausinhvien", "ketthucsinhvien", "trangthai");
-            case KETQUA -> List.of("id", "tendetai", "tennhom", "diemcuoi", "ngaycongbo");
         };
     }
 }

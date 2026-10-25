@@ -200,11 +200,22 @@ public class Module16RegressionTests {
             dt.setTrangthai(TrangthaiDetai.CONGBO);
             em.persist(dt);
 
+            Sinhvien sv1 = createStudent("sv-c2-1");
+            Sinhvien sv2 = createStudent("sv-c2-2");
+            Sinhvien sv3 = createStudent("sv-c2-3");
+
             Nhomsinhvien grp = new Nhomsinhvien();
             grp.setDotdangkyid(round.getId());
             grp.setTennhom("Nhóm Điều kiện 2");
-            grp.setNhomtruongid(1L);
+            grp.setNhomtruongid(sv1.getId());
             em.persist(grp);
+
+            for (Sinhvien s : List.of(sv1, sv2, sv3)) {
+                Thanhviennhom tv = new Thanhviennhom();
+                tv.setNhomid(grp.getId());
+                tv.setSinhvienid(s.getId());
+                em.persist(tv);
+            }
 
             Dangkydetai dk = new Dangkydetai();
             dk.setDetaiid(dt.getId());

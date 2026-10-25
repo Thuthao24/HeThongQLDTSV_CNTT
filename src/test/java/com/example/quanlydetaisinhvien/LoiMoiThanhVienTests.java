@@ -159,4 +159,97 @@ class LoiMoiThanhVienTests {
         List<LoiMoiThanhVienDto> dsLoiMoi = service.layDanhSachLoiMoiCuaSinhVien("sv_candidate");
         assertTrue(dsLoiMoi.isEmpty());
     }
+
+    @Test
+    void testChanDongYLoiMoiKhiDeTaiDaDuyet() {
+        // Tạo lời mời khi nhóm chưa duyệt
+        service.themThanhVien(nhom.getId(), "sv_candidate", "sv_lead");
+        List<LoiMoiThanhVienDto> dsLoiMoi = service.layDanhSachLoiMoiCuaSinhVien("sv_candidate");
+        assertEquals(1, dsLoiMoi.size());
+        Long loiMoiId = dsLoiMoi.get(0).getId();
+
+        // Giả lập đề tài của nhóm đã được duyệt
+        Detai dt = new Detai();
+        dt.setTendetai("Đề tài khóa luận");
+        dt.setDotdangkyid(dot.getId());
+        dt.setBomonid(bm.getId());
+        dt.setGiangviendexuatid(1L);
+        dt.setTrangthai(TrangthaiDetai.CONGBO);
+        em.persist(dt);
+
+        Dangkydetai dk = new Dangkydetai();
+        dk.setDetaiid(dt.getId());
+        dk.setNhomid(nhom.getId());
+        dk.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dk.setNgaydangky(LocalDateTime.now());
+        em.persist(dk);
+        em.flush();
+
+        // Ứng viên cố đồng ý lời mời -> Phải bị chặn và báo lỗi
+        org.junit.jupiter.api.Assertions.assertThrows(com.example.quanlydetaisinhvien.exception.NghiepvuException.class, () -> {
+            service.dongYLoiMoi(loiMoiId, "sv_candidate");
+        });
+
+        // Lời mời phải chuyển sang DA_HUY
+        Loimoithanhvien lm = loimoithanhvienRepository.findById(loiMoiId).orElseThrow();
+        assertEquals(TrangthaiLoimoi.DA_HUY, lm.getTrangthai());
+    }
+
+    @Test
+    void testChanDongYLoiMoiKhiNhomDaDu5ThanhVien() {
+        // Tạo lời mời
+        service.themThanhVien(nhom.getId(), "sv_candidate", "sv_lead");
+        List<LoiMoiThanhVienDto> dsLoiMoi = service.layDanhSachLoiMoiCuaSinhVien("sv_candidate");
+        Long loiMoiId = dsLoiMoi.get(0).getId();
+
+        // Thêm 4 thành viên khác để nhóm đạt 5 người
+        for (int i = 1; i <= 4; i++) {
+            Taikhoan tk = new Taikhoan();
+            tk.setTendangnhap("sv_other_" + i);
+            tk.setMatkhau("123456");
+            tk.setHoten("Sinh vien " + i);
+            tk.setVaitro(Vaitro.SINHVIEN);
+            tk.setEmail("sv" + i + "@test.com");
+            tk.setKichhoat(true);
+            em.persist(tk);
+
+            Sinhvien sv = new Sinhvien();
+            sv.setTaikhoanid(tk.getId());
+            sv.setMasinhvien("sv_other_" + i);
+            sv.setBomonid(bm.getId());
+            em.persist(sv);
+
+            Thanhviennhom tv = new Thanhviennhom(nhom.getId(), sv.getId());
+            em.persist(tv);
+        }
+        em.flush();
+        assertEquals(5, thanhviennhomRepository.countByNhomid(nhom.getId()));
+
+        // Chấp nhận lời mời -> Phải bị chặn
+        org.junit.jupiter.api.Assertions.assertThrows(com.example.quanlydetaisinhvien.exception.NghiepvuException.class, () -> {
+            service.dongYLoiMoi(loiMoiId, "sv_candidate");
+        });
+
+        Loimoithanhvien lm = loimoithanhvienRepository.findById(loiMoiId).orElseThrow();
+        assertEquals(TrangthaiLoimoi.DA_HUY, lm.getTrangthai());
+    }
+
+    @Test
+    void testChanDongYLoiMoiKhiDotDaDong() {
+        service.themThanhVien(nhom.getId(), "sv_candidate", "sv_lead");
+        List<LoiMoiThanhVienDto> dsLoiMoi = service.layDanhSachLoiMoiCuaSinhVien("sv_candidate");
+        Long loiMoiId = dsLoiMoi.get(0).getId();
+
+        // Đóng đợt đăng ký
+        dot.setTrangthai(TrangthaiDotdangky.DONG);
+        em.persist(dot);
+        em.flush();
+
+        org.junit.jupiter.api.Assertions.assertThrows(com.example.quanlydetaisinhvien.exception.NghiepvuException.class, () -> {
+            service.dongYLoiMoi(loiMoiId, "sv_candidate");
+        });
+
+        Loimoithanhvien lm = loimoithanhvienRepository.findById(loiMoiId).orElseThrow();
+        assertEquals(TrangthaiLoimoi.DA_HUY, lm.getTrangthai());
+    }
 }

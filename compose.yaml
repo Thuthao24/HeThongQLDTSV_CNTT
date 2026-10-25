@@ -10,6 +10,7 @@ services:
       - ./database/migrations/pending/V003__emailthongbao.sql:/docker-entrypoint-initdb.d/03-v003.sql:ro    
       - ./database/migrations/pending/V004__thongbao_doituong.sql:/docker-entrypoint-initdb.d/04-v004.sql:ro
       - ./database/migrations/pending/V005__thongbao_dadoc.sql:/docker-entrypoint-initdb.d/05-v005.sql:ro
+      - ./database/migrations/pending/V006__loimoithanhvien.sql:/docker-entrypoint-initdb.d/06-v006.sql:ro
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s

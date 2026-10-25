@@ -20,6 +20,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Map;
 
 @Controller
@@ -70,43 +75,90 @@ public class KetquaController {
         model.addAttribute("items", items);
         model.addAttribute("canManage", canManage);
 
-        // Lookups for topic, group, and council names
-        Map<Long, com.example.quanlydetaisinhvien.entity.Dangkydetai> dkMap = dangkydetaiRepository.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Dangkydetai::getId, dk -> dk, (a, b) -> a));
-        Map<Long, com.example.quanlydetaisinhvien.entity.Detai> dtMap = detaiRepository.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Detai::getId, dt -> dt, (a, b) -> a));
-        Map<Long, com.example.quanlydetaisinhvien.entity.Nhomsinhvien> nhomMap = nhomsinhvienRepository.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Nhomsinhvien::getId, nh -> nh, (a, b) -> a));
-        Map<Long, com.example.quanlydetaisinhvien.entity.Hoidong> hdMap = hoidongRepository.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(com.example.quanlydetaisinhvien.entity.Hoidong::getId, hd -> hd, (a, b) -> a));
+        // Batch lookups scoped to the current page items
+        Set<Long> dkIds = items.stream()
+                .map(com.example.quanlydetaisinhvien.entity.Ketqua::getDangkydetaiid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<com.example.quanlydetaisinhvien.entity.Dangkydetai> dangKyList = dkIds.isEmpty()
+                ? List.of()
+                : dangkydetaiRepository.findAllById(dkIds);
+
+        Set<Long> dtIds = dangKyList.stream()
+                .map(com.example.quanlydetaisinhvien.entity.Dangkydetai::getDetaiid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, com.example.quanlydetaisinhvien.entity.Detai> dtMap = dtIds.isEmpty()
+                ? Map.of()
+                : detaiRepository.findAllById(dtIds).stream()
+                .collect(Collectors.toMap(com.example.quanlydetaisinhvien.entity.Detai::getId, dt -> dt, (a, b) -> a));
+
+        Set<Long> nhomIds = dangKyList.stream()
+                .map(com.example.quanlydetaisinhvien.entity.Dangkydetai::getNhomid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, com.example.quanlydetaisinhvien.entity.Nhomsinhvien> nhomMap = nhomIds.isEmpty()
+                ? Map.of()
+                : nhomsinhvienRepository.findAllById(nhomIds).stream()
+                .collect(Collectors.toMap(com.example.quanlydetaisinhvien.entity.Nhomsinhvien::getId, nh -> nh, (a, b) -> a));
 
         Map<Long, String> topicNames = new HashMap<>();
         Map<Long, String> groupNames = new HashMap<>();
-        for (var entry : dkMap.entrySet()) {
-            var dt = dtMap.get(entry.getValue().getDetaiid());
-            if (dt != null) topicNames.put(entry.getKey(), dt.getTendetai());
-            var nh = nhomMap.get(entry.getValue().getNhomid());
-            if (nh != null) groupNames.put(entry.getKey(), nh.getTennhom());
-        }
-        Map<Long, String> councilNames = new HashMap<>();
-        for (var entry : hdMap.entrySet()) {
-            councilNames.put(entry.getKey(), entry.getValue().getTenhoidong());
+        for (var dk : dangKyList) {
+            if (dk.getDetaiid() != null) {
+                var dt = dtMap.get(dk.getDetaiid());
+                if (dt != null && dt.getTendetai() != null) {
+                    topicNames.put(dk.getId(), dt.getTendetai());
+                }
+            }
+            if (dk.getNhomid() != null) {
+                var nh = nhomMap.get(dk.getNhomid());
+                if (nh != null && nh.getTennhom() != null) {
+                    groupNames.put(dk.getId(), nh.getTennhom());
+                }
+            }
         }
         model.addAttribute("topicNames", topicNames);
         model.addAttribute("groupNames", groupNames);
-        model.addAttribute("councilNames", councilNames);
 
+        Map<Long, String> councilNames = new HashMap<>();
         if (canManage) {
-            model.addAttribute("publicationInfo", service.publicationInfo(items));
-            var emailStatuses = outbox.statuses(items.stream().map(item -> item.getId()).toList());
+            Set<Long> dotIds = dtMap.values().stream()
+                    .map(com.example.quanlydetaisinhvien.entity.Detai::getDotdangkyid)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            for (Long dotId : dotIds) {
+                for (var hd : hoidongRepository.findByDotdangkyid(dotId)) {
+                    if (hd.getId() != null && hd.getTenhoidong() != null) {
+                        councilNames.put(hd.getId(), hd.getTenhoidong());
+                    }
+                }
+            }
+
+            var publicationInfo = service.publicationInfo(items);
+            model.addAttribute("publicationInfo", publicationInfo);
+
+            for (var info : publicationInfo.values()) {
+                if (info.councils() != null) {
+                    for (var c : info.councils()) {
+                        if (c.getId() != null && c.getTenhoidong() != null) {
+                            councilNames.put(c.getId(), c.getTenhoidong());
+                        }
+                    }
+                }
+            }
+
+            var emailStatuses = outbox.statuses(items.stream().map(com.example.quanlydetaisinhvien.entity.Ketqua::getId).toList());
             model.addAttribute("emailStatuses", emailStatuses);
             model.addAttribute("recipientLabels", outbox.recipientLabels(emailStatuses.values().stream().flatMap(Collection::stream).toList()));
             model.addAttribute("emailStatusLabels", Map.of("PENDING", "Chờ gửi", "SENDING", "Đang gửi",
                     "SENT", "Đã gửi", "MISSING_EMAIL", "Thiếu hoặc sai email", "FAILED", "Chưa gửi được",
                     "UNCERTAIN", "Cần đối soát trước khi gửi lại"));
             model.addAttribute("emailEnabled", emailEnabled);
-            model.addAttribute("doiChieuItems", service.findAllDoiChieuDto());
+            model.addAttribute("doiChieuItems", service.findDoiChieuDto(items));
         }
+        model.addAttribute("councilNames", councilNames);
         return "ketqua-list";
     }
 

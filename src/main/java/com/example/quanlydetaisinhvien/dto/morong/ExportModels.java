@@ -15,7 +15,7 @@ public final class ExportModels {
         Format(int limit, String mime) { this.limit = limit; this.mime = mime; }
     }
     public enum Dataset {
-        DETAI, DOTDANGKY, KETQUA, THONGKE;
+        DETAI, THONGKE;
         public void requireAccess() {
             if (this == THONGKE) ThongkePermissions.requireChief();
             else MorongPermissions.require(MorongPermissions.Dataset.valueOf(name()));
@@ -24,8 +24,6 @@ public final class ExportModels {
         public Class<?> filterType() {
             return switch (this) {
                 case DETAI -> DetaiFilterDTO.class;
-                case DOTDANGKY -> DotdangkyFilterDTO.class;
-                case KETQUA -> KetquaFilterDTO.class;
                 case THONGKE -> ThongkeFilterDTO.class;
             };
         }

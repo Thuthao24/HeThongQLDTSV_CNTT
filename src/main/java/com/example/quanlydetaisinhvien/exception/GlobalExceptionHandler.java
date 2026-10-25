@@ -11,6 +11,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String notFound(Model model) {
+        model.addAttribute("message", "Không tìm thấy trang được yêu cầu.");
+        return "error";
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public String methodNotAllowed(Model model) {
@@ -31,14 +38,37 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NghiepvuException.class)
-    public String handleNghiepvu(NghiepvuException ex, Model model) {
-        model.addAttribute("message", ex.getMessage());
+    public String handleNghiepvu(
+            NghiepvuException ex, Model model) {
+
+        // Ghi nhận lỗi nghiệp vụ để hỗ trợ kiểm tra
+        org.slf4j.LoggerFactory
+                .getLogger(GlobalExceptionHandler.class)
+                .warn("Lỗi nghiệp vụ: {}", ex.getMessage());
+
+        // Chỉ hiển thị thông báo nghiệp vụ đã được kiểm soát
+        model.addAttribute(
+             "message",
+             "Yêu cầu không thể thực hiện. Vui lòng kiểm tra lại dữ liệu."
+        );
+
         return "error";
     }
 
     @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public String handleOther(Exception ex, Model model) {
-        model.addAttribute("message", "Co loi xay ra: " + ex.getMessage());
+        // Chi tiết lỗi chỉ ghi ở log phía máy chủ
+        org.slf4j.LoggerFactory
+                .getLogger(GlobalExceptionHandler.class)
+                .error("Lỗi hệ thống không mong muốn", ex);
+
+        // Không hiển thị ex.getMessage() cho người dùng
+        model.addAttribute(
+                "message",
+                "Hệ thống đang gặp sự cố. Vui lòng thử lại sau."
+        );
+
         return "error";
     }
 }

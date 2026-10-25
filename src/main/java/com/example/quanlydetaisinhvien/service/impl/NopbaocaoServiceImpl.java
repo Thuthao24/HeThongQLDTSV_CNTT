@@ -9,6 +9,8 @@ import com.example.quanlydetaisinhvien.service.NopbaocaoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
@@ -260,9 +262,13 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             throw new NghiepvuException("Đường dẫn file báo cáo không được để trống");
         }
 
+        // Khóa bi quan bản ghi đăng ký đề tài để tránh xung đột với tiến trình chấm điểm
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(request.getDangkydetaiid())
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
         kiemTraKhoaNopBaoCao(request.getDangkydetaiid());
 
-        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(request.getDangkydetaiid(), currentUsername);
+        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         // Kiểm tra xem đề tài này đã có bản ghi báo cáo chưa
         // Nếu đã có: Cập nhật bản ghi hiện tại (nộp lại / thay thế), không tạo thêm bản ghi trùng lặp
@@ -300,10 +306,14 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             throw new NghiepvuException("Định dạng tệp không được hỗ trợ. Chỉ chấp nhận các định dạng: .pdf, .doc, .docx, .zip, .rar");
         }
 
+        // Khóa bi quan bản ghi đăng ký để đồng bộ hóa với việc chấm điểm đồng thời
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
         kiemTraKhoaNopBaoCao(dangkydetaiid);
         kiemTraDinhDangFileVoiMagicBytes(file, ext);
 
-        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dangkydetaiid, currentUsername);
+        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         String safeName = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
         String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
@@ -332,14 +342,40 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
             Nopbaocao saved = repository.save(nb);
 
-            // Dọn dẹp tệp cũ sau khi lưu CSDL thành công
+            // Bảo đảm không xóa file cũ trước khi transaction commit thành công
             if (oldFileDuongDan != null && !oldFileDuongDan.equals(duongdanfile)) {
-                xoaFileVatLy(oldFileDuongDan);
+                final String fileCanXoa = oldFileDuongDan;
+                if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            xoaFileVatLy(fileCanXoa);
+                        }
+                    });
+                } else {
+                    xoaFileVatLy(fileCanXoa);
+                }
+            }
+
+            // Dọn dẹp tệp mới tải lên nếu transaction bị rollback
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                final Path uploadFile = targetPath;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status == STATUS_ROLLED_BACK) {
+                            try {
+                                Files.deleteIfExists(uploadFile);
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    }
+                });
             }
 
             return saved;
         } catch (Exception e) {
-            // Dọn dẹp tệp mồ côi nếu lưu CSDL hoặc upload thất bại
+            // Dọn dẹp tệp mồ côi nếu lưu CSDL hoặc upload thất bại tức thì
             if (targetPath != null) {
                 try {
                     Files.deleteIfExists(targetPath);
@@ -358,12 +394,28 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         Nopbaocao nb = repository.findById(id)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy báo cáo"));
 
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(nb.getDangkydetaiid())
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
         kiemTraKhoaNopBaoCao(nb.getDangkydetaiid());
-        xacThucNhomTruongNopBaoCao(nb.getDangkydetaiid(), currentUsername);
+        xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         String oldFileDuongDan = nb.getDuongdanfile();
         repository.deleteById(id);
-        xoaFileVatLy(oldFileDuongDan);
+
+        if (oldFileDuongDan != null) {
+            final String fileCanXoa = oldFileDuongDan;
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        xoaFileVatLy(fileCanXoa);
+                    }
+                });
+            } else {
+                xoaFileVatLy(fileCanXoa);
+            }
+        }
     }
 
     /**
@@ -433,16 +485,17 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         }
     }
 
-    private Sinhvien xacThucNhomTruongNopBaoCao(Long dangkydetaiid, String currentUsername) {
+    private Sinhvien xacThucNhomTruongNopBaoCao(Dangkydetai dk, String currentUsername) {
         if (currentUsername == null || currentUsername.trim().isEmpty()) {
             throw new NghiepvuException("Người chưa đăng nhập không được phép nộp báo cáo");
         }
 
+        if (dk == null) {
+            throw new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài");
+        }
+
         Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername)
                 .orElseThrow(() -> new NghiepvuException("Tài khoản người dùng không tồn tại"));
-
-        Dangkydetai dk = dangkydetaiRepository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
 
         if (dk.getTrangthai() != null && dk.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
             throw new NghiepvuException("Chỉ được nộp báo cáo khi đề tài của nhóm đã được duyệt chính thức (Trạng thái hiện tại: " + dk.getTrangthai() + ")");

@@ -13,6 +13,13 @@ import java.util.Optional;
 public interface DiemRepository extends JpaRepository<Diem, Long> {
 
     List<Diem> findByDangkydetaiid(Long dangkydetaiid);
+
+    // =========================================================================
+    // MODULE 16 (HỮU NGHỊ) - Batch query phục vụ đối chiếu điểm không gây N+1
+    // Cần Hữu Lộc review khi tạo PR dùng chung DiemRepository
+    // =========================================================================
+    List<Diem> findByDangkydetaiidIn(java.util.Collection<Long> dangkydetaiids);
+
     List<Diem> findByGiangvienid(Long giangvienid);
     org.springframework.data.domain.Page<Diem> findByGiangvienid(Long giangvienid, org.springframework.data.domain.Pageable pageable);
     boolean existsByDangkydetaiidAndGiangvienid(Long dangkydetaiid, Long giangvienid);

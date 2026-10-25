@@ -1,3 +1,4 @@
+
 package com.example.quanlydetaisinhvien.service.impl;
 
 import com.example.quanlydetaisinhvien.dto.DangKyDeTaiDto;
@@ -7,13 +8,12 @@ import com.example.quanlydetaisinhvien.exception.NghiepvuException;
 import com.example.quanlydetaisinhvien.repository.*;
 import com.example.quanlydetaisinhvien.service.DangkydetaiService;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Transactional
@@ -32,7 +32,8 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private GiangvienRepository giangvienRepository;
 
-    public void setGiangvienRepository(GiangvienRepository giangvienRepository) {
+    public void setGiangvienRepository(
+            GiangvienRepository giangvienRepository) {
         this.giangvienRepository = giangvienRepository;
     }
 
@@ -47,7 +48,9 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             TaikhoanRepository taikhoanRepository,
             NopbaocaoRepository nopbaocaoRepository,
             KetquaRepository ketquaRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) GiangvienRepository giangvienRepository) {
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            GiangvienRepository giangvienRepository) {
+
         this.repository = repository;
         this.nhomsinhvienRepository = nhomsinhvienRepository;
         this.thanhviennhomRepository = thanhviennhomRepository;
@@ -70,8 +73,12 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             TaikhoanRepository taikhoanRepository,
             NopbaocaoRepository nopbaocaoRepository,
             KetquaRepository ketquaRepository) {
-        this(repository, nhomsinhvienRepository, thanhviennhomRepository, detaiRepository,
-                dotdangkyRepository, sinhvienRepository, taikhoanRepository, nopbaocaoRepository, ketquaRepository, null);
+
+        this(repository, nhomsinhvienRepository,
+            thanhviennhomRepository, detaiRepository,
+            dotdangkyRepository, sinhvienRepository,
+            taikhoanRepository, nopbaocaoRepository,
+            ketquaRepository, null);
     }
 
     public DangkydetaiServiceImpl(
@@ -83,9 +90,15 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             SinhvienRepository sinhvienRepository,
             TaikhoanRepository taikhoanRepository,
             NopbaocaoRepository nopbaocaoRepository) {
-        this(repository, nhomsinhvienRepository, thanhviennhomRepository, detaiRepository,
-                dotdangkyRepository, sinhvienRepository, taikhoanRepository, nopbaocaoRepository, null, null);
+
+        this(repository, nhomsinhvienRepository,
+            thanhviennhomRepository, detaiRepository,
+            dotdangkyRepository, sinhvienRepository,
+            taikhoanRepository, nopbaocaoRepository,
+            null, null);
     }
+
+    // ===== CRUD CO KIEM SOAT =====
 
     @Override
     public List<Dangkydetai> findAll() {
@@ -99,13 +112,19 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
 
     @Override
     public Dangkydetai save(Dangkydetai entity) {
-        throw new NghiepvuException("Không ghi đăng ký trực tiếp; sử dụng nghiệp vụ đăng ký, duyệt hoặc hủy có kiểm tra quyền và thời gian.");
+        throw new NghiepvuException(
+            "Không lưu đăng ký trực tiếp. "
+            + "Vui lòng sử dụng chức năng đăng ký đề tài.");
     }
 
     @Override
     public void deleteById(Long id) {
-        throw new NghiepvuException("Không xóa đăng ký trực tiếp; sử dụng nghiệp vụ hủy đăng ký có kiểm tra quyền.");
+        throw new NghiepvuException(
+            "Không xóa đăng ký trực tiếp. "
+            + "Vui lòng sử dụng chức năng hủy đăng ký.");
     }
+
+    // ===== DANH SACH DANG KY =====
 
     @Override
     @Transactional(readOnly = true)
@@ -116,31 +135,55 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     @Override
     @Transactional(readOnly = true)
     public List<DangKyDeTaiDto> layDanhSachDangKyDto(int page) {
-        List<Dangkydetai> list = repository.findAll(org.springframework.data.domain.PageRequest.of(Math.max(0, page), 50, org.springframework.data.domain.Sort.by("id").descending())).getContent();
+        List<Dangkydetai> list = repository.findAll(
+            org.springframework.data.domain.PageRequest.of(
+                Math.max(0, page), 50,
+                org.springframework.data.domain.Sort.by("id").descending()
+            )
+        ).getContent();
+
         return chuyenDanhSachDangKySangDto(list);
     }
 
-    private List<DangKyDeTaiDto> chuyenDanhSachDangKySangDto(List<Dangkydetai> list) {
+    private List<DangKyDeTaiDto> chuyenDanhSachDangKySangDto(
+            List<Dangkydetai> list) {
+
         if (list == null || list.isEmpty()) {
             return new ArrayList<>();
         }
-        // Bulk queries: avoid one query per registration while constructing the page.
-        java.util.Map<Long, Nhomsinhvien> nhomMap = new java.util.HashMap<>();
-        nhomsinhvienRepository.findAllById(list.stream().map(Dangkydetai::getNhomid).distinct().toList())
-                .forEach(n -> nhomMap.put(n.getId(), n));
-        java.util.Map<Long, Detai> detaiMap = new java.util.HashMap<>();
-        detaiRepository.findAllById(list.stream().map(Dangkydetai::getDetaiid).distinct().toList())
-                .forEach(d -> detaiMap.put(d.getId(), d));
-        java.util.Map<Long, Dotdangky> dotMap = new java.util.HashMap<>();
-        dotdangkyRepository.findAllById(nhomMap.values().stream().map(Nhomsinhvien::getDotdangkyid).distinct().toList())
-                .forEach(d -> dotMap.put(d.getId(), d));
-        java.util.Map<Long, Sinhvien> sinhvienMap = new java.util.HashMap<>();
-        sinhvienRepository.findAllById(nhomMap.values().stream().map(Nhomsinhvien::getNhomtruongid).distinct().toList())
-                .forEach(sv -> sinhvienMap.put(sv.getId(), sv));
-        java.util.Map<Long, Taikhoan> accountMap = new java.util.HashMap<>();
-        taikhoanRepository.findAllById(sinhvienMap.values().stream().map(Sinhvien::getTaikhoanid).distinct().toList())
-                .forEach(tk -> accountMap.put(tk.getId(), tk));
-        List<DangKyDeTaiDto> dtos = new ArrayList<>();
+
+        Map<Long, Nhomsinhvien> nhomMap = new HashMap<>();
+        nhomsinhvienRepository.findAllById(
+            list.stream().map(Dangkydetai::getNhomid)
+                .filter(Objects::nonNull).distinct().toList()
+        ).forEach(n -> nhomMap.put(n.getId(), n));
+
+        Map<Long, Detai> detaiMap = new HashMap<>();
+        detaiRepository.findAllById(
+            list.stream().map(Dangkydetai::getDetaiid)
+                .filter(Objects::nonNull).distinct().toList()
+        ).forEach(d -> detaiMap.put(d.getId(), d));
+
+        Map<Long, Dotdangky> dotMap = new HashMap<>();
+        dotdangkyRepository.findAllById(
+            nhomMap.values().stream().map(Nhomsinhvien::getDotdangkyid)
+                .filter(Objects::nonNull).distinct().toList()
+        ).forEach(d -> dotMap.put(d.getId(), d));
+
+        Map<Long, Sinhvien> sinhvienMap = new HashMap<>();
+        sinhvienRepository.findAllById(
+            nhomMap.values().stream().map(Nhomsinhvien::getNhomtruongid)
+                .filter(Objects::nonNull).distinct().toList()
+        ).forEach(s -> sinhvienMap.put(s.getId(), s));
+
+        Map<Long, Taikhoan> accountMap = new HashMap<>();
+        taikhoanRepository.findAllById(
+            sinhvienMap.values().stream().map(Sinhvien::getTaikhoanid)
+                .filter(Objects::nonNull).distinct().toList()
+        ).forEach(t -> accountMap.put(t.getId(), t));
+
+        List<DangKyDeTaiDto> result = new ArrayList<>();
+
         for (Dangkydetai dk : list) {
             DangKyDeTaiDto dto = new DangKyDeTaiDto();
             dto.setId(dk.getId());
@@ -148,83 +191,126 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             dto.setDetaiid(dk.getDetaiid());
             dto.setTrangthai(dk.getTrangthai());
             dto.setNgaydangky(dk.getNgaydangky());
-            Nhomsinhvien n = nhomMap.get(dk.getNhomid());
-            if (n != null) {
-                dto.setTennhom(n.getTennhom());
-                dto.setDotdangkyid(n.getDotdangkyid());
-                dto.setNhomtruongid(n.getNhomtruongid());
-                Dotdangky dot = dotMap.get(n.getDotdangkyid());
-                if (dot != null) { dto.setTendot(dot.getTendot()); dto.setHanNop(dot.getKetthucsinhvien()); }
-                Sinhvien sv = sinhvienMap.get(n.getNhomtruongid());
+
+            Nhomsinhvien nhom = nhomMap.get(dk.getNhomid());
+
+            if (nhom != null) {
+                dto.setTennhom(nhom.getTennhom());
+                dto.setDotdangkyid(nhom.getDotdangkyid());
+                dto.setNhomtruongid(nhom.getNhomtruongid());
+
+                Dotdangky dot = dotMap.get(nhom.getDotdangkyid());
+                if (dot != null) {
+                    dto.setTendot(dot.getTendot());
+                    dto.setHanNop(dot.getKetthucsinhvien());
+                }
+
+                Sinhvien sv = sinhvienMap.get(nhom.getNhomtruongid());
                 if (sv != null) {
                     dto.setMasinhvienNhomtruong(sv.getMasinhvien());
+
                     Taikhoan tk = accountMap.get(sv.getTaikhoanid());
-                    if (tk != null) dto.setTenNhomtruong(tk.getHoten());
+                    if (tk != null) {
+                        dto.setTenNhomtruong(tk.getHoten());
+                    }
                 }
             }
+
             Detai dt = detaiMap.get(dk.getDetaiid());
-            if (dt != null) dto.setTendetai(dt.getTendetai());
-            dtos.add(dto);
+            if (dt != null) {
+                dto.setTendetai(dt.getTendetai());
+            }
+            result.add(dto);
         }
-        return dtos;
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<DangKyDeTaiDto> layDanhSachDangKyChoUser(String currentUsername) {
-        if (currentUsername == null || currentUsername.trim().isEmpty()) {
+    public List<DangKyDeTaiDto> layDanhSachDangKyChoUser(
+            String currentUsername) {
+
+        if (currentUsername == null || currentUsername.isBlank()) {
             return new ArrayList<>();
         }
-        Optional<Taikhoan> tkOpt = taikhoanRepository.findByTendangnhap(currentUsername);
-        if (tkOpt.isEmpty()) {
+
+        Optional<Taikhoan> accountOpt =
+            taikhoanRepository.findByTendangnhap(currentUsername);
+
+        if (accountOpt.isEmpty()) {
             return new ArrayList<>();
         }
-        Taikhoan tk = tkOpt.get();
-        if (tk.getVaitro() == Vaitro.TRUONGKHOA) {
+
+        Taikhoan account = accountOpt.get();
+
+        if (account.getVaitro() == Vaitro.TRUONGKHOA) {
             return layDanhSachDangKyDto();
         }
-        if (tk.getVaitro() == Vaitro.TRUONGBOMON && giangvienRepository != null) {
-            Optional<Giangvien> gvOpt = giangvienRepository.findByTaikhoanid(tk.getId());
-            if (gvOpt.isPresent() && gvOpt.get().getBomonid() != null) {
-                List<Detai> bmDetais = detaiRepository.findByBomonid(gvOpt.get().getBomonid());
-                List<Long> bmDetaiIds = bmDetais.stream().map(Detai::getId).toList();
-                if (!bmDetaiIds.isEmpty()) {
-                    return chuyenDanhSachDangKySangDto(repository.findByDetaiidIn(bmDetaiIds));
-                }
+
+        if (account.getVaitro() == Vaitro.TRUONGBOMON) {
+            if (giangvienRepository == null) {
                 return new ArrayList<>();
             }
-            return layDanhSachDangKyDto();
+
+            Optional<Giangvien> teacher =
+                giangvienRepository.findByTaikhoanid(account.getId());
+
+            if (teacher.isEmpty() || teacher.get().getBomonid() == null) {
+                return new ArrayList<>();
+            }
+
+            List<Long> ids = detaiRepository.findByBomonid(
+                teacher.get().getBomonid()
+            ).stream().map(Detai::getId).toList();
+
+            return ids.isEmpty() ? new ArrayList<>()
+                : chuyenDanhSachDangKySangDto(
+                    repository.findByDetaiidIn(ids));
         }
-        if (tk.getVaitro() == Vaitro.GIANGVIEN && giangvienRepository != null) {
-            Optional<Giangvien> gvOpt = giangvienRepository.findByTaikhoanid(tk.getId());
-            if (gvOpt.isPresent()) {
-                List<Detai> myDetais = detaiRepository.findByGiangviendexuatid(gvOpt.get().getId());
-                List<Long> myDetaiIds = myDetais.stream().map(Detai::getId).toList();
-                if (!myDetaiIds.isEmpty()) {
-                    return chuyenDanhSachDangKySangDto(repository.findByDetaiidIn(myDetaiIds));
-                }
+
+        if (account.getVaitro() == Vaitro.GIANGVIEN) {
+            if (giangvienRepository == null) {
                 return new ArrayList<>();
             }
+
+            Optional<Giangvien> teacher =
+                giangvienRepository.findByTaikhoanid(account.getId());
+
+            if (teacher.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Long> ids = detaiRepository.findByGiangviendexuatid(
+                teacher.get().getId()
+            ).stream().map(Detai::getId).toList();
+
+            return ids.isEmpty() ? new ArrayList<>()
+                : chuyenDanhSachDangKySangDto(
+                    repository.findByDetaiidIn(ids));
+        }
+
+        if (account.getVaitro() != Vaitro.SINHVIEN) {
             return new ArrayList<>();
         }
-        if (tk.getVaitro() == Vaitro.SINHVIEN) {
-            Optional<Sinhvien> svOpt = sinhvienRepository.findByMasinhvien(currentUsername);
-            if (svOpt.isPresent()) {
-                List<Thanhviennhom> tvList = thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
-                List<DangKyDeTaiDto> result = new ArrayList<>();
-                for (Thanhviennhom tv : tvList) {
-                    repository.findByNhomid(tv.getNhomid()).ifPresent(dk -> result.add(chuyenSangDto(dk)));
-                }
-                return result;
+        Optional<Sinhvien> svOpt = sinhvienRepository.findByMasinhvien(currentUsername);
+        if (svOpt.isPresent()) {
+            List<Thanhviennhom> tvList = thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
+            List<DangKyDeTaiDto> result = new ArrayList<>();
+            for (Thanhviennhom tv : tvList) {
+                repository.findByNhomid(tv.getNhomid()).ifPresent(dk -> result.add(chuyenSangDto(dk)));
             }
+            return result;
         }
         return new ArrayList<>();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DangKyDeTaiDto layDangKyCuaSinhVien(String currentUsername) {
-        if (currentUsername == null || currentUsername.trim().isEmpty()) {
+    public DangKyDeTaiDto layDangKyCuaSinhVien(
+            String currentUsername) {
+
+        if (currentUsername == null || currentUsername.isBlank()) {
             return null;
         }
         List<DangKyDeTaiDto> ds = layDanhSachDangKyChoUser(currentUsername);
@@ -251,150 +337,234 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             dto.setTennhom(nhom.getTennhom());
             dto.setDotdangkyid(nhom.getDotdangkyid());
             dto.setNhomtruongid(nhom.getNhomtruongid());
-            dotdangkyRepository.findById(nhom.getDotdangkyid()).ifPresent(d -> {
-                dto.setTendot(d.getTendot());
-                dto.setHanNop(d.getKetthucsinhvien());
-            });
-            sinhvienRepository.findById(nhom.getNhomtruongid()).ifPresent(sv -> {
-                dto.setMasinhvienNhomtruong(sv.getMasinhvien());
-                taikhoanRepository.findById(sv.getTaikhoanid()).ifPresent(tk -> dto.setTenNhomtruong(tk.getHoten()));
-            });
+
+            dotdangkyRepository.findById(nhom.getDotdangkyid())
+                .ifPresent(dot -> {
+                    dto.setTendot(dot.getTendot());
+                    dto.setHanNop(dot.getKetthucsinhvien());
+                });
+
+            sinhvienRepository.findById(nhom.getNhomtruongid())
+                .ifPresent(sv -> {
+                    dto.setMasinhvienNhomtruong(sv.getMasinhvien());
+                    taikhoanRepository.findById(sv.getTaikhoanid())
+                        .ifPresent(tk ->
+                            dto.setTenNhomtruong(tk.getHoten()));
+                });
         });
 
-        detaiRepository.findById(dk.getDetaiid()).ifPresent(dt -> dto.setTendetai(dt.getTendetai()));
+        detaiRepository.findById(dk.getDetaiid())
+            .ifPresent(dt -> dto.setTendetai(dt.getTendetai()));
+
         return dto;
     }
 
-    @Override
-    public Dangkydetai dangkyDetai(DangKyDeTaiRequest request, String currentUsername) {
-        if (request == null || request.getNhomid() == null || request.getDetaiid() == null) {
-            throw new NghiepvuException("Thông tin đăng ký đề tài không hợp lệ");
+    // ===== KIEM TRA DANG NHAP VA QUYEN =====
+
+    private Sinhvien currentStudent(String username) {
+        if (username == null || username.isBlank()) {
+            throw new AccessDeniedException("Vui lòng đăng nhập");
         }
 
-        Nhomsinhvien nhom = nhomsinhvienRepository.findById(request.getNhomid())
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm sinh viên"));
+        Taikhoan account = taikhoanRepository
+            .findByTendangnhap(username)
+            .orElseThrow(() -> new AccessDeniedException(
+                "Không xác định được tài khoản"));
 
-        Detai detai = detaiRepository.findById(request.getDetaiid())
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy đề tài"));
-
-        Dotdangky dot = dotdangkyRepository.findById(nhom.getDotdangkyid())
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy đợt đăng ký"));
-
-        // 1. Nhóm và đề tài phải thuộc cùng đợt đăng ký
-        if (!detai.getDotdangkyid().equals(nhom.getDotdangkyid())) {
-            throw new NghiepvuException("Nhóm và đề tài không cùng đợt đăng ký");
+        if (account.getVaitro() != Vaitro.SINHVIEN) {
+            throw new AccessDeniedException(
+                "Chỉ sinh viên được thực hiện đăng ký");
         }
 
-        // 2. Đề tài phải ở trạng thái công bố
-        if (detai.getTrangthai() != TrangthaiDetai.CONGBO) {
-            throw new NghiepvuException("Chỉ được đăng ký đề tài đã được công bố");
+        return sinhvienRepository.findByTaikhoanid(account.getId())
+            .orElseThrow(() -> new AccessDeniedException(
+                "Tài khoản chưa liên kết sinh viên"));
+    }
+
+    private void checkLeader(Nhomsinhvien nhom, Sinhvien sv) {
+        if (!Objects.equals(sv.getId(), nhom.getNhomtruongid())) {
+            throw new AccessDeniedException(
+                "Chỉ nhóm trưởng được đăng ký hoặc hủy đăng ký");
         }
 
-        // 3. Đề tài chưa được duyệt chính thức cho một nhóm khác
-        boolean daCoNhomDuyet = repository.existsByDetaiidAndTrangthai(detai.getId(), TrangthaiDangkydetai.DADUYET);
-        if (daCoNhomDuyet) {
-            throw new NghiepvuException("Đề tài này đã được phê duyệt cho một nhóm khác, vui lòng chọn đề tài khác");
+        if (!thanhviennhomRepository.existsByNhomidAndSinhvienid(
+                nhom.getId(), sv.getId())) {
+            throw new AccessDeniedException(
+                "Nhóm trưởng phải có trong danh sách thành viên");
         }
+    }
 
-        // 4. Đợt đăng ký phải ở trạng thái cho phép đăng ký
+    private void checkRegistrationWindow(Dotdangky dot) {
         if (dot.getTrangthai() != TrangthaiDotdangky.GIAIDOAN2) {
-            throw new NghiepvuException("Đợt đăng ký hiện không mở để sinh viên đăng ký đề tài");
+            throw new NghiepvuException(
+                "Đợt đăng ký chưa mở hoặc đã đóng Giai đoạn 2");
         }
 
         LocalDateTime now = LocalDateTime.now();
-        // Cả trạng thái GĐ2 lẫn khung giờ đăng ký đều phải hợp lệ.
-        if (dot.getBatdausinhvien() == null || dot.getKetthucsinhvien() == null
-                || now.isBefore(dot.getBatdausinhvien()) || now.isAfter(dot.getKetthucsinhvien())) {
-            throw new NghiepvuException("Ngoài thời gian sinh viên đăng ký đề tài của đợt này");
+
+        if (dot.getBatdausinhvien() == null
+                || dot.getKetthucsinhvien() == null
+                || now.isBefore(dot.getBatdausinhvien())
+                || !now.isBefore(dot.getKetthucsinhvien())) {
+            throw new NghiepvuException(
+                "Ngoài thời gian sinh viên đăng ký đề tài");
+        }
+    }
+
+    // ===== DANG KY DE TAI =====
+
+    @Override
+    public Dangkydetai dangkyDetai(
+            DangKyDeTaiRequest request, String currentUsername) {
+
+        if (request == null || request.getNhomid() == null
+                || request.getDetaiid() == null) {
+            throw new NghiepvuException(
+                "Thông tin đăng ký đề tài không hợp lệ");
         }
 
-        // 5. Kiểm tra nhóm đã đăng ký đề tài trước đó chưa
-        Optional<Dangkydetai> dkHienTaiOpt = repository.findByNhomid(nhom.getId());
-        if (dkHienTaiOpt.isPresent()) {
-            Dangkydetai dkHienTai = dkHienTaiOpt.get();
-            if (dkHienTai.getTrangthai() == TrangthaiDangkydetai.TUCHOI) {
-                // Nhóm đã bị từ chối đề tài cũ -> Xóa lượt đăng ký bị từ chối để cho phép đăng ký đề tài mới
-                repository.delete(dkHienTai);
-                repository.flush();
-            } else {
-                throw new NghiepvuException("Nhóm đã đăng ký đề tài trong đợt này, mỗi nhóm chỉ được đăng ký một đề tài");
+        Nhomsinhvien nhom = nhomsinhvienRepository
+            .findById(request.getNhomid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy nhóm sinh viên"));
+
+        Detai detai = detaiRepository
+            .findById(request.getDetaiid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đề tài"));
+
+        Dotdangky dot = dotdangkyRepository
+            .findById(nhom.getDotdangkyid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đợt đăng ký"));
+
+        // Nhom va de tai phai cung dot.
+        if (!Objects.equals(
+                nhom.getDotdangkyid(), detai.getDotdangkyid())) {
+            throw new NghiepvuException(
+                "Nhóm và đề tài phải thuộc cùng đợt đăng ký");
+        }
+
+        // Chi de tai CONGBO moi duoc dang ky.
+        if (detai.getTrangthai() != TrangthaiDetai.CONGBO) {
+            throw new NghiepvuException(
+                "Chỉ được đăng ký đề tài đã công bố");
+        }
+
+        if (repository.existsByDetaiidAndTrangthai(
+                detai.getId(), TrangthaiDangkydetai.DADUYET)) {
+            throw new NghiepvuException(
+                "Đề tài đã được duyệt cho một nhóm khác");
+        }
+
+        checkRegistrationWindow(dot);
+
+        // Moi nhom chi co mot ban ghi dang ky.
+        Optional<Dangkydetai> oldOpt =
+            repository.findByNhomid(nhom.getId());
+
+        if (oldOpt.isPresent()
+                && oldOpt.get().getTrangthai()
+                != TrangthaiDangkydetai.TUCHOI) {
+            throw new NghiepvuException(
+                "Nhóm đã đăng ký đề tài, không thể đăng ký trùng");
+        }
+
+        // Quy tac so thanh vien dang co cua he thong.
+        long memberCount =
+            thanhviennhomRepository.countByNhomid(nhom.getId());
+
+        if (memberCount < 3 || memberCount > 5) {
+            throw new NghiepvuException(
+                "Nhóm cần từ 3 đến 5 thành viên để đăng ký");
+        }
+
+        Sinhvien sv = currentStudent(currentUsername);
+        checkLeader(nhom, sv);
+
+        // Dang ky lai sau TUCHOI phai giu ID cu.
+        if (oldOpt.isPresent()) {
+            Long oldId = oldOpt.get().getId();
+
+            if (nopbaocaoRepository.existsByDangkydetaiid(oldId)
+                    || ketquaRepository.existsByDangkydetaiid(oldId)) {
+                throw new NghiepvuException(
+                    "Đăng ký cũ đã có báo cáo hoặc kết quả, "
+                    + "không thể đăng ký lại tự động");
             }
         }
 
-        // 6. Kiểm tra số lượng thành viên trong nhóm (3 - 5 sinh viên)
-        long soThanhvien = thanhviennhomRepository.countByNhomid(nhom.getId());
-        if (soThanhvien < 3 || soThanhvien > 5) {
-            throw new NghiepvuException("Nhóm phải có từ 3 đến 5 thành viên mới được đăng ký đề tài");
-        }
-
-        
-        if (currentUsername == null || currentUsername.isBlank()) {
-            throw new NghiepvuException( "Vui lòng đăng nhập trước khi đăng ký đề tài");
-        }
-
-        Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElseThrow(() -> new NghiepvuException(
-            "Không tìm thấy tài khoản"));
-
-        if (tk.getVaitro() != Vaitro.SINHVIEN && tk.getVaitro() != Vaitro.TRUONGKHOA) {
-            throw new NghiepvuException("Chỉ sinh viên là nhóm trưởng hoặc Trưởng khoa mới được đăng ký");
-        }
-
-        if (tk.getVaitro() == Vaitro.SINHVIEN) {
-            Sinhvien sv = sinhvienRepository.findByTaikhoanid(tk.getId()).orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin sinh viên"));
-
-            if (!sv.getId().equals(nhom.getNhomtruongid())) {
-                throw new NghiepvuException("Chỉ nhóm trưởng mới được đăng ký đề tài");
-            }
-
-            if (!thanhviennhomRepository.existsByNhomidAndSinhvienid(nhom.getId(), sv.getId())) {
-                throw new NghiepvuException("Nhóm trưởng phải thuộc danh sách thành viên nhóm");
-            }
-        }
+        Dangkydetai dk = oldOpt.orElseGet(Dangkydetai::new);
 
 
-        Dangkydetai dk = new Dangkydetai();
         dk.setNhomid(nhom.getId());
         dk.setDetaiid(detai.getId());
         dk.setTrangthai(TrangthaiDangkydetai.CHODUYET);
-        dk.setNgaydangky(now);
+        dk.setNgaydangky(LocalDateTime.now());
 
         try {
-            return repository.save(dk);
-        } catch (DataIntegrityViolationException e) {
-            // Xử lý tình huống hai yêu cầu đăng ký được gửi đồng thời
-            throw new NghiepvuException("Nhóm đã đăng ký đề tài rồi, không thể đăng ký lần thứ hai");
+            // UNIQUE(Nhomid) duoc kiem tra khi flush.
+            return repository.saveAndFlush(dk);
+        } catch (DataIntegrityViolationException ex) {
+            throw new NghiepvuException(
+                "Đăng ký bị trùng hoặc vi phạm ràng buộc dữ liệu");
         }
     }
+
+    // ===== HUY DANG KY =====
 
     @Override
-    public void huyDangky(Long dangkydetaiid, String currentUsername) {
-        Dangkydetai dk = repository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+    public void huyDangky(
+            Long dangkydetaiid, String currentUsername) {
 
-        Nhomsinhvien nhom = nhomsinhvienRepository.findById(dk.getNhomid())
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin nhóm"));
-
-        if (currentUsername != null) {
-            Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElse(null);
-            if (tk != null && tk.getVaitro() == Vaitro.SINHVIEN) {
-                Sinhvien sv = sinhvienRepository.findByMasinhvien(currentUsername).orElse(null);
-                if (sv == null || !nhom.getNhomtruongid().equals(sv.getId())) {
-                    throw new NghiepvuException("Chỉ nhóm trưởng mới có quyền hủy đăng ký đề tài");
-                }
-            }
+        if (dangkydetaiid == null) {
+            throw new NghiepvuException(
+                "Mã đăng ký không hợp lệ");
         }
 
-        if (nopbaocaoRepository.existsByDangkydetaiid(dangkydetaiid)) {
-            throw new NghiepvuException("Không thể hủy đăng ký đề tài vì nhóm đã có báo cáo được nộp");
-        }
+        Sinhvien sv = currentStudent(currentUsername);
+
+        Dangkydetai dk = repository
+            .findByIdForUpdate(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đăng ký đề tài"));
+
+        Nhomsinhvien nhom = nhomsinhvienRepository
+            .findById(dk.getNhomid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy nhóm sinh viên"));
+
+        checkLeader(nhom, sv);
+
+        Dotdangky dot = dotdangkyRepository
+            .findById(nhom.getDotdangkyid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đợt đăng ký"));
+
+        checkRegistrationWindow(dot);
 
         if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
-            throw new NghiepvuException("Không thể hủy đề tài đã được duyệt chính thức. Vui lòng liên hệ Trưởng bộ môn/Khoa.");
+            throw new NghiepvuException(
+                "Không thể hủy đăng ký đã được duyệt");
         }
 
-        repository.deleteById(dangkydetaiid);
+        if (dk.getTrangthai() != TrangthaiDangkydetai.CHODUYET
+                && dk.getTrangthai() != TrangthaiDangkydetai.TUCHOI) {
+            throw new NghiepvuException(
+                "Trạng thái đăng ký không cho phép hủy");
+        }
+
+        if (nopbaocaoRepository.existsByDangkydetaiid(dangkydetaiid)
+                || ketquaRepository.existsByDangkydetaiid(dangkydetaiid)) {
+            throw new NghiepvuException(
+                "Đăng ký đã có báo cáo hoặc kết quả, không thể hủy");
+        }
+
+        repository.delete(dk);
+        repository.flush();
     }
 
+    // ===== DUYET DANG KY =====
 
     @Override
     public Dangkydetai duyetDangky(
@@ -402,57 +572,89 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             boolean chapNhan,
             String currentUsername) {
 
-        Taikhoan approvingAccount = currentUsername == null
-                ? null
-                : taikhoanRepository.findByTendangnhap(currentUsername)
-                        .orElse(null);
-
-        if (approvingAccount == null) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Vui lòng đăng nhập để thực hiện duyệt đăng ký đề tài");
+        if (dangkydetaiid == null) {
+            throw new NghiepvuException(
+                "Mã đăng ký không hợp lệ");
         }
 
-        // Lấy ID đề tài trước khi khóa giao dịch.
-        Long detaiId = repository.findDetaiIdByRegistrationId(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException(
-                        "Không tìm thấy đăng ký đề tài"));
+        if (currentUsername == null || currentUsername.isBlank()) {
+            throw new AccessDeniedException("Vui lòng đăng nhập");
+        }
 
-        // Khóa đề tài để các yêu cầu duyệt cùng đề tài được xử lý lần lượt.
-        Detai detai = detaiRepository.findByIdForUpdate(detaiId)
-                .orElseThrow(() -> new NghiepvuException(
-                        "Không tìm thấy đề tài"));
+        Taikhoan account = taikhoanRepository
+            .findByTendangnhap(currentUsername)
+            .orElseThrow(() -> new AccessDeniedException(
+                "Không xác định được tài khoản"));
 
-        boolean coQuyen = false;
-        if (approvingAccount.getVaitro() == Vaitro.TRUONGKHOA) {
-            coQuyen = true;
-        } else if (giangvienRepository != null && (approvingAccount.getVaitro() == Vaitro.TRUONGBOMON || approvingAccount.getVaitro() == Vaitro.GIANGVIEN)) {
-            Giangvien gv = giangvienRepository.findByTaikhoanid(approvingAccount.getId()).orElse(null);
-            if (gv != null) {
-                if (approvingAccount.getVaitro() == Vaitro.TRUONGBOMON && gv.getBomonid() != null && gv.getBomonid().equals(detai.getBomonid())) {
-                    coQuyen = true;
-                } else if (gv.getId().equals(detai.getGiangviendexuatid())) {
-                    coQuyen = true;
+        Long detaiId = repository
+            .findDetaiIdByRegistrationId(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đăng ký đề tài"));
+
+        // Khoa de tai tranh hai nhom duoc duyet dong thoi.
+        Detai detai = detaiRepository
+            .findByIdForUpdate(detaiId)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đề tài"));
+
+        boolean authorized =
+            account.getVaitro() == Vaitro.TRUONGKHOA;
+
+        if (!authorized && giangvienRepository != null
+                && (account.getVaitro() == Vaitro.TRUONGBOMON
+                    || account.getVaitro() == Vaitro.GIANGVIEN)) {
+
+            Optional<Giangvien> teacher =
+                giangvienRepository.findByTaikhoanid(account.getId());
+
+            if (teacher.isPresent()) {
+                Giangvien g = teacher.get();
+
+                if (account.getVaitro() == Vaitro.TRUONGBOMON
+                        && Objects.equals(
+                            g.getBomonid(), detai.getBomonid())) {
+                    authorized = true;
+                } else if (Objects.equals(
+                        g.getId(), detai.getGiangviendexuatid())) {
+                    authorized = true;
                 }
             }
         }
 
-        if (!coQuyen) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Bạn không có quyền duyệt đăng ký cho đề tài này");
+        if (!authorized) {
+            throw new AccessDeniedException(
+                "Không có quyền duyệt đăng ký cho đề tài này");
         }
 
-        Dangkydetai dk = repository.findByIdForUpdate(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException(
-                        "Không tìm thấy đăng ký đề tài"));
+        Dangkydetai dk = repository
+            .findByIdForUpdate(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy đăng ký đề tài"));
 
-        if (!detaiId.equals(dk.getDetaiid())) {
+        if (!Objects.equals(detaiId, dk.getDetaiid())) {
             throw new NghiepvuException(
-                    "Thông tin đề tài đăng ký không hợp lệ");
+                "Dữ liệu đăng ký không nhất quán");
         }
 
         if (dk.getTrangthai() != TrangthaiDangkydetai.CHODUYET) {
             throw new NghiepvuException(
-                    "Chỉ xử lý đăng ký đang chờ duyệt");
+                "Chỉ xử lý đăng ký đang chờ duyệt");
+        }
+
+        Nhomsinhvien nhom = nhomsinhvienRepository
+            .findById(dk.getNhomid())
+            .orElseThrow(() -> new NghiepvuException(
+                "Không tìm thấy nhóm sinh viên"));
+
+        if (!Objects.equals(
+                nhom.getDotdangkyid(), detai.getDotdangkyid())) {
+            throw new NghiepvuException(
+                "Đề tài và nhóm không cùng đợt đăng ký");
+        }
+
+        if (detai.getTrangthai() != TrangthaiDetai.CONGBO) {
+            throw new NghiepvuException(
+                "Đề tài chưa được công bố");
         }
 
         if (chapNhan) {
@@ -461,17 +663,20 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
                 throw new NghiepvuException("Nhóm phải có từ 3 đến 5 thành viên mới đủ điều kiện duyệt đề tài (Hiện có: " + soThanhvien + " thành viên)");
             }
 
-            boolean daCoNhomKhac = repository.findApprovedForUpdate(
+            boolean approvedElsewhere = repository.findApprovedForUpdate(
                     detaiId, TrangthaiDangkydetai.DADUYET)
-                    .stream()
-                    .anyMatch(x -> !x.getId().equals(dangkydetaiid));
+                .stream()
+                .anyMatch(x -> !Objects.equals(
+                    x.getId(), dangkydetaiid));
 
-            if (daCoNhomKhac) {
+            if (approvedElsewhere) {
                 throw new NghiepvuException(
-                        "Đề tài này đã được duyệt cho nhóm khác");
+                    "Đề tài đã được duyệt cho nhóm khác");
             }
-            // The existing topic/registration locks also serialize result initialization.
-            if (ketquaRepository.findByDangkydetaiid(dangkydetaiid).isEmpty()) {
+
+            // Tao ket qua trung gian neu chua ton tai.
+            if (ketquaRepository.findByDangkydetaiid(
+                    dangkydetaiid).isEmpty()) {
                 Ketqua result = new Ketqua();
                 result.setDangkydetaiid(dangkydetaiid);
                 result.setDacongbo(false);
@@ -480,10 +685,9 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         }
 
         dk.setTrangthai(chapNhan
-                ? TrangthaiDangkydetai.DADUYET
-                : TrangthaiDangkydetai.TUCHOI);
+            ? TrangthaiDangkydetai.DADUYET
+            : TrangthaiDangkydetai.TUCHOI);
 
         return repository.save(dk);
     }
 }
-
