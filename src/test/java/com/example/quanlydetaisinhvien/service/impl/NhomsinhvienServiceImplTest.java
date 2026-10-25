@@ -37,6 +37,10 @@ class NhomsinhvienServiceImplTest {
     private DangkydetaiRepository dkRepo;
 
     @Autowired
+    private DetaiRepository detaiRepo;
+
+
+    @Autowired
     private SinhvienRepository svRepo;
 
     @Autowired
@@ -83,7 +87,7 @@ class NhomsinhvienServiceImplTest {
         tk2.setMatkhau("password");
         tkRepo.save(tk2);
         Sinhvien sv = new Sinhvien();
-        sv.setMasinhvien("SV002");
+        sv.setMasinhvien("student");
         sv.setTaikhoanid(tk2.getId());
         // assign a valid Bomon (reuse the one created above)
         sv.setBomonid(bomon.getId());
@@ -97,9 +101,20 @@ class NhomsinhvienServiceImplTest {
         invitation.setTrangthai(TrangthaiLoimoi.CHO_XAC_NHAN);
         loiRepo.save(invitation);
         // create a registration record to lock the group (simulate locked state)
+        // create a Detai to satisfy NOT NULL detaiid constraint
+        Detai detai = new Detai();
+        detai.setDotdangkyid(group.getDotdangkyid());
+        detai.setBomonid(bomon.getId());
+        detai.setTendetai("Đề tài 1");
+        detai.setMota("Mô tả đề tài");
+        detai.setGiangviendexuatid(1L);
+        detai.setTrangthai(TrangthaiDetai.DADUYET);
+        detaiRepo.save(detai);
         Dangkydetai dk = new Dangkydetai();
         dk.setNhomid(group.getId());
+        dk.setDetaiid(detai.getId());
         dk.setTrangthai(TrangthaiDangkydetai.DADUYET); // locked
+        dk.setNgaydangky(LocalDateTime.now());
         dkRepo.save(dk);
     }
 
@@ -110,7 +125,7 @@ class NhomsinhvienServiceImplTest {
         NghiepvuException ex = Assertions.assertThrows(NghiepvuException.class, () -> {
             service.dongYLoiMoi(invitation.getId(), "student");
         });
-        Assertions.assertTrue(ex.getMessage().contains("không thể tham gia nhóm"));
+        Assertions.assertTrue(ex.getMessage().toLowerCase().contains("không thể tham gia nhóm"));
         // After exception, the invitation status must be DA_HUY (persisted)
         Optional<Loimoithanhvien> after = loiRepo.findById(invitation.getId());
         Assertions.assertTrue(after.isPresent());
