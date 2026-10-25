@@ -20,11 +20,23 @@ public class TimkiemNangcaoService {
     public Result<DetaiRow> detai(DetaiFilterDTO filter) {
         check(Dataset.DETAI, filter); return repository.detai(filter);
     }
+    public Result<DotdangkyRow> dotdangky(DotdangkyFilterDTO filter) {
+        check(Dataset.DOTDANGKY, filter); return repository.dotdangky(filter);
+    }
+    public Result<KetquaRow> ketqua(KetquaFilterDTO filter) {
+        check(Dataset.KETQUA, filter); return repository.ketqua(filter);
+    }
     public FilterOptions options(Dataset dataset) {
         MorongPermissions.require(dataset); return repository.options(dataset);
     }
     public java.util.List<DetaiRow> exportDetai(DetaiFilterDTO filter, int limit) {
         check(Dataset.DETAI, filter); return repository.exportDetai(filter, limit);
+    }
+    public java.util.List<DotdangkyRow> exportDotdangky(DotdangkyFilterDTO filter, int limit) {
+        check(Dataset.DOTDANGKY, filter); return repository.exportDotdangky(filter, limit);
+    }
+    public java.util.List<KetquaRow> exportKetqua(KetquaFilterDTO filter, int limit) {
+        check(Dataset.KETQUA, filter); return repository.exportKetqua(filter, limit);
     }
     private void check(Dataset dataset, SearchFilterDTO filter) {
         MorongPermissions.require(dataset); validation.validate(dataset, filter);

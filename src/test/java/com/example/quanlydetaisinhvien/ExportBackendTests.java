@@ -37,12 +37,13 @@ class ExportBackendTests extends MorongSearchTestSupport {
         return Arrays.stream(Dataset.values()).flatMap(d -> Arrays.stream(Format.values()).map(f -> Arguments.of(d, f)));
     }
     Object filter(Dataset d) {
-        return switch (d) { case DETAI -> new DetaiFilterDTO(); case THONGKE -> new ThongkeFilterDTO(); };
+        return switch (d) { case DETAI -> new DetaiFilterDTO(); case DOTDANGKY -> new DotdangkyFilterDTO();
+            case KETQUA -> new KetquaFilterDTO(); case THONGKE -> new ThongkeFilterDTO(); };
     }
     String url(Dataset d, Format f) { return "/morong/xuat/" + d.slug() + "." + f.name().toLowerCase(Locale.ROOT); }
 
     @ParameterizedTest @MethodSource("outputs")
-    void allFourDownloadsHaveRealReadableContentHeadersAndMatchVerifiedSourceData(Dataset dataset, Format format) throws Exception {
+    void allEightDownloadsHaveRealReadableContentHeadersAndMatchVerifiedSourceData(Dataset dataset, Format format) throws Exception {
         var expected = data.load(dataset, filter(dataset), format);
         var response = mvc.perform(get(url(dataset, format)).with(user("search-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk()).andExpect(content().contentType(format.mime))
@@ -93,15 +94,44 @@ class ExportBackendTests extends MorongSearchTestSupport {
     }
     @ParameterizedTest @MethodSource("roles")
     void strictHttpAndDirectServiceRoleMatrix(Dataset dataset, Format format, String role) throws Exception {
-        boolean allowed = role.equals("TRUONGKHOA") || dataset == Dataset.DETAI && Set.of("TRUONGBOMON", "GIANGVIEN").contains(role);
+        boolean allowed = role.equals("TRUONGKHOA") || dataset == Dataset.DETAI && Set.of("TRUONGBOMON", "GIANGVIEN").contains(role)
+                || dataset == Dataset.KETQUA && role.equals("SINHVIEN");
         String username = role.equals("SINHVIEN") ? "search-student-a" : "search-chief";
         auth(username, role);
         if (!allowed) {
             assertThatThrownBy(() -> exports.export(dataset, filter(dataset), format)).isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> data.load(dataset, filter(dataset), format)).isInstanceOf(AccessDeniedException.class);
             if (dataset == Dataset.DETAI) assertThatThrownBy(() -> repository.exportDetai(new DetaiFilterDTO(), format.limit)).isInstanceOf(AccessDeniedException.class);
+            if (dataset == Dataset.DOTDANGKY) assertThatThrownBy(() -> repository.exportDotdangky(new DotdangkyFilterDTO(), format.limit)).isInstanceOf(AccessDeniedException.class);
+            if (dataset == Dataset.KETQUA) assertThatThrownBy(() -> repository.exportKetqua(new KetquaFilterDTO(), format.limit)).isInstanceOf(AccessDeniedException.class);
         }
         mvc.perform(get(url(dataset, format)).with(user(username).roles(role))).andExpect(status().is(allowed ? 200 : 403));
+    }
+
+    @ParameterizedTest @EnumSource(Format.class)
+    void studentsOnlyExportPublishedMembershipResultsAndCannotForgeScope(Format format) throws Exception {
+        auth("search-student-a", "SINHVIEN");
+        var rows = repository.exportKetqua(new KetquaFilterDTO(), format.limit);
+        assertThat(rows).extracting(SearchModels.KetquaRow::id).containsExactly(resultB.getId(), resultA.getId());
+        var expected = data.load(Dataset.KETQUA, new KetquaFilterDTO(), format);
+        var response = mvc.perform(get(url(Dataset.KETQUA, format)).with(user("search-student-a").roles("SINHVIEN")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        if (format == Format.XLSX) assertWorkbook(response, expected);
+        else try (var doc = Loader.loadPDF(response)) {
+            assertThat(new PDFTextStripper().getText(doc)).doesNotContain(topicC.getTendetai(), topicD.getTendetai());
+        }
+        for (String[] param : List.of(new String[]{"dotdangkyid", roundC.getId().toString()},
+                new String[]{"dotdangkyid", roundD.getId().toString()}, new String[]{"dacongbo", "false"})) {
+            var bytes = mvc.perform(get(url(Dataset.KETQUA, format)).param(param[0], param[1])
+                            .with(user("search-student-a").roles("SINHVIEN"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+            assertThat(contentText(bytes, format)).contains("Không có dữ liệu");
+        }
+        for (String param : List.of("username", "role", "sinhvienid", "nhomid", "ids")) {
+            mvc.perform(get(url(Dataset.KETQUA, format)).param(param, "1").with(user("search-student-a").roles("SINHVIEN")))
+                    .andExpect(status().isBadRequest());
+        }
+        auth("search-member", "SINHVIEN");
+        assertThat(repository.exportKetqua(new KetquaFilterDTO(), format.limit)).extracting(SearchModels.KetquaRow::id).containsExactly(resultA.getId());
     }
 
     @ParameterizedTest @EnumSource(Format.class)
@@ -120,9 +150,30 @@ class ExportBackendTests extends MorongSearchTestSupport {
         if (format == Format.XLSX) assertWorkbook(bytes, expected);
         else {
             var text = contentText(bytes, format);
-            assertThat(text).contains("Hệ thống bổ sung", "Sắp xếp: Mã đề tài tăng dần",
-                    "Giảng viên hướng dẫn: Kiểm thử search-teacher-b");
+            assertThat(text).contains("Hệ thống bổ sung", "sort = id,asc", "giangvienhuongdanid = " + teacherB.getId());
             assertThat(text.indexOf(topicA.getTendetai())).isLessThan(text.indexOf(extra.getTendetai()));
+        }
+    }
+
+    @ParameterizedTest @EnumSource(Format.class)
+    void roundAndResultFiltersUseTheSameValidationAndQueriesAsSearch(Format format) throws Exception {
+        var rounds = new DotdangkyFilterDTO(); rounds.setKeyword("Môn học"); rounds.setLoaidot(Loaidot.MONHOC);
+        rounds.setTrangthai(TrangthaiDotdangky.DONG); rounds.setMocThoiGian(DotdangkyFilterDTO.MocThoiGian.BATDAUSINHVIEN);
+        rounds.setThoiGianTu(roundA.getBatdausinhvien().toLocalDate()); rounds.setThoiGianDen(roundA.getBatdausinhvien().toLocalDate()); rounds.setSort("id,asc");
+        var results = new KetquaFilterDTO(); results.setKeyword("Nhóm Một"); results.setDotdangkyid(roundA.getId());
+        results.setLoaidot(Loaidot.MONHOC); results.setTrangthai(TrangthaiDangkydetai.DADUYET); results.setDacongbo(true);
+        results.setDiemTu(new java.math.BigDecimal("8.25")); results.setDiemDen(new java.math.BigDecimal("8.25"));
+        results.setNgayCongboTu(resultA.getNgaycongbo().toLocalDate()); results.setNgayCongboDen(resultA.getNgaycongbo().toLocalDate()); results.setSort("id,asc");
+        assertThat(service.exportDotdangky(rounds, format.limit)).isEqualTo(service.dotdangky(rounds).items());
+        assertThat(service.exportKetqua(results, format.limit)).isEqualTo(service.ketqua(results).items());
+        for (Dataset dataset : List.of(Dataset.DOTDANGKY, Dataset.KETQUA)) {
+            auth("search-chief", "TRUONGKHOA"); Object filter = dataset == Dataset.DOTDANGKY ? rounds : results;
+            var expected = data.load(dataset, filter, format);
+            var request = get(url(dataset, format)).with(user("search-chief").roles("TRUONGKHOA"));
+            com.example.quanlydetaisinhvien.service.morong.ExportLinks.values(dataset, filter).forEach((k, v) -> request.param(k, v.toString()));
+            byte[] bytes = mvc.perform(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+            if (format == Format.XLSX) assertWorkbook(bytes, expected);
+            else assertThat(contentText(bytes, format)).contains(expected.title());
         }
     }
 
@@ -133,7 +184,7 @@ class ExportBackendTests extends MorongSearchTestSupport {
         var bytes = mvc.perform(get(url(Dataset.THONGKE, format)).param("dotdangkyid", roundA.getId().toString())
                         .with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         if (format == Format.XLSX) assertWorkbook(bytes, expected);
-        else assertThat(contentText(bytes, format)).contains("THỐNG KÊ & BÁO CÁO", "Công bố kết quả", "Phạm vi:", roundA.getTendot());
+        else assertThat(contentText(bytes, format)).contains("THỐNG KÊ & BÁO CÁO", "Tỷ lệ công bố", "Phạm vi:", roundA.getTendot());
     }
 
     @ParameterizedTest @MethodSource("outputs")
@@ -143,12 +194,16 @@ class ExportBackendTests extends MorongSearchTestSupport {
         else request.param("keyword", "KHÔNG KHỚP BẤT KỲ DỮ LIỆU NÀO");
         var bytes = mvc.perform(request).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         if (dataset != Dataset.THONGKE) assertThat(contentText(bytes, format)).contains("Không có dữ liệu");
-        else assertThat(contentText(bytes, format)).contains("Kết quả đã công bố", "0 / 0").doesNotContain("Cần xử lý");
+        else assertThat(contentText(bytes, format)).contains("Tổng số kết quả", "Nhóm chưa đăng ký");
     }
 
     static Stream<Arguments> invalidFilters() {
         return Stream.of(Arguments.of("detai", "bomonid", "0"), Arguments.of("detai", "trangthai", "BAD"),
-                Arguments.of("detai", "sort", "password,asc"), Arguments.of("thongke", "dotdangkyid", "abc"), Arguments.of("thongke", "dotdangkyid", "0"),
+                Arguments.of("detai", "sort", "password,asc"), Arguments.of("dotdangky", "loaidot", "BAD"),
+                Arguments.of("dotdangky", "mocThoiGian", "BAD"), Arguments.of("dotdangky", "thoiGianTu", "2026-02-30"),
+                Arguments.of("ketqua", "diemTu", "11"), Arguments.of("ketqua", "dacongbo", "BAD"),
+                Arguments.of("ketqua", "trangthai", "CONGBO"), Arguments.of("ketqua", "ngayCongboDen", "BAD"),
+                Arguments.of("thongke", "dotdangkyid", "abc"), Arguments.of("thongke", "dotdangkyid", "0"),
                 Arguments.of("thongke", "dotdangkyid", "-1"), Arguments.of("thongke", "dotdangkyid", "999999999999999999999"));
     }
     @ParameterizedTest @MethodSource("invalidFilters")
@@ -159,6 +214,8 @@ class ExportBackendTests extends MorongSearchTestSupport {
     }
 
     @Test void invalidRangesDuplicatesUnknownDatasetAndMissingStatisticsRoundHaveExplicitErrors() throws Exception {
+        mvc.perform(get("/morong/xuat/ketqua.xlsx").param("diemTu", "9").param("diemDen", "1").with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isBadRequest());
+        mvc.perform(get("/morong/xuat/dotdangky.pdf").param("thoiGianTu", "2026-10-20").param("thoiGianDen", "2026-10-01").with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isBadRequest());
         mvc.perform(get("/morong/xuat/detai.xlsx").param("sort", "id,asc", "id,desc").with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isBadRequest());
         mvc.perform(get("/morong/xuat/taikhoan.xlsx").with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isNotFound());
         mvc.perform(get("/morong/xuat/detai.csv").with(user("search-chief").roles("TRUONGKHOA"))).andExpect(status().isNotFound());
@@ -175,7 +232,7 @@ class ExportBackendTests extends MorongSearchTestSupport {
     }
 
     @Test void linksKeepEveryAppliedFilterAndExposeOnlyRealDownloadRoutes() throws Exception {
-        var result = mvc.perform(get("/detai").param("keyword", "Tiếng Việt + 100% & ' =").param("sort", "tendetai,asc")
+        var result = mvc.perform(get("/morong/timkiem/detai").param("keyword", "Tiếng Việt + 100% & ' =").param("sort", "tendetai,asc")
                         .param("page", "2").param("size", "1").with(user("search-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk()).andReturn();
         var options = (SearchModels.ExportOptions) result.getModelAndView().getModel().get("exportOptions");

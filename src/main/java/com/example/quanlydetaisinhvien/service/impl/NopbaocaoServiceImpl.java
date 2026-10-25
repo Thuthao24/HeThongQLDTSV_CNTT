@@ -318,7 +318,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
             return repository.save(nb);
         } catch (IOException e) {
-            throw new NghiepvuException("Không thể lưu file tải lên: " + e.getMessage());
+            throw new NghiepvuException("Không thể lưu file tải lên. Vui lòng thử lại.");
         }
     }
 

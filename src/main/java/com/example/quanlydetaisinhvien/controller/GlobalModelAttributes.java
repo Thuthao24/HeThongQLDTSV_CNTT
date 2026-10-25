@@ -47,6 +47,8 @@ public class GlobalModelAttributes
             "thongbao-list", "thongbao-detail",
             "thongbao-form",
             "morong/timkiem-detai",
+            "morong/timkiem-dotdangky",
+            "morong/timkiem-ketqua",
             "morong/thongke"
     );
 

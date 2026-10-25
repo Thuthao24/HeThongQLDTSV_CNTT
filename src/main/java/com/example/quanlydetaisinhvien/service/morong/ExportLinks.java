@@ -15,16 +15,12 @@ public final class ExportLinks {
         var common = List.of("keyword", "dotdangkyid", "loaidot", "sort", "page", "size");
         var fields = new ArrayList<>(dataset == Dataset.THONGKE ? List.of("dotdangkyid") : common);
         switch (dataset) {
-            case DETAI -> fields.addAll(List.of("q", "bomonid", "trangthai", "giangviendexuatid", "giangvienhuongdanid"));
+            case DETAI -> fields.addAll(List.of("bomonid", "trangthai", "giangviendexuatid", "giangvienhuongdanid"));
+            case DOTDANGKY -> fields.addAll(List.of("trangthai", "mocThoiGian", "thoiGianTu", "thoiGianDen"));
+            case KETQUA -> fields.addAll(List.of("trangthai", "dacongbo", "diemTu", "diemDen", "ngayCongboTu", "ngayCongboDen"));
             case THONGKE -> { }
         }
         return List.copyOf(fields);
-    }
-    public static void validateParameters(Dataset dataset, jakarta.servlet.http.HttpServletRequest request) {
-        request.getParameterMap().forEach((name, values) -> {
-            if (!fields(dataset).contains(name) || values.length != 1)
-                throw new IllegalArgumentException("Tham số không hỗ trợ hoặc bị lặp: " + name);
-        });
     }
     public static Map<String, Object> values(Dataset dataset, Object filter) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -37,22 +33,11 @@ public final class ExportLinks {
         return result;
     }
     public static String url(Dataset dataset, Object filter, String format) {
-        return buildUrl(dataset, filter, "/morong/xuat/" + dataset.slug() + "." + format, null);
-    }
-    public static String detaiPage(DetaiFilterDTO filter, int page) {
-        return buildUrl(Dataset.DETAI, filter, "/detai", page);
-    }
-    private static String buildUrl(Dataset dataset, Object filter, String path, Integer page) {
         String context = RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
                 ? attributes.getRequest().getContextPath() : "";
-        var builder = UriComponentsBuilder.fromPath(context + path);
+        var builder = UriComponentsBuilder.fromPath(context + "/morong/xuat/" + dataset.slug() + "." + format);
         Map<String, Object> variables = new LinkedHashMap<>();
-        var parameters = values(dataset, filter);
-        if (page != null) {
-            parameters.put("page", page);
-            parameters.put("size", ((SearchFilterDTO) filter).getSize());
-        }
-        parameters.forEach((key, value) -> {
+        values(dataset, filter).forEach((key, value) -> {
             String variable = "p" + variables.size();
             builder.queryParam(key, "{" + variable + "}"); variables.put(variable, value.toString());
         });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Thống kê &amp; Báo cáo</title>
+    <title th:text="${title != null ? title : 'Thống kê & Báo cáo'}">Thống kê & Báo cáo</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link rel="stylesheet" th:href="@{/css/morong-thongke.css}">
     <link rel="stylesheet" th:href="@{/css/morong-export.css}">
@@ -13,93 +13,500 @@
     <div th:replace="~{fragments :: portalHeader}"></div>
     <div class="portal-body">
         <div th:replace="~{fragments :: sidebar('thongke')}"></div>
-        <main class="main-panel morong-statistics" data-statistics
-              th:attr="data-selected-round=${filter.dotdangkyid != null ? filter.dotdangkyid : ''}">
-            <div class="statistics-heading">
-                <h1>THỐNG KÊ &amp; BÁO CÁO</h1>
-                <div class="statistics-actions">
-                    <form th:action="@{/morong/thongke}" method="get" id="filterForm">
-                        <select id="dotdangkyid" name="dotdangkyid" aria-label="Phạm vi đợt đăng ký">
-                            <option value="" th:selected="${filter.dotdangkyid == null}">Tất cả đợt đăng ký</option>
-                            <option th:each="opt : ${filterOptions.dotdangky}" th:value="${opt.value}"
-                                    th:text="${opt.label}"
-                                    th:selected="${filter.dotdangkyid != null and filter.dotdangkyid.toString() == opt.value}"></option>
-                        </select>
-                    </form>
-                    <div class="morong-export-wrap" th:if="${exportOptions != null and exportOptions.enabled}">
-                        <button type="button" class="morong-export-btn" id="exportDropdownBtn"
-                                aria-expanded="false" aria-haspopup="true" aria-controls="exportDropdownMenu">
-                            <span>Xuất</span><span class="morong-export-arrow" aria-hidden="true">▾</span>
+        <main class="main-panel">
+            <!-- Tiêu đề trang & Nút xuất báo cáo -->
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">Cổng thông tin đào tạo / Tính năng mở rộng / Thống kê & Báo cáo</div>
+                    <h1>THỐNG KÊ & BÁO CÁO</h1>
+                    <p>Phân tích số liệu đề tài, nhóm sinh viên, lượt đăng ký và kết quả đánh giá chuyên sâu.</p>
+                </div>
+
+                <!-- Khu vực Nút Xuất (Dropdown Excel/PDF) -->
+                <div class="morong-thongke-header-actions">
+                    <!-- Khi Backend kích hoạt tính năng xuất báo cáo -->
+                    <div class="morong-export-wrap"
+                         th:if="${exportOptions != null and exportOptions.enabled}">
+                        <button type="button"
+                                class="morong-export-btn"
+                                id="exportDropdownBtn"
+                                aria-expanded="false"
+                                aria-haspopup="true"
+                                title="Xuất báo cáo thống kê ra file Excel hoặc PDF">
+                            <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Xuất báo cáo</span>
+                            <span class="morong-export-arrow" aria-hidden="true">▾</span>
                         </button>
                         <div class="morong-export-dropdown" id="exportDropdownMenu" role="menu">
-                            <a th:href="${exportOptions.excelUrl}" class="morong-export-item" role="menuitem"
-                               data-export-format="xlsx" data-export-label="Excel">Excel (.xlsx)</a>
-                            <a th:href="${exportOptions.pdfUrl}" class="morong-export-item" role="menuitem"
-                               data-export-format="pdf" data-export-label="PDF">PDF (.pdf)</a>
+                            <a th:href="${exportOptions.excelUrl}"
+                               class="morong-export-item morong-export-excel"
+                               role="menuitem"
+                               data-export-format="xlsx"
+                               data-export-label="Excel">
+                                <span class="morong-export-icon excel-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM15.5 17.5h-1.8l-1.7-2.9-1.7 2.9H8.5l2.6-4-2.4-3.8h1.8l1.5 2.6 1.5-2.6h1.8l-2.4 3.8 2.6 4zM13 9V3.5L18.5 9H13z"/>
+                                    </svg>
+                                </span>
+                                <span class="morong-export-text">Xuất Excel (.xlsx)</span>
+                            </a>
+                            <a th:href="${exportOptions.pdfUrl}"
+                               class="morong-export-item morong-export-pdf"
+                               role="menuitem"
+                               data-export-format="pdf"
+                               data-export-label="PDF">
+                                <span class="morong-export-icon pdf-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-3.5 15.5H9v-5h1.5a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5zm0-3.5H10v2h.5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM13 9V3.5L18.5 9H13zm3.5 8.5H15v-5h1.5a1.5 1.5 0 0 1 0 3H16v2zm0-3.5H16v-1h.5a.5.5 0 0 1 0 1z"/>
+                                    </svg>
+                                </span>
+                                <span class="morong-export-text">Xuất PDF (.pdf)</span>
+                            </a>
                         </div>
+                    </div>
+
+                    <!-- Khi Backend chưa kích hoạt: hiển thị nút không hoạt động, không dùng href="#" -->
+                    <div class="morong-export-wrap"
+                         th:if="${exportOptions == null or !exportOptions.enabled}"
+                         title="Tính năng xuất báo cáo Excel/PDF chưa khả dụng">
+                        <button type="button"
+                                class="morong-export-btn disabled"
+                                disabled="disabled">
+                            <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Xuất báo cáo (Chưa khả dụng)</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <section class="statistics-kpis" aria-label="Chỉ số chính">
-                <article class="statistics-kpi"><h2>Tổng đề tài</h2><strong data-kpi="topics" th:text="${summary.tongDetai}">0</strong></article>
-                <article class="statistics-kpi"><h2>Nhóm sinh viên</h2><strong data-kpi="groups" th:text="${summary.tongNhom}">0</strong></article>
-                <article class="statistics-kpi"><h2>Lượt đăng ký</h2><strong data-kpi="registrations" th:text="${summary.tongDangky}">0</strong></article>
-                <article class="statistics-kpi"><h2>Kết quả đã công bố</h2><strong data-kpi="publication" th:text="|${summary.daCongbo} / ${summary.tongKetqua}|">0 / 0</strong></article>
-            </section>
-
-            <div class="statistics-charts">
-                <section class="statistics-card" data-chart="topics">
-                    <h2>Trạng thái đề tài</h2>
-                    <p class="statistics-empty" th:if="${summary.tongDetai == 0}">Không có dữ liệu</p>
-                    <div class="statistics-bars">
-                        <div class="statistics-status" th:each="item : ${detaiByStatus}"
-                             th:attr="data-status=${item.code},data-count=${item.count},data-percentage=${item.percentage}">
-                            <div class="statistics-status-label"><span th:text="${item.label}"></span><strong th:text="${item.count}">0</strong></div>
-                            <div class="statistics-track" aria-hidden="true"><div class="statistics-fill" th:style="|width: ${item.percentage}%;|"></div></div>
-                        </div>
-                    </div>
-                </section>
-                <section class="statistics-card" data-chart="publication">
-                    <h2>Công bố kết quả</h2>
-                    <p class="statistics-empty" th:if="${summary.tongKetqua == 0}">Không có dữ liệu</p>
-                    <div class="statistics-ratio" th:if="${summary.tongKetqua > 0}" aria-hidden="true">
-                        <div th:each="item : ${ketquaByStatus}" th:class="|statistics-ratio-${item.code}|" th:style="|width: ${item.percentage}%;|"></div>
-                    </div>
-                    <ul class="statistics-legend">
-                        <li th:each="item : ${ketquaByStatus}"
-                            th:attr="data-status=${item.code},data-count=${item.count},data-percentage=${item.percentage}">
-                            <span><i th:class="|statistics-dot statistics-ratio-${item.code}|" aria-hidden="true"></i><span th:text="${item.label}"></span></span>
-                            <strong><span th:text="${item.count}">0</span><small th:if="${summary.tongKetqua > 0}" th:text="| (${item.percentage}%)|"></small></strong>
-                        </li>
-                    </ul>
-                </section>
+            <!-- Cảnh báo phân quyền nếu truy cập trái phép -->
+            <div th:if="${vaitro != null and vaitro != 'TRUONGKHOA'}"
+                 class="publication-message error"
+                 role="alert"
+                 style="margin-bottom: 16px;">
+                <strong>Lưu ý quyền hạn:</strong> Trang Thống kê & Báo cáo toàn hệ thống chỉ dành cho Trưởng khoa.
             </div>
 
-            <section class="statistics-attention" th:if="${summary.nhomChuaDangky > 0 or summary.ketquaThieuDiemCuoi > 0}">
-                <h2>Cần xử lý</h2>
-                <span>Nhóm chưa đăng ký <strong th:text="${summary.nhomChuaDangky}">0</strong></span>
-                <span>Kết quả thiếu điểm <strong th:text="${summary.ketquaThieuDiemCuoi}">0</strong></span>
+            <!-- Khung Bộ Lọc Thống Kê -->
+            <section class="morong-thongke-filter">
+                <form th:action="@{/morong/thongke}" method="get" id="filterForm">
+                    <div class="morong-thongke-filter-header">
+                        <span class="morong-thongke-filter-title">
+                            <span>⌕</span> BỘ LỌC PHẠM VI THỐNG KÊ
+                        </span>
+                    </div>
+
+                    <div class="morong-thongke-filter-body">
+                        <!-- Chọn đợt đăng ký -->
+                        <div class="morong-thongke-filter-field">
+                            <label for="dotdangkyid">Phạm vi đợt đăng ký</label>
+                            <select id="dotdangkyid" name="dotdangkyid" class="morong-thongke-filter-control">
+                                <option value="">— Tất cả các đợt đăng ký —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.dotdangky : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.dotdangkyid != null && filter.dotdangkyid.toString() == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Nút thao tác -->
+                        <div class="morong-thongke-filter-actions">
+                            <button type="submit" class="btn btn-primary">⌕ Xem thống kê</button>
+                            <a th:href="@{/morong/thongke}" class="btn btn-secondary">↺ Đặt lại</a>
+                        </div>
+                    </div>
+
+                    <div class="morong-thongke-filter-hint">
+                        <span>ℹ</span> Số liệu KPI, biểu đồ phân bố và bảng dữ liệu bên dưới được tính toán đồng bộ theo phạm vi đợt đã chọn.
+                    </div>
+                </form>
             </section>
 
-            <section class="statistics-card statistics-rounds">
-                <h2>Theo đợt đăng ký</h2>
-                <div class="statistics-table-scroll" role="region" aria-label="Bảng thống kê theo đợt" tabindex="0">
-                    <table>
-                        <thead><tr><th scope="col">Tên đợt đăng ký</th><th scope="col">Số đề tài</th><th scope="col">Số nhóm</th><th scope="col">Số lượt đăng ký</th><th scope="col">Kết quả công bố</th></tr></thead>
-                        <tbody>
-                        <tr th:each="row : ${byRound}" th:attr="data-round-id=${row.id}">
-                            <th scope="row" th:text="${row.tendot}"></th>
-                            <td th:text="${row.soDetai}">0</td><td th:text="${row.soNhom}">0</td><td th:text="${row.soDangky}">0</td>
-                            <td th:text="|${row.soDaCongbo} / ${row.soKetqua}|">0 / 0</td>
+            <!-- Lưới 6 Thẻ KPI Tổng Số (Ngữ Cảnh Hệ Thống) -->
+            <section class="morong-thongke-kpi-grid">
+                <!-- KPI 1: Tổng số đề tài -->
+                <div class="morong-thongke-kpi-card blue">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Tổng số đề tài</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.tongDetai : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Đề tài đề xuất trong phạm vi</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">▤</div>
+                </div>
+
+                <!-- KPI 2: Tổng số nhóm sinh viên -->
+                <div class="morong-thongke-kpi-card teal">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Tổng số nhóm SV</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.tongNhom : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Nhóm sinh viên lập theo đợt</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">👥</div>
+                </div>
+
+                <!-- KPI 3: Tổng số đăng ký đề tài -->
+                <div class="morong-thongke-kpi-card purple">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Tổng lượt đăng ký</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.tongDangky : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Lượt đăng ký đề tài của các nhóm</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">📋</div>
+                </div>
+
+                <!-- KPI 4: Tổng số kết quả -->
+                <div class="morong-thongke-kpi-card orange">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Tổng số kết quả</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.tongKetqua : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Hồ sơ kết quả đánh giá đề tài</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">🏆</div>
+                </div>
+
+                <!-- KPI 5: Kết quả đã công bố -->
+                <div class="morong-thongke-kpi-card green">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Kết quả đã công bố</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.daCongbo : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Đã công bố điểm cho sinh viên</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">📢</div>
+                </div>
+
+                <!-- KPI 6: Kết quả chưa công bố -->
+                <div class="morong-thongke-kpi-card amber">
+                    <div class="morong-thongke-kpi-content">
+                        <span class="morong-thongke-kpi-label">Kết quả chưa công bố</span>
+                        <div class="morong-thongke-kpi-value"
+                             th:text="${summary != null ? summary.chuaCongbo : '—'}">—</div>
+                        <p class="morong-thongke-kpi-note">Đang chờ hoàn tất hoặc phê duyệt</p>
+                    </div>
+                    <div class="morong-thongke-kpi-icon">⏳</div>
+                </div>
+            </section>
+
+            <!-- Khu Vực Thống Kê Chuyên Sâu: 3 Chỉ Số Giám Sát Toàn Vẹn & Bất Thường Dữ Liệu -->
+            <section class="morong-thongke-sub-section">
+                <div class="morong-thongke-sub-header">
+                    <span class="morong-thongke-sub-title">
+                        <span>🔍</span> CHỈ SỐ GIÁM SÁT TOÀN VẸN & BẤT THƯỜNG DỮ LIỆU
+                    </span>
+                    <span style="font-size: 10.5px; color: #64748b;">Dữ liệu phân tích độc lập theo quan hệ thực tế</span>
+                </div>
+
+                <div class="morong-thongke-sub-grid">
+                    <!-- Chỉ số 1: Nhóm chưa đăng ký đề tài -->
+                    <div class="morong-thongke-sub-card notice">
+                        <div class="morong-thongke-sub-content">
+                            <span class="morong-thongke-sub-label">Nhóm chưa đăng ký đề tài</span>
+                            <div class="morong-thongke-sub-value"
+                                 th:text="${summary != null ? summary.nhomChuaDangky : '—'}">—</div>
+                            <p class="morong-thongke-sub-note">Nhóm đã lập nhưng chưa có bản ghi đăng ký đề tài nào</p>
+                        </div>
+                        <div class="morong-thongke-sub-icon">👥</div>
+                    </div>
+
+                    <!-- Chỉ số 2: Đăng ký lệch đợt giữa nhóm và đề tài -->
+                    <div class="morong-thongke-sub-card warning">
+                        <div class="morong-thongke-sub-content">
+                            <span class="morong-thongke-sub-label">Đăng ký lệch đợt (Nhóm & Đề tài)</span>
+                            <div class="morong-thongke-sub-value"
+                                 th:text="${summary != null ? summary.dangkyLechDot : '—'}">—</div>
+                            <p class="morong-thongke-sub-note">Lượt đăng ký mà đợt của nhóm khác với đợt của đề tài</p>
+                        </div>
+                        <div class="morong-thongke-sub-icon">🔀</div>
+                    </div>
+
+                    <!-- Chỉ số 3: Kết quả thiếu điểm cuối -->
+                    <div class="morong-thongke-sub-card info">
+                        <div class="morong-thongke-sub-content">
+                            <span class="morong-thongke-sub-label">Kết quả thiếu điểm cuối</span>
+                            <div class="morong-thongke-sub-value"
+                                 th:text="${summary != null ? summary.ketquaThieuDiemCuoi : '—'}">—</div>
+                            <p class="morong-thongke-sub-note">Hồ sơ kết quả chưa có điểm tổng kết (độc lập trạng thái công bố)</p>
+                        </div>
+                        <div class="morong-thongke-sub-icon">📝</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Khu Vực 4 Biểu Đồ Thống Kê Phân Bố (HTML/CSS Charts) -->
+            <section class="morong-thongke-charts-grid">
+                <!-- Biểu đồ 1: Phân bố Đề tài theo Trạng thái -->
+                <div class="morong-thongke-chart-card">
+                    <div class="morong-thongke-chart-header">
+                        <span class="morong-thongke-chart-title"><span>📊</span> Phân bố đề tài theo trạng thái</span>
+                        <span class="morong-thongke-chart-badge"
+                              th:text="${summary != null ? summary.tongDetai + ' đề tài' : 'Chờ dữ liệu'}">Chờ dữ liệu</span>
+                    </div>
+                    <div class="morong-thongke-chart-body">
+                        <!-- Danh sách thanh tỷ lệ khi có dữ liệu -->
+                        <div th:if="${detaiByStatus != null and not #lists.isEmpty(detaiByStatus)}"
+                             style="display: flex; flex-direction: column; gap: 11px;">
+                            <div class="morong-thongke-bar-row" th:each="st : ${detaiByStatus}">
+                                <div class="morong-thongke-bar-meta">
+                                    <span class="morong-thongke-bar-label">
+                                        <span class="morong-thongke-dot"
+                                              th:classappend="${st.code == 'CHODUYET' ? 'amber' : (st.code == 'DADUYET' ? 'blue' : (st.code == 'CONGBO' ? 'green' : (st.code == 'TUCHOI' ? 'red' : 'muted')))}"></span>
+                                        <span th:text="${st.label}">Trạng thái</span>
+                                    </span>
+                                    <span class="morong-thongke-bar-stat">
+                                        <b th:text="${st.count}">0</b>
+                                        <span th:if="${st.percentage != null}" th:text="' (' + ${#numbers.formatDecimal(st.percentage, 1, 2)} + '%)'"> (0.00%)</span>
+                                    </span>
+                                </div>
+                                <div class="morong-thongke-bar-track">
+                                    <div class="morong-thongke-bar-fill"
+                                         th:classappend="${st.code == 'CHODUYET' ? 'amber' : (st.code == 'DADUYET' ? 'blue' : (st.code == 'CONGBO' ? 'green' : (st.code == 'TUCHOI' ? 'red' : 'muted')))}"
+                                         th:style="'width: ' + ${st.percentage != null ? st.percentage : 0} + '%'"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trạng thái chưa có dữ liệu từ backend -->
+                        <div class="morong-thongke-chart-empty"
+                             th:if="${detaiByStatus == null or #lists.isEmpty(detaiByStatus)}">
+                            <span class="morong-thongke-chart-empty-icon">📊</span>
+                            <p>Chưa có dữ liệu thống kê trạng thái đề tài</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biểu đồ 2: Phân bố Đăng ký Đề tài theo Trạng thái -->
+                <div class="morong-thongke-chart-card">
+                    <div class="morong-thongke-chart-header">
+                        <span class="morong-thongke-chart-title"><span>📋</span> Phân bố đăng ký theo trạng thái</span>
+                        <span class="morong-thongke-chart-badge"
+                              th:text="${summary != null ? summary.tongDangky + ' lượt' : 'Chờ dữ liệu'}">Chờ dữ liệu</span>
+                    </div>
+                    <div class="morong-thongke-chart-body">
+                        <!-- Danh sách thanh tỷ lệ khi có dữ liệu -->
+                        <div th:if="${dangkyByStatus != null and not #lists.isEmpty(dangkyByStatus)}"
+                             style="display: flex; flex-direction: column; gap: 11px;">
+                            <div class="morong-thongke-bar-row" th:each="st : ${dangkyByStatus}">
+                                <div class="morong-thongke-bar-meta">
+                                    <span class="morong-thongke-bar-label">
+                                        <span class="morong-thongke-dot"
+                                              th:classappend="${st.code == 'CHODUYET' ? 'amber' : (st.code == 'DADUYET' ? 'green' : (st.code == 'TUCHOI' ? 'red' : 'muted'))}"></span>
+                                        <span th:text="${st.label}">Trạng thái</span>
+                                    </span>
+                                    <span class="morong-thongke-bar-stat">
+                                        <b th:text="${st.count}">0</b>
+                                        <span th:if="${st.percentage != null}" th:text="' (' + ${#numbers.formatDecimal(st.percentage, 1, 2)} + '%)'"> (0.00%)</span>
+                                    </span>
+                                </div>
+                                <div class="morong-thongke-bar-track">
+                                    <div class="morong-thongke-bar-fill"
+                                         th:classappend="${st.code == 'CHODUYET' ? 'amber' : (st.code == 'DADUYET' ? 'green' : (st.code == 'TUCHOI' ? 'red' : 'teal'))}"
+                                         th:style="'width: ' + ${st.percentage != null ? st.percentage : 0} + '%'"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trạng thái chưa có dữ liệu từ backend -->
+                        <div class="morong-thongke-chart-empty"
+                             th:if="${dangkyByStatus == null or #lists.isEmpty(dangkyByStatus)}">
+                            <span class="morong-thongke-chart-empty-icon">📋</span>
+                            <p>Chưa có dữ liệu thống kê trạng thái đăng ký</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biểu đồ 3: Tỷ lệ Công bố Kết quả (Đã/Chưa công bố) -->
+                <div class="morong-thongke-chart-card">
+                    <div class="morong-thongke-chart-header">
+                        <span class="morong-thongke-chart-title"><span>📢</span> Tỷ lệ công bố kết quả</span>
+                        <span class="morong-thongke-chart-badge"
+                              th:text="${summary != null ? summary.tongKetqua + ' kết quả' : 'Chờ dữ liệu'}">Chờ dữ liệu</span>
+                    </div>
+                    <div class="morong-thongke-chart-body">
+                        <!-- Đồng hồ tỷ lệ so sánh khi có dữ liệu -->
+                        <div class="morong-thongke-ratio-box"
+                             th:if="${summary != null && summary.tongKetqua > 0}">
+                            <div class="morong-thongke-ratio-meter">
+                                <div class="morong-thongke-ratio-segment published"
+                                     th:style="'width: ' + ${(summary.daCongbo * 100.0 / summary.tongKetqua)} + '%'"></div>
+                                <div class="morong-thongke-ratio-segment unpublished"
+                                     th:style="'width: ' + ${(summary.chuaCongbo * 100.0 / summary.tongKetqua)} + '%'"></div>
+                            </div>
+
+                            <div class="morong-thongke-ratio-legend">
+                                <div class="morong-thongke-ratio-card published"
+                                     th:each="st : ${ketquaByStatus}"
+                                     th:if="${st.code == 'DACONGBO'}">
+                                    <span class="morong-thongke-ratio-title">
+                                        <span class="morong-thongke-dot green"></span> <span th:text="${st.label}">Đã công bố</span>
+                                    </span>
+                                    <span class="morong-thongke-ratio-num" th:text="${st.count}">0</span>
+                                    <span class="morong-thongke-ratio-percent"
+                                          th:text="${#numbers.formatDecimal(st.percentage, 1, 2)} + '%'">0.00%</span>
+                                </div>
+
+                                <div class="morong-thongke-ratio-card unpublished"
+                                     th:each="st : ${ketquaByStatus}"
+                                     th:if="${st.code == 'CHUACONGBO'}">
+                                    <span class="morong-thongke-ratio-title">
+                                        <span class="morong-thongke-dot amber"></span> <span th:text="${st.label}">Chưa công bố</span>
+                                    </span>
+                                    <span class="morong-thongke-ratio-num" th:text="${st.count}">0</span>
+                                    <span class="morong-thongke-ratio-percent"
+                                          th:text="${#numbers.formatDecimal(st.percentage, 1, 2)} + '%'">0.00%</span>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 10px; color: #78889b; margin: 4px 0 0; line-height: 1.4;">
+                                * Tỷ lệ phản ánh số kết quả đã công bố trên tổng số hồ sơ kết quả hiện có trong phạm vi đợt, không phải tỷ lệ hoàn thành đề tài.
+                            </p>
+                        </div>
+
+                        <!-- Trạng thái khi tổng kết quả bằng 0 -->
+                        <div class="morong-thongke-chart-empty"
+                             th:if="${summary == null || summary.tongKetqua == 0}">
+                            <span class="morong-thongke-chart-empty-icon">📢</span>
+                            <p>Chưa có dữ liệu kết quả công bố trong phạm vi đợt</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biểu đồ 4: So sánh Đề tài & Lượt đăng ký theo Đợt -->
+                <div class="morong-thongke-chart-card">
+                    <div class="morong-thongke-chart-header">
+                        <span class="morong-thongke-chart-title"><span>▣</span> So sánh đề tài & đăng ký theo đợt</span>
+                        <span class="morong-thongke-chart-badge"
+                              th:text="${byRound != null ? #lists.size(byRound) + ' đợt' : 'Chờ dữ liệu'}">Chờ dữ liệu</span>
+                    </div>
+                    <div class="morong-thongke-chart-body">
+                        <!-- Danh sách thanh so sánh theo đợt khi có dữ liệu -->
+                        <div th:if="${byRound != null and not #lists.isEmpty(byRound)}"
+                             style="display: flex; flex-direction: column; gap: 12px;">
+                            <div th:each="r : ${byRound}" style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #1e293b;">
+                                    <span th:text="${r.tendot}">Tên đợt</span>
+                                    <span style="font-size: 10px; color: #64748b;">
+                                        <span style="color: #06649a;">▤ <b th:text="${r.soDetai}">0</b> đề tài</span>
+                                        &nbsp;|&nbsp;
+                                        <span style="color: #7c3aed;">📋 <b th:text="${r.soDangky}">0</b> đăng ký</span>
+                                    </span>
+                                </div>
+                                <div class="morong-thongke-bar-track" style="height: 7px;">
+                                    <div class="morong-thongke-bar-fill blue"
+                                         th:style="'width: ' + ${(summary != null && summary.tongDetai > 0) ? (r.soDetai * 100.0 / summary.tongDetai) : 0} + '%'"></div>
+                                </div>
+                                <div class="morong-thongke-bar-track" style="height: 7px;">
+                                    <div class="morong-thongke-bar-fill purple"
+                                         th:style="'width: ' + ${(summary != null && summary.tongDangky > 0) ? (r.soDangky * 100.0 / summary.tongDangky) : 0} + '%'"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trạng thái chưa có dữ liệu theo đợt -->
+                        <div class="morong-thongke-chart-empty"
+                             th:if="${byRound == null or #lists.isEmpty(byRound)}">
+                            <span class="morong-thongke-chart-empty-icon">▣</span>
+                            <p>Chưa có dữ liệu thống kê theo đợt đăng ký</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bảng Thống Kê Tổng Hợp Chi Tiết Theo Đợt Đăng Ký -->
+            <section class="morong-thongke-table-card">
+                <div class="morong-thongke-table-header">
+                    <span class="morong-thongke-table-title">
+                        <span>▣</span> BẢNG TỔNG HỢP SỐ LIỆU THEO ĐỢT ĐĂNG KÝ
+                    </span>
+                    <span style="font-size: 11px; color: #64748b;"
+                          th:if="${byRound != null and not #lists.isEmpty(byRound)}">
+                        Hiển thị: <b th:text="${#lists.size(byRound)}">0</b> đợt
+                    </span>
+                </div>
+
+                <div class="morong-thongke-table-wrap">
+                    <table class="morong-thongke-table">
+                        <thead>
+                        <tr>
+                            <th class="center-col" style="width: 40px;">#</th>
+                            <th style="min-width: 170px;">Tên đợt đăng ký</th>
+                            <th style="width: 140px;">Loại đợt</th>
+                            <th class="num-col" style="width: 80px;" title="Số đề tài thuộc đợt">Số đề tài</th>
+                            <th class="num-col" style="width: 85px;" title="Số nhóm SV lập theo đợt">Số nhóm</th>
+                            <th class="num-col" style="width: 85px;" title="Số lượt đăng ký đề tài thuộc đợt">Số ĐK</th>
+                            <th class="num-col" style="width: 85px;" title="Số kết quả đánh giá thuộc đợt">Số kết quả</th>
+                            <th class="num-col" style="width: 90px;" title="Số kết quả đã công bố">Đã công bố</th>
+                            <th class="num-col" style="width: 85px;" title="Tỷ lệ: Đã công bố / Tổng kết quả của đợt">Tỷ lệ CB</th>
+                            <th class="num-col" style="width: 95px; color: #64748b;" title="Số nhóm chưa đăng ký đề tài">Chưa ĐK</th>
+                            <th class="num-col" style="width: 85px; color: #d97706;" title="Số đăng ký có nhóm và đề tài lệch đợt">Lệch đợt</th>
+                            <th class="num-col" style="width: 95px; color: #0284c7;" title="Số kết quả chưa có điểm cuối">Thiếu điểm</th>
                         </tr>
-                        <tr th:if="${#lists.isEmpty(byRound)}"><td colspan="5" class="statistics-empty">Không có dữ liệu</td></tr>
+                        </thead>
+                        <tbody>
+                        <!-- Khi Backend cung cấp dữ liệu danh sách theo đợt -->
+                        <tr th:if="${byRound != null and not #lists.isEmpty(byRound)}"
+                            th:each="row, stat : ${byRound}">
+                            <td class="center-col" th:text="${stat.count}">1</td>
+                            <td>
+                                <strong th:text="${row.tendot}">Tên đợt</strong>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:text="${row.loaidot != null ? (row.loaidot.toString() == 'KLTN' ? 'Khóa luận tốt nghiệp' : (row.loaidot.toString() == 'TLCN' ? 'Tiểu luận chuyên ngành' : (row.loaidot.toString() == 'NCKH' ? 'Nghiên cứu khoa học' : (row.loaidot.toString() == 'MONHOC' ? 'Môn học' : row.loaidot)))) : '—'}">Loại đợt</span>
+                            </td>
+                            <td class="num-col" th:text="${row.soDetai}">0</td>
+                            <td class="num-col" th:text="${row.soNhom}">0</td>
+                            <td class="num-col" th:text="${row.soDangky}">0</td>
+                            <td class="num-col" th:text="${row.soKetqua}">0</td>
+                            <td class="num-col" style="color: #16a34a; font-weight: 700;"
+                                th:text="${row.soDaCongbo}">0</td>
+                            <td class="num-col"
+                                th:text="${row.soKetqua > 0 ? (#numbers.formatDecimal(row.soDaCongbo * 100.0 / row.soKetqua, 1, 1) + '%') : '—'}">—</td>
+                            <td class="num-col" style="color: #64748b;" th:text="${row.soNhomChuaDangky}">0</td>
+                            <td class="num-col" style="color: #d97706;" th:text="${row.soDangkyLechDot}">0</td>
+                            <td class="num-col" style="color: #0284c7;" th:text="${row.soKetquaThieuDiemCuoi}">0</td>
+                        </tr>
+
+                        <!-- Trạng thái trống khi chưa có dữ liệu từ backend -->
+                        <tr th:if="${byRound == null or #lists.isEmpty(byRound)}">
+                            <td colspan="12">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon" style="font-size: 28px; margin-bottom: 6px;">📋</div>
+                                    <strong>Chưa có dữ liệu thống kê theo đợt đăng ký</strong>
+                                    <span>Hệ thống chưa ghi nhận bản ghi đợt đăng ký nào phù hợp.</span>
+                                </div>
+                            </td>
+                        </tr>
                         </tbody>
-                        <tfoot th:if="${!#lists.isEmpty(byRound)}"><tr><th scope="row">Tổng</th>
-                            <td th:text="${summary.tongDetai}">0</td><td th:text="${summary.tongNhom}">0</td><td th:text="${summary.tongDangky}">0</td>
-                            <td th:text="|${summary.daCongbo} / ${summary.tongKetqua}|">0 / 0</td>
-                        </tr></tfoot>
+
+                        <!-- Hàng tổng cộng ở chân bảng (phản ánh chính xác phạm vi toàn hệ thống hoặc đợt đã chọn) -->
+                        <tfoot th:if="${summary != null and byRound != null and not #lists.isEmpty(byRound)}">
+                        <tr>
+                            <td colspan="3" style="text-align: right; text-transform: uppercase;"
+                                th:text="${filter != null && filter.dotdangkyid != null ? 'TỔNG CỘNG THEO ĐỢT ĐÃ CHỌN:' : 'TỔNG CỘNG TOÀN HỆ THỐNG:'}">
+                                TỔNG CỘNG TOÀN HỆ THỐNG:
+                            </td>
+                            <td class="num-col" th:text="${summary.tongDetai}">0</td>
+                            <td class="num-col" th:text="${summary.tongNhom}">0</td>
+                            <td class="num-col" th:text="${summary.tongDangky}">0</td>
+                            <td class="num-col" th:text="${summary.tongKetqua}">0</td>
+                            <td class="num-col" style="color: #16a34a; font-weight: 800;" th:text="${summary.daCongbo}">0</td>
+                            <td class="num-col"
+                                th:text="${summary.tongKetqua > 0 ? (#numbers.formatDecimal(summary.daCongbo * 100.0 / summary.tongKetqua, 1, 1) + '%') : '—'}">—</td>
+                            <td class="num-col" style="color: #64748b;" th:text="${summary.nhomChuaDangky}">0</td>
+                            <td class="num-col" style="color: #d97706;" th:text="${summary.dangkyLechDot}">0</td>
+                            <td class="num-col" style="color: #0284c7;" th:text="${summary.ketquaThieuDiemCuoi}">0</td>
+                        </tr>
+                        </tfoot>
                     </table>
+                </div>
+
+                <div style="padding: 10px 16px; background: #fafbfc; border-top: 1px solid #edf2f7; font-size: 10px; color: #64748b; line-height: 1.5;">
+                    <b>Quy tắc nghiệp vụ:</b> Số nhóm tính theo đợt của nhóm; số đề tài tính theo đợt đề xuất; lượt đăng ký và kết quả đánh giá tính theo đợt của đề tài. Các trường hợp đăng ký lệch đợt (nhóm thuộc đợt này nhưng đăng ký đề tài đợt khác) được ghi nhận độc lập ở cột "Lệch đợt" nhằm đảm bảo tính minh bạch dữ liệu.
                 </div>
             </section>
         </main>

@@ -117,17 +117,11 @@ class ThongbaoHeaderTests extends ThongbaoTestSupport {
     }
 
     @ParameterizedTest @ValueSource(strings = {"/detai", "/ketqua", "/thongbao/create",
-            "/morong/timkiem/detai", "/dotdangky", "/morong/thongke"})
+            "/morong/timkiem/detai", "/morong/timkiem/dotdangky", "/morong/timkiem/ketqua"})
     void existingModulePagesAlsoReceiveTheSharedHeader(String path) throws Exception {
         notice("Dữ liệu chung", "Nội dung", chief.getId(), oldDate); authenticate("notice-chief","TRUONGKHOA");
         var expected = service.findLatestForHeader();
-        if (path.equals("/morong/timkiem/detai")) {
-            var redirect = mvc.perform(get(path).with(user("notice-chief").roles("TRUONGKHOA")))
-                    .andExpect(status().isFound()).andReturn().getResponse().getRedirectedUrl();
-            assertThat(redirect).startsWith("/detai?");
-            path = redirect;
-        }
-        mvc.perform(get(java.net.URI.create(path)).with(user("notice-chief").roles("TRUONGKHOA")))
+        mvc.perform(get(path).with(user("notice-chief").roles("TRUONGKHOA")))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("headerThongbaos", expected));
     }

@@ -52,7 +52,7 @@ class GlobalModelAttributesTests {
     @ParameterizedTest @ValueSource(strings = {"index", "taikhoan-list", "bomon-list", "detai-list",
             "dotdangky-list", "giangvien-list", "sinhvien-list", "nhom-list", "dangkydetai-list",
             "hoidong-list", "diem-list", "ketqua-list", "thongbao-list", "thongbao-detail", "thongbao-form",
-            "morong/timkiem-detai", "morong/thongke"})
+            "morong/timkiem-detai", "morong/timkiem-dotdangky", "morong/timkiem-ketqua", "morong/thongke"})
     void everyExistingPortalViewUsesTheSameHeaderAttribute(String name) {
         reader();
         when(service.findLatestForHeader()).thenReturn(List.of());
@@ -64,7 +64,7 @@ class GlobalModelAttributesTests {
     }
 
     @ParameterizedTest @NullSource @ValueSource(strings = {"login", "403", "error", "redirect:/thongbao",
-            "forward:/login", "unknown-view", "morong/timkiem-dotdangky", "morong/timkiem-ketqua"})
+            "forward:/login", "unknown-view"})
     void noNoticeQueryForViewsWithoutPortalHeader(String name) {
         reader();
         var view = new ModelAndView(); view.setViewName(name);

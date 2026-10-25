@@ -52,6 +52,31 @@ public class TaikhoanServiceImpl implements TaikhoanService {
         if (entity == null) {
             throw new IllegalArgumentException("Tai khoan khong hop le");
         }
+        String username = entity.getTendangnhap();
+
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Ten dang nhap khong duoc de trong");
+        }
+
+        username = username.trim();
+        entity.setTendangnhap(username);
+
+        boolean usernameExists;
+
+        if (entity.getId() == null) {
+            usernameExists =
+                    repository.existsByTendangnhapIgnoreCase(username);
+        } else {
+            usernameExists =
+                    repository.existsByTendangnhapIgnoreCaseAndIdNot(
+                            username, entity.getId());
+        }
+
+        if (usernameExists) {
+            throw new IllegalArgumentException(
+                    "Ten dang nhap da ton tai");
+        }
 
         String password = entity.getMatkhau();
 
@@ -95,5 +120,22 @@ public class TaikhoanServiceImpl implements TaikhoanService {
     public org.springframework.data.domain.Page<Taikhoan> searchPage(String keyword, org.springframework.data.domain.Pageable pageable) {
         String q = keyword == null ? "" : keyword.trim();
         return q.isEmpty() ? repository.findAll(pageable) : repository.searchPage(q, pageable);
+    }
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.security.access.prepost.PreAuthorize(
+            "hasRole('TRUONGKHOA')")
+    public void resetPassword(Long id, String newPassword) {
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException(
+                    "Mat khau phai co it nhat 8 ky tu");
+        }
+
+        Taikhoan tk = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tai khoan khong ton tai"));
+
+        tk.setMatkhau(encoder.encode(newPassword));
+        repository.save(tk);
     }
 }

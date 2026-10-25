@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title != null ? title : 'Tìm kiếm nâng cao kết quả'}">Tìm kiếm nâng cao kết quả</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/morong-export.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('timkiem')}"></div>
+        <main class="main-panel" th:object="${filter}">
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">Cổng thông tin đào tạo / Tính năng mở rộng / Tìm kiếm kết quả</div>
+                    <h1 th:text="${title != null ? title : 'TÌM KIẾM NÂNG CAO KẾT QUẢ'}">TÌM KIẾM NÂNG CAO KẾT QUẢ</h1>
+                    <p>Tra cứu kết quả đánh giá điểm đề tài theo nhiều tiêu chí kết hợp.</p>
+                </div>
+            </div>
+
+            <!-- Tabs chuyển đổi giữa các trang tìm kiếm được phân quyền -->
+            <div class="morong-tabs">
+                <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}"
+                   th:href="@{/morong/timkiem/detai}"
+                   class="morong-tab-item">▤ TÌM KIẾM ĐỀ TÀI</a>
+                <a th:if="${vaitro == 'TRUONGKHOA'}"
+                   th:href="@{/morong/timkiem/dotdangky}"
+                   class="morong-tab-item">▣ TÌM KIẾM ĐỢT ĐĂNG KÝ</a>
+                <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'SINHVIEN'}"
+                   th:href="@{/morong/timkiem/ketqua}"
+                   class="morong-tab-item active">◎ TÌM KIẾM KẾT QUẢ</a>
+            </div>
+
+            <!-- Khung Bộ Lọc Nâng Cao -->
+            <section class="morong-filter-card">
+                <form th:action="@{/morong/timkiem/ketqua}" method="get" id="filterForm" th:object="${filter}">
+                    <input type="hidden" name="page" id="pageNumberInput" th:value="${pageInfo != null ? pageInfo.number : 0}">
+
+                    <!-- Lỗi validation từ BindingResult -->
+                    <div th:if="${#fields != null and #fields.hasAnyErrors()}" class="publication-message error" role="alert" style="margin-bottom: 14px;">
+                        <strong>Bộ lọc không hợp lệ:</strong>
+                        <ul style="margin: 6px 0 0 18px; padding: 0;">
+                            <li th:each="err : ${#fields.allErrors()}" th:text="${err}">Lỗi</li>
+                        </ul>
+                    </div>
+
+                    <div class="morong-filter-header">
+                        <span class="morong-filter-title"><span>⌕</span> BỘ LỌC TÌM KIẾM KẾT QUẢ</span>
+                    </div>
+
+                    <div class="morong-filter-grid">
+                        <!-- Từ khóa -->
+                        <div class="morong-filter-field">
+                            <label for="keyword">Từ khóa tìm kiếm</label>
+                            <input type="text"
+                                   id="keyword"
+                                   name="keyword"
+                                   class="morong-filter-control"
+                                   placeholder="Tên đề tài, tên nhóm..."
+                                   th:value="${filter != null ? filter.keyword : ''}"
+                                   autocomplete="off">
+                        </div>
+
+                        <!-- Đợt đăng ký -->
+                        <div class="morong-filter-field">
+                            <label for="dotdangkyid">Đợt đăng ký</label>
+                            <select id="dotdangkyid" name="dotdangkyid" class="morong-filter-control">
+                                <option value="">— Tất cả đợt đăng ký —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.dotdangky : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.dotdangkyid != null && filter.dotdangkyid.toString() == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Trạng thái đăng ký -->
+                        <div class="morong-filter-field">
+                            <label for="trangthai">Trạng thái đăng ký</label>
+                            <select id="trangthai" name="trangthai" class="morong-filter-control">
+                                <option value="">— Tất cả trạng thái đăng ký —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.trangthai : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'CHODUYET' ? 'Chờ duyệt' : (opt.value == 'DADUYET' ? 'Đã duyệt' : (opt.value == 'TUCHOI' ? 'Từ chối' : opt.label))}"
+                                        th:selected="${filter != null && filter.trangthai != null && filter.trangthai.name() == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Trạng thái công bố -->
+                        <div class="morong-filter-field">
+                            <label for="dacongbo">Trạng thái công bố</label>
+                            <select id="dacongbo" name="dacongbo" class="morong-filter-control">
+                                <option value="">— Tất cả trạng thái công bố —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.dacongbo : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'true' ? 'Đã công bố' : (opt.value == 'false' ? 'Chưa công bố' : opt.label)}"
+                                        th:selected="${filter != null && filter.dacongbo != null && filter.dacongbo.toString() == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Điểm từ -->
+                        <div class="morong-filter-field">
+                            <label for="diemTu">Điểm số từ</label>
+                            <input type="number"
+                                   id="diemTu"
+                                   name="diemTu"
+                                   step="0.01"
+                                   min="0.00"
+                                   max="10.00"
+                                   class="morong-filter-control"
+                                   placeholder="0.00"
+                                   th:value="${filter != null && filter.diemTu != null ? filter.diemTu : ''}">
+                        </div>
+
+                        <!-- Điểm đến -->
+                        <div class="morong-filter-field">
+                            <label for="diemDen">Điểm số đến</label>
+                            <input type="number"
+                                   id="diemDen"
+                                   name="diemDen"
+                                   step="0.01"
+                                   min="0.00"
+                                   max="10.00"
+                                   class="morong-filter-control"
+                                   placeholder="10.00"
+                                   th:value="${filter != null && filter.diemDen != null ? filter.diemDen : ''}">
+                        </div>
+
+                        <!-- Ngày công bố từ (dd/MM/yyyy) -->
+                        <div class="morong-filter-field">
+                            <label for="ngayCongboTuDisplay">Ngày công bố từ</label>
+                            <div class="morong-date-picker-wrap">
+                                <input type="text"
+                                       id="ngayCongboTuDisplay"
+                                       class="morong-filter-control morong-date-display"
+                                       data-target="ngayCongboTu"
+                                       placeholder="dd/MM/yyyy"
+                                       maxlength="10"
+                                       autocomplete="off"
+                                       th:value="${filter != null && filter.ngayCongboTu != null ? #temporals.format(filter.ngayCongboTu, 'dd/MM/yyyy') : ''}">
+                                <input type="hidden"
+                                       id="ngayCongboTu"
+                                       name="ngayCongboTu"
+                                       th:value="${filter != null && filter.ngayCongboTu != null ? #temporals.format(filter.ngayCongboTu, 'yyyy-MM-dd') : ''}">
+                                <button type="button" class="morong-date-picker-btn" tabindex="-1" title="Chọn ngày từ lịch" aria-label="Chọn ngày từ lịch">📅</button>
+                                <input type="date" class="morong-date-native-picker" tabindex="-1" aria-hidden="true">
+                            </div>
+                            <div class="morong-date-error" id="ngayCongboTu_err" style="display:none;"></div>
+                        </div>
+
+                        <!-- Ngày công bố đến (dd/MM/yyyy) -->
+                        <div class="morong-filter-field">
+                            <label for="ngayCongboDenDisplay">Ngày công bố đến</label>
+                            <div class="morong-date-picker-wrap">
+                                <input type="text"
+                                       id="ngayCongboDenDisplay"
+                                       class="morong-filter-control morong-date-display"
+                                       data-target="ngayCongboDen"
+                                       placeholder="dd/MM/yyyy"
+                                       maxlength="10"
+                                       autocomplete="off"
+                                       th:value="${filter != null && filter.ngayCongboDen != null ? #temporals.format(filter.ngayCongboDen, 'dd/MM/yyyy') : ''}">
+                                <input type="hidden"
+                                       id="ngayCongboDen"
+                                       name="ngayCongboDen"
+                                       th:value="${filter != null && filter.ngayCongboDen != null ? #temporals.format(filter.ngayCongboDen, 'yyyy-MM-dd') : ''}">
+                                <button type="button" class="morong-date-picker-btn" tabindex="-1" title="Chọn ngày từ lịch" aria-label="Chọn ngày từ lịch">📅</button>
+                                <input type="date" class="morong-date-native-picker" tabindex="-1" aria-hidden="true">
+                            </div>
+                            <div class="morong-date-error" id="ngayCongboDen_err" style="display:none;"></div>
+                        </div>
+
+                        <!-- Sắp xếp -->
+                        <div class="morong-filter-field" th:if="${filterOptions != null && filterOptions.sort != null && !filterOptions.sort.isEmpty()}">
+                            <label for="sort">Sắp xếp theo</label>
+                            <select id="sort" name="sort" class="morong-filter-control">
+                                <option th:each="opt : ${filterOptions.sort}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'id,asc' ? 'Mã kết quả (Tăng dần)' :
+                                                 (opt.value == 'id,desc' ? 'Mã kết quả (Giảm dần)' :
+                                                 (opt.value == 'tendetai,asc' ? 'Tên đề tài (A đến Z)' :
+                                                 (opt.value == 'tendetai,desc' ? 'Tên đề tài (Z đến A)' :
+                                                 (opt.value == 'tennhom,asc' ? 'Tên nhóm (A đến Z)' :
+                                                 (opt.value == 'tennhom,desc' ? 'Tên nhóm (Z đến A)' :
+                                                 (opt.value == 'diemcuoi,asc' ? 'Điểm cuối (Thấp đến cao)' :
+                                                 (opt.value == 'diemcuoi,desc' ? 'Điểm cuối (Cao đến thấp)' :
+                                                 (opt.value == 'ngaycongbo,asc' ? 'Ngày công bố (Cũ nhất trước)' :
+                                                 (opt.value == 'ngaycongbo,desc' ? 'Ngày công bố (Mới nhất trước)' : opt.label)))))))))}"
+                                        th:selected="${filter != null && filter.sort != null && filter.sort == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="morong-filter-actions">
+                        <div class="morong-btn-group">
+                            <button type="submit" class="btn btn-primary" onclick="resetPage()">⌕ Tìm kiếm</button>
+                            <a th:href="@{/morong/timkiem/ketqua}" class="btn btn-secondary">↺ Đặt lại</a>
+                        </div>
+                        <!-- Component Xuất Excel/PDF duy nhất -->
+                        <div class="morong-export-wrap" th:if="${exportOptions != null and exportOptions.enabled}">
+                            <button type="button"
+                                    class="morong-export-btn"
+                                    aria-haspopup="true"
+                                    aria-expanded="false"
+                                    title="Xuất danh sách kết quả ra file Excel hoặc PDF">
+                                <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Xuất</span>
+                                <span class="morong-export-arrow" aria-hidden="true">▾</span>
+                            </button>
+                            <div class="morong-export-dropdown" role="menu">
+                                <a th:href="${exportOptions.excelUrl}"
+                                   class="morong-export-item morong-export-excel"
+                                   role="menuitem"
+                                   data-export-format="xlsx"
+                                   data-export-label="Excel">
+                                    <span class="morong-export-icon excel-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM15.5 17.5h-1.8l-1.7-2.9-1.7 2.9H8.5l2.6-4-2.4-3.8h1.8l1.5 2.6 1.5-2.6h1.8l-2.4 3.8 2.6 4zM13 9V3.5L18.5 9H13z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="morong-export-text">Xuất Excel (.xlsx)</span>
+                                </a>
+                                <a th:href="${exportOptions.pdfUrl}"
+                                   class="morong-export-item morong-export-pdf"
+                                   role="menuitem"
+                                   data-export-format="pdf"
+                                   data-export-label="PDF">
+                                    <span class="morong-export-icon pdf-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-3.5 15.5H9v-5h1.5a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5zm0-3.5H10v2h.5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM13 9V3.5L18.5 9H13zm3.5 8.5H15v-5h1.5a1.5 1.5 0 0 1 0 3H16v2zm0-3.5H16v-1h.5a.5.5 0 0 1 0 1z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="morong-export-text">Xuất PDF (.pdf)</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="morong-export-wrap" th:if="${exportOptions == null or !exportOptions.enabled}">
+                            <button type="button" class="morong-export-btn disabled" disabled="disabled" title="Chức năng xuất chưa khả dụng cho bộ lọc này">
+                                <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Xuất</span>
+                                <span class="morong-export-arrow" aria-hidden="true">▾</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Bảng Kết Quả Tìm Kiếm -->
+            <section class="panel-card">
+                <div class="table-toolbar">
+                    <div class="record-count" th:if="${!#fields.hasAnyErrors()}">
+                        <b th:text="${pageInfo != null ? pageInfo.totalElements : (items != null ? #lists.size(items) : 0)}">0</b> kết quả tìm thấy
+                    </div>
+                    <div class="record-count" th:if="${#fields.hasAnyErrors()}">
+                        <span style="color: #b91c1c; font-weight: 600;">⚠ Bộ lọc không hợp lệ</span>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th style="width: 65px;">Mã</th>
+                                <th style="width: 80px;">Mã ĐK</th>
+                                <th>Tên đề tài / Nhóm thực hiện</th>
+                                <th style="width: 170px;">Đợt đăng ký</th>
+                                <th style="width: 120px;">Trạng thái ĐK</th>
+                                <th style="width: 90px; text-align: center;">Điểm</th>
+                                <th style="width: 110px;">Công bố</th>
+                                <th style="width: 150px;">Ngày công bố</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Hiển thị khi không có lỗi -->
+                            <tr th:if="${!#fields.hasAnyErrors()}" th:each="item, stat : ${items}">
+                                <td th:text="${pageInfo != null ? (pageInfo.number * pageInfo.size + stat.count) : stat.count}">1</td>
+                                <td th:text="${item.id}">---</td>
+                                <td th:text="${item.dangkydetaiid != null ? item.dangkydetaiid : '—'}">---</td>
+                                <td>
+                                    <strong th:text="${item.tendetai != null ? item.tendetai : '---'}">Tên đề tài</strong>
+                                    <small th:if="${item.tennhom != null and !#strings.isEmpty(item.tennhom)}"
+                                           th:text="'Nhóm: ' + ${item.tennhom}"
+                                           style="display: block; color: #64748b; margin-top: 2px;"></small>
+                                </td>
+                                <td>
+                                    <span th:text="${item.tendot != null ? item.tendot : (item.dotdangkyid != null ? 'Đợt ' + item.dotdangkyid : '—')}">---</span>
+                                    <span th:if="${item.loaidot != null}" class="badge badge-info" th:text="${item.loaidot}" style="margin-left: 4px;"></span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${item.trangthai != null ? (item.trangthai.name() == 'DADUYET' ? ' badge-success' : (item.trangthai.name() == 'CHODUYET' ? ' badge-warning' : (item.trangthai.name() == 'TUCHOI' ? ' badge-danger' : ''))) : ''}"
+                                          th:text="${item.trangthai != null ? (item.trangthai.name() == 'DADUYET' ? 'Đã duyệt' : (item.trangthai.name() == 'CHODUYET' ? 'Chờ duyệt' : (item.trangthai.name() == 'TUCHOI' ? 'Từ chối' : item.trangthai.name()))) : '—'}">---</span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <b th:if="${item.diemcuoi != null}"
+                                       th:text="${#numbers.formatDecimal(item.diemcuoi, 1, 2)}">---</b>
+                                    <span th:if="${item.diemcuoi == null}">—</span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${item.dacongbo == true} ? ' badge-success' : ' badge-muted'"
+                                          th:text="${item.dacongbo == true} ? 'Đã công bố' : 'Chưa công bố'">---</span>
+                                </td>
+                                <td th:text="${item.ngaycongbo != null ? #temporals.format(item.ngaycongbo, 'dd/MM/yyyy HH:mm') : '—'}">---</td>
+                            </tr>
+
+                            <!-- Trạng thái khi có lỗi validation -->
+                            <tr th:if="${#fields.hasAnyErrors()}">
+                                <td colspan="9">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon" style="color: #b91c1c;">⚠️</div>
+                                        <strong style="color: #b91c1c;">Bộ lọc tìm kiếm không hợp lệ</strong>
+                                        <span>Vui lòng kiểm tra và sửa lại các điều kiện lọc được báo lỗi ở trên trước khi tìm kiếm lại.</span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Trạng thái khi không có lỗi nhưng không tìm thấy kết quả -->
+                            <tr th:if="${!#fields.hasAnyErrors() and #lists.isEmpty(items)}">
+                                <td colspan="9">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">🔍</div>
+                                        <strong>Không tìm thấy kết quả phù hợp</strong>
+                                        <span>Không có kết quả nào thỏa mãn các điều kiện tìm kiếm. Hãy thử thay đổi bộ lọc hoặc bấm "Đặt lại".</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang có cửa sổ nhỏ, giữ lại bộ lọc (chỉ hiện khi không có lỗi) -->
+                <div class="morong-pagination" th:if="${!#fields.hasAnyErrors() and pageInfo != null and pageInfo.totalPages > 1}">
+                    <div class="morong-pagination-info">
+                        Trang <b th:text="${pageInfo.number + 1}">1</b> / <b th:text="${pageInfo.totalPages}">1</b>
+                        (<span th:text="${pageInfo.totalElements}">0</span> bản ghi)
+                    </div>
+                    <div class="morong-pagination-nav"
+                         th:with="start=${pageInfo.number > 2 ? pageInfo.number - 2 : 0}, end=${pageInfo.number + 2 < pageInfo.totalPages ? pageInfo.number + 2 : pageInfo.totalPages - 1}">
+                        <button type="button"
+                                class="morong-page-btn"
+                                th:classappend="${!pageInfo.hasPrevious} ? ' disabled' : ''"
+                                th:onclick="${pageInfo.hasPrevious} ? 'goToPage(' + (${pageInfo.number} - 1) + ')' : ''"
+                                title="Trang trước">‹</button>
+
+                        <th:block th:if="${end >= start}" th:each="p : ${#numbers.sequence(start, end)}">
+                            <button type="button"
+                                    class="morong-page-btn"
+                                    th:classappend="${p == pageInfo.number} ? ' active' : ''"
+                                    th:onclick="'goToPage(' + ${p} + ')'"
+                                    th:text="${p + 1}">1</button>
+                        </th:block>
+
+                        <button type="button"
+                                class="morong-page-btn"
+                                th:classappend="${!pageInfo.hasNext} ? ' disabled' : ''"
+                                th:onclick="${pageInfo.hasNext} ? 'goToPage(' + (${pageInfo.number} + 1) + ')' : ''"
+                                title="Trang sau">›</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    function resetPage() {
+        const pageInput = document.getElementById('pageNumberInput');
+        if (pageInput) pageInput.value = 0;
+    }
+    function goToPage(page) {
+        const pageInput = document.getElementById('pageNumberInput');
+        if (pageInput) {
+            pageInput.value = page;
+            document.getElementById('filterForm').submit();
+        }
+    }
+</script>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/morong-export.js}" defer></script>
+</body>
+</html>

@@ -24,23 +24,9 @@ public class DetaiServiceImpl implements DetaiService {
 
 
     private final DetaiRepository repository;
-    private final com.example.quanlydetaisinhvien.service.morong.TimkiemNangcaoService search;
 
-    public DetaiServiceImpl(DetaiRepository repository, com.example.quanlydetaisinhvien.service.morong.TimkiemNangcaoService search) {
+    public DetaiServiceImpl(DetaiRepository repository) {
         this.repository = repository;
-        this.search = search;
-    }
-
-    @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
-    public org.springframework.data.domain.Page<Detai> searchPage(com.example.quanlydetaisinhvien.dto.morong.DetaiFilterDTO filter) {
-        var result = search.detai(filter);
-        // Bounded page lookup preserves the existing GĐ1 permission API without per-row queries.
-        var ids = result.items().stream().map(com.example.quanlydetaisinhvien.dto.morong.SearchModels.DetaiRow::id).toList();
-        var byId = repository.findAllById(ids).stream().collect(java.util.stream.Collectors.toMap(Detai::getId, d -> d));
-        var items = ids.stream().map(byId::get).toList();
-        return new org.springframework.data.domain.PageImpl<>(items,
-                org.springframework.data.domain.PageRequest.of(filter.getPage(), filter.getSize()), result.pageInfo().totalElements());
     }
 
     @Override

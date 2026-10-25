@@ -31,31 +31,24 @@ public class PdfReportWriter {
         final PDDocument document;
         final PDFont regular, bold;
         final Report report;
-        final boolean statistics;
-        final float padding;
         PDPageContentStream stream;
-        float y, width, bodyTop;
+        float y, width;
         PDRectangle paper;
         Renderer(PDDocument document, PDFont regular, PDFont bold, Report report) {
             this.document = document; this.regular = regular; this.bold = bold; this.report = report;
-            this.statistics = report.title().equals("THỐNG KÊ & BÁO CÁO")
-                    && report.sections().stream().map(Section::title).toList().equals(List.of("Tổng hợp", "Theo đợt"));
-            this.padding = statistics ? 3 : PAD;
         }
         void render() throws IOException {
             int columns = report.sections().stream().mapToInt(s -> s.columns().size()).max().orElse(2);
             var base = columns > 8 ? PDRectangle.A3 : PDRectangle.A4;
-            // The compact statistics report fits portrait A4; other datasets retain their layout.
-            paper = statistics ? PDRectangle.A4 : new PDRectangle(base.getHeight(), base.getWidth());
-            width = paper.getWidth() - 2 * MARGIN;
+            paper = new PDRectangle(base.getHeight(), base.getWidth()); width = paper.getWidth() - 2 * MARGIN;
             try {
                 for (var section : report.sections()) {
                     if (stream == null || y < BOTTOM + 100) newPage(section);
                     else { y -= 20; sectionHeader(section); }
                     if (section.rows().isEmpty()) {
-                        text("Không có dữ liệu", MARGIN + padding, y - LINE, regular, SIZE); y -= LINE * 2;
+                        text("Không có dữ liệu", MARGIN + PAD, y - LINE, regular, SIZE); y -= LINE * 2;
                     }
-                    for (int r = 0; r < section.rows().size(); r++) drawRow(section, section.rows().get(r), r + 1);
+                    for (var row : section.rows()) drawRow(section, row);
                 }
                 if (stream != null) { stream.close(); stream = null; }
                 int total = document.getNumberOfPages();
@@ -68,9 +61,6 @@ public class PdfReportWriter {
             } finally { if (stream != null) stream.close(); }
         }
         void newPage(Section section) throws IOException {
-            newPage(section, null);
-        }
-        void newPage(Section section, String continuation) throws IOException {
             if (stream != null) { stream.close(); stream = null; }
             if (document.getNumberOfPages() >= 500) throw new ExportLimitException("PDF vượt giới hạn 500 trang. Vui lòng thu hẹp bộ lọc.");
             var page = new PDPage(paper); document.addPage(page); stream = new PDPageContentStream(document, page);
@@ -80,14 +70,8 @@ public class PdfReportWriter {
             for (String filter : report.filters()) for (String line : wrap(filter, width, regular, SIZE)) {
                 text(line, MARGIN, y - LINE, regular, SIZE); y -= LINE;
             }
-            if (continuation != null) {
-                for (String line : wrap(continuation, width, bold, SIZE)) {
-                    text(line, MARGIN, y - LINE, bold, SIZE); y -= LINE;
-                }
-            }
             sectionHeader(section);
-            bodyTop = y;
-            if (y < BOTTOM + LINE + 2 * padding) throw new ExportLimitException("Bộ lọc quá dài để dàn trang PDF.");
+            if (y < BOTTOM + LINE + 2 * PAD) throw new ExportLimitException("Bộ lọc quá dài để dàn trang PDF.");
         }
         void sectionHeader(Section section) throws IOException {
             y -= 12; text(section.title(), MARGIN, y - 12, bold, 12); y -= 24;
@@ -101,37 +85,30 @@ public class PdfReportWriter {
             float weights = section.columns().stream().mapToInt(Column::width).sum();
             for (int c = 0; c < row.size(); c++) {
                 result.add(wrap(display(row.get(c), section.columns().get(c).kind()),
-                        width * section.columns().get(c).width() / weights - 2 * padding, font, SIZE));
+                        width * section.columns().get(c).width() / weights - 2 * PAD, font, SIZE));
             }
             return result;
         }
-        void drawRow(Section section, List<Object> row, int rowNumber) throws IOException {
+        void drawRow(Section section, List<Object> row) throws IOException {
             var lines = lines(section, row, regular);
             int total = lines.stream().mapToInt(List::size).max().orElse(1), offset = 0;
-            float height = total * LINE + 2 * padding;
-            // Measure every cell before drawing. Move the entire row to a fresh page whenever
-            // it cannot fit here, including oversized rows that need controlled continuation.
-            if (y - height < BOTTOM && y < bodyTop) newPage(section);
-            String context = report.title().equals("DANH SÁCH ĐỀ TÀI")
-                    && section.columns().getFirst().label().equals("ID")
-                    ? "Mã đề tài: " + row.getFirst() : "Bản ghi số " + rowNumber;
             while (offset < total) {
-                int capacity = (int) ((y - BOTTOM - 2 * padding) / LINE);
-                if (capacity < 1) throw new ExportLimitException("Không đủ diện tích dàn trang hàng PDF.");
+                int capacity = (int) ((y - BOTTOM - 2 * PAD) / LINE);
+                if (capacity < 1) { newPage(section); continue; }
                 int count = Math.min(capacity, total - offset);
                 segment(section, lines, offset, count, false); offset += count;
-                if (offset < total) newPage(section, "Tiếp theo - " + context);
+                if (offset < total) newPage(section);
             }
         }
         void segment(Section section, List<List<String>> lines, int offset, int count, boolean header) throws IOException {
-            float height = count * LINE + 2 * padding, x = MARGIN;
+            float height = count * LINE + 2 * PAD, x = MARGIN;
             float weights = section.columns().stream().mapToInt(Column::width).sum();
             for (int c = 0; c < lines.size(); c++) {
                 float cellWidth = width * section.columns().get(c).width() / weights;
                 if (header) { stream.setNonStrokingColor(225 / 255f, 234 / 255f, 245 / 255f); stream.addRect(x, y - height, cellWidth, height); stream.fill(); }
                 stream.setStrokingColor(0.65f); stream.setLineWidth(0.35f); stream.addRect(x, y - height, cellWidth, height); stream.stroke();
                 for (int j = 0; j < count && offset + j < lines.get(c).size(); j++) {
-                    text(lines.get(c).get(offset + j), x + padding, y - padding - SIZE - j * LINE, header ? bold : regular, SIZE);
+                    text(lines.get(c).get(offset + j), x + PAD, y - PAD - SIZE - j * LINE, header ? bold : regular, SIZE);
                 }
                 x += cellWidth;
             }

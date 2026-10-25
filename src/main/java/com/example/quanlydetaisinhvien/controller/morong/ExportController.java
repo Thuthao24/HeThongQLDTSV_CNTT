@@ -31,6 +31,12 @@ public class ExportController {
     @GetMapping({"/detai.xlsx", "/detai.pdf"})
     public ResponseEntity<byte[]> detai(@Valid @ModelAttribute("filter") DetaiFilterDTO filter, BindingResult errors,
             HttpServletRequest request) throws IOException { return download(Dataset.DETAI, filter, errors, request); }
+    @GetMapping({"/dotdangky.xlsx", "/dotdangky.pdf"})
+    public ResponseEntity<byte[]> dotdangky(@Valid @ModelAttribute("filter") DotdangkyFilterDTO filter, BindingResult errors,
+            HttpServletRequest request) throws IOException { return download(Dataset.DOTDANGKY, filter, errors, request); }
+    @GetMapping({"/ketqua.xlsx", "/ketqua.pdf"})
+    public ResponseEntity<byte[]> ketqua(@Valid @ModelAttribute("filter") KetquaFilterDTO filter, BindingResult errors,
+            HttpServletRequest request) throws IOException { return download(Dataset.KETQUA, filter, errors, request); }
     @GetMapping({"/thongke.xlsx", "/thongke.pdf"})
     public ResponseEntity<byte[]> thongke(@Valid @ModelAttribute("filter") ThongkeFilterDTO filter, BindingResult errors,
             HttpServletRequest request) throws IOException { return download(Dataset.THONGKE, filter, errors, request); }

@@ -138,7 +138,7 @@ class NoticeEmailRemovalTests {
     @Test void sidebarDropsOnlyTheRetiredMenuWhileNoticeBellAndModule17LinksRemain() throws Exception {
         String chief=mvc.perform(get("/thongbao").with(user("removal-TRUONGKHOA").roles("TRUONGKHOA")))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(chief).contains("/morong/thongke","/detai","TIỆN ÍCH").doesNotContain("/morong/timkiem/detai","/morong/timkiem/dotdangky","/morong/timkiem/ketqua","Giám sát Email","/morong/email-thongbao");
+        assertThat(chief).contains("/morong/thongke","/morong/timkiem/detai").doesNotContain("Giám sát Email","/morong/email-thongbao");
         String student=mvc.perform(get("/thongbao").with(user("removal-SINHVIEN").roles("SINHVIEN")))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(student).contains("headerNoticeBadge","/js/thongbao-bell.js").doesNotContain("Giám sát Email","/morong/email-thongbao");
