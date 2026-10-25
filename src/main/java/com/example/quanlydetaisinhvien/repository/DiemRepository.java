@@ -31,6 +31,9 @@ public interface DiemRepository extends JpaRepository<Diem, Long> {
     @Query("SELECT COUNT(d) FROM Diem d WHERE d.dangkydetaiid = :dangkydetaiid")
     long demSoLuongDiemTheoDangky(@Param("dangkydetaiid") Long dangkydetaiid);
 
+    @Query("SELECT DISTINCT d.dangkydetaiid FROM Diem d WHERE d.dangkydetaiid IN :ids")
+    java.util.Set<Long> findDangkydetaiidsWithDiem(@Param("ids") java.util.Collection<Long> ids);
+
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select d from Diem d where d.dangkydetaiid = :id")
     List<Diem> findForPublication(@Param("id") Long id);

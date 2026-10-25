@@ -29,8 +29,7 @@ public class EmailLocalTestDatabaseConfig {
         require(env,"spring.jpa.generate-ddl","false");
         require(env,"spring.sql.init.mode","never");
         require(env,"spring.mail.test-connection","false");
-        boolean resultDelivery=env.getProperty("app.ketqua.email.enabled",Boolean.class,false)
-                || env.getProperty("KETQUA_EMAIL_ENABLED",Boolean.class,false);
+        boolean resultDelivery=env.getProperty("app.ketqua.email.enabled",Boolean.class,false);
         if (resultDelivery && !results.deliveryAllowed())
             throw new IllegalStateException("Gửi thử kết quả cần một outbox ID và ALLOWLIST đúng một địa chỉ.");
         String username=env.getRequiredProperty("spring.datasource.username");

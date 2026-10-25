@@ -195,13 +195,18 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         Set<Long> dotIds = nhoms.values().stream().map(Nhomsinhvien::getDotdangkyid).collect(Collectors.toSet());
         Map<Long, Dotdangky> dots = new HashMap<>();
         if (dotdangkyRepository != null) dotdangkyRepository.findAllById(dotIds).forEach(e -> dots.put(e.getId(), e));
+        Set<Long> dkWithDiem = (diemRepository != null && !dkIds.isEmpty())
+                ? diemRepository.findDangkydetaiidsWithDiem(dkIds) : java.util.Collections.emptySet();
+        Set<Long> dkWithCongBo = (ketquaRepository != null && !dkIds.isEmpty())
+                ? ketquaRepository.findDangkydetaiidsWithKetquaDaCongBo(dkIds) : java.util.Collections.emptySet();
+
         List<NopBaoCaoDto> result = new ArrayList<>();
         for (Nopbaocao nb : reports) {
             NopBaoCaoDto dto = new NopBaoCaoDto();
             dto.setId(nb.getId()); dto.setDangkydetaiid(nb.getDangkydetaiid());
             dto.setSinhvienid(nb.getSinhvienid()); dto.setDuongdanfile(nb.getDuongdanfile());
             dto.setNgaynop(nb.getNgaynop());
-            dto.setDaKhoa(kiemTraDaKhoaNopBaoCao(nb.getDangkydetaiid()));
+            dto.setDaKhoa(dkWithDiem.contains(nb.getDangkydetaiid()) || dkWithCongBo.contains(nb.getDangkydetaiid()));
             Sinhvien sv = svs.get(nb.getSinhvienid());
             if (sv != null) {
                 dto.setMasinhvien(sv.getMasinhvien());
@@ -270,9 +275,14 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
         kiemTraKhoaNopBaoCao(request.getDangkydetaiid());
 
-        // Kiểm tra quyền sở hữu tệp: không cho phép nhóm khác tham chiếu hoặc mượn đường dẫn file của nhóm khác
+        // Kiểm tra quyền sở hữu tệp theo canonical physical file: không cho phép mượn đường dẫn file của nhóm khác
         String duongdanfile = request.getDuongdanfile().trim();
-        if (repository.existsByDuongdanfileAndDangkydetaiidNot(duongdanfile, request.getDangkydetaiid())) {
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+        Path targetPhysical = layDuongDanVatLyHopLe(duongdanfile, uploadRoot);
+        if (targetPhysical != null) {
+            duongdanfile = "/uploads/baocao/" + uploadRoot.relativize(targetPhysical).toString().replace('\\', '/');
+        }
+        if (isFileReferencedByOtherRegistration(duongdanfile, request.getDangkydetaiid())) {
             throw new NghiepvuException("Tệp báo cáo này đã thuộc về đề tài khác, không được phép sử dụng lại.");
         }
 
@@ -285,7 +295,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
         nb.setDangkydetaiid(request.getDangkydetaiid());
         nb.setSinhvienid(sinhvienNop.getId());
-        nb.setDuongdanfile(request.getDuongdanfile().trim());
+        nb.setDuongdanfile(duongdanfile);
         nb.setNgaynop(LocalDateTime.now());
 
         return repository.save(nb);
@@ -352,7 +362,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
             // Bảo đảm không xóa file cũ trước khi transaction commit thành công và không xóa nếu thuộc đăng ký khác
             if (oldFileDuongDan != null && !oldFileDuongDan.equals(duongdanfile)) {
-                boolean isUsedByOther = repository.existsByDuongdanfileAndDangkydetaiidNot(oldFileDuongDan, dangkydetaiid);
+                boolean isUsedByOther = isFileReferencedByOtherRegistration(oldFileDuongDan, dangkydetaiid);
                 if (!isUsedByOther) {
                     final String fileCanXoa = oldFileDuongDan;
                     if (TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -416,7 +426,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
         if (oldFileDuongDan != null) {
             // Chỉ xóa file vật lý nếu file không bị đăng ký khác tham chiếu
-            boolean isUsedByOther = repository.existsByDuongdanfileAndDangkydetaiidNot(oldFileDuongDan, nb.getDangkydetaiid());
+            boolean isUsedByOther = isFileReferencedByOtherRegistration(oldFileDuongDan, nb.getDangkydetaiid());
             if (!isUsedByOther) {
                 final String fileCanXoa = oldFileDuongDan;
                 if (TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -484,22 +494,104 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         }
     }
 
-    private void xoaFileVatLy(String duongdanfile) {
-        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return;
-        // Kiểm tra an toàn: nếu còn bản ghi trong hệ thống đang tham chiếu file này thì không xóa file vật lý
-        if (repository != null && repository.countByDuongdanfile(duongdanfile) > 0) {
-            return;
+    public Path layDuongDanVatLyHopLe(String duongdanfile, Path uploadRoot) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return null;
+        String raw = duongdanfile.trim();
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            return null;
         }
         try {
+            String decoded = java.net.URLDecoder.decode(raw, java.nio.charset.StandardCharsets.UTF_8).replace('\\', '/');
             String prefix = "/uploads/baocao/";
-            if (duongdanfile.startsWith(prefix)) {
-                String filename = duongdanfile.substring(prefix.length());
-                Path uploadDir = Paths.get(uploadDirectory).toAbsolutePath().normalize();
-                Path filePath = uploadDir.resolve(filename).normalize();
-                if (filePath.startsWith(uploadDir) && Files.exists(filePath)) {
-                    Files.deleteIfExists(filePath);
+            String subPath = decoded;
+            if (subPath.startsWith(prefix)) {
+                subPath = subPath.substring(prefix.length());
+            } else if (subPath.startsWith("uploads/baocao/")) {
+                subPath = subPath.substring("uploads/baocao/".length());
+            }
+            while (subPath.startsWith("/")) {
+                subPath = subPath.substring(1);
+            }
+            Path resolved = uploadRoot.resolve(subPath).normalize();
+            if (!resolved.startsWith(uploadRoot)) {
+                throw new NghiepvuException("Đường dẫn file không hợp lệ hoặc cố tình thoát khỏi thư mục lưu trữ");
+            }
+            if (Files.exists(resolved) && Files.isSymbolicLink(resolved)) {
+                throw new NghiepvuException("Không hỗ trợ liên kết tượng trưng (symlink)");
+            }
+            return resolved;
+        } catch (IllegalArgumentException e) {
+            throw new NghiepvuException("Đường dẫn file chứa ký tự không hợp lệ");
+        }
+    }
+
+    public boolean isFileReferencedByOtherRegistration(String duongdanfile, Long currentDkId) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return false;
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+        Path targetPath = layDuongDanVatLyHopLe(duongdanfile, uploadRoot);
+
+        if (repository != null) {
+            List<Nopbaocao> allReports = repository.findAll();
+            for (Nopbaocao r : allReports) {
+                if (r.getDangkydetaiid() != null && !r.getDangkydetaiid().equals(currentDkId)) {
+                    if (r.getDuongdanfile() != null) {
+                        // 1. So khớp chuỗi trực tiếp
+                        if (r.getDuongdanfile().trim().equalsIgnoreCase(duongdanfile.trim())) {
+                            return true;
+                        }
+                        // 2. So khớp đường dẫn chuẩn hóa và inode vật lý
+                        try {
+                            Path otherPath = layDuongDanVatLyHopLe(r.getDuongdanfile(), uploadRoot);
+                            if (targetPath != null && otherPath != null) {
+                                if (targetPath.equals(otherPath)) {
+                                    return true;
+                                }
+                                if (Files.exists(targetPath) && Files.exists(otherPath)) {
+                                    if (Files.isSameFile(targetPath, otherPath)) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
                 }
             }
+        }
+        return false;
+    }
+
+    private void xoaFileVatLy(String duongdanfile) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return;
+        try {
+            Path uploadDir = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+            Path filePath = layDuongDanVatLyHopLe(duongdanfile, uploadDir);
+            if (filePath == null || !Files.exists(filePath)) {
+                return;
+            }
+            if (repository != null) {
+                List<Nopbaocao> remaining = repository.findAll();
+                for (Nopbaocao r : remaining) {
+                    if (r.getDuongdanfile() != null) {
+                        if (r.getDuongdanfile().trim().equalsIgnoreCase(duongdanfile.trim())) {
+                            return; // Bảo toàn file nếu còn bản ghi CSDL tham chiếu cùng chuỗi
+                        }
+                        try {
+                            Path otherPath = layDuongDanVatLyHopLe(r.getDuongdanfile(), uploadDir);
+                            if (otherPath != null) {
+                                if (filePath.equals(otherPath)) {
+                                    return; // Bảo toàn file nếu chuẩn hóa cùng một đường dẫn
+                                }
+                                if (Files.exists(otherPath) && Files.isSameFile(filePath, otherPath)) {
+                                    return; // Bảo toàn file nếu chung inode vật lý
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+            Files.deleteIfExists(filePath);
         } catch (Exception ignored) {
         }
     }

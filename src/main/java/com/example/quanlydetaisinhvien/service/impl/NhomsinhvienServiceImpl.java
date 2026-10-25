@@ -273,7 +273,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
 
     @Override
     public Nhomsinhvien capNhatThongTinNhom(Long nhomid, String tenNhomMoi, String currentUsername) {
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
@@ -295,7 +295,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
 
     @Override
     public void xoaNhom(Long nhomid, String currentUsername) {
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
@@ -409,7 +409,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
 
     @Override
     public void xoaThanhVien(Long nhomid, Long sinhvienid, String currentUsername) {
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
@@ -431,7 +431,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
                 throw new NghiepvuException("Không thể xóa thành viên khi đề tài của nhóm đã được duyệt chính thức");
             }
             if (dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET) {
-                long soLuongHienTai = thanhviennhomRepository.countByNhomid(nhomid);
+                long soLuongHienTai = thanhviennhomRepository.findByNhomidForUpdate(nhomid).size();
                 if (soLuongHienTai <= 3) {
                     throw new NghiepvuException("Không thể xóa thành viên vì nhóm đang chờ duyệt đề tài (yêu cầu tối thiểu 3 thành viên). Vui lòng hủy đăng ký đề tài nếu muốn thay đổi sĩ số.");
                 }
@@ -452,7 +452,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
 
     @Override
     public void doiNhomTruong(Long nhomid, Long sinhvienidMoi, String currentUsername) {
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
@@ -477,7 +477,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         if (currentUsername == null || currentUsername.trim().isEmpty()) {
             throw new NghiepvuException("Vui lòng đăng nhập để thực hiện thao tác này");
         }
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         Sinhvien sv = sinhvienRepository.findByMasinhvien(currentUsername.trim())
@@ -498,7 +498,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
                 throw new NghiepvuException("Không thể rời nhóm khi đề tài đã được duyệt chính thức");
             }
             if (dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET) {
-                long soLuongHienTai = thanhviennhomRepository.countByNhomid(nhomid);
+                long soLuongHienTai = thanhviennhomRepository.findByNhomidForUpdate(nhomid).size();
                 if (soLuongHienTai <= 3) {
                     throw new NghiepvuException("Không thể rời nhóm vì nhóm đang chờ duyệt đề tài (yêu cầu tối thiểu 3 thành viên). Vui lòng hủy đăng ký đề tài nếu muốn thay đổi sĩ số.");
                 }
@@ -868,7 +868,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
     @Override
     public void huyLoiMoi(Long nhomid, Long loiMoiId, String currentUsername) {
         if (loimoithanhvienRepository == null) return;
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm"));
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
 

@@ -155,14 +155,25 @@ public class NopbaocaoController {
             return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(pathStr)).build();
         }
 
+        String decoded;
+        try {
+            decoded = java.net.URLDecoder.decode(pathStr, java.nio.charset.StandardCharsets.UTF_8).replace('\\', '/');
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         // Only serve application-managed uploads. Never trust a DB-stored path as an
         // arbitrary filesystem location (including ../ or an absolute path).
         String prefix = "/uploads/baocao/";
-        if (!pathStr.startsWith(prefix)) {
+        if (!decoded.startsWith(prefix) && !decoded.startsWith("uploads/baocao/")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        String fileName = pathStr.substring(prefix.length());
+        String fileName = decoded.startsWith(prefix) ? decoded.substring(prefix.length()) : decoded.substring("uploads/baocao/".length());
+        while (fileName.startsWith("/")) {
+            fileName = fileName.substring(1);
+        }
         if (fileName.isBlank() || fileName.equals(".") || fileName.equals("..")
+                || fileName.contains("../") || fileName.contains("..\\")
                 || fileName.contains("/") || fileName.contains("\\")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
