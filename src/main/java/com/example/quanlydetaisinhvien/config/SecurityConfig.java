@@ -33,9 +33,6 @@ public class SecurityConfig {
         "/taikhoan",
         "/taikhoan/canhan"
 ).authenticated()
-
-.requestMatchers("/taikhoan/**").denyAll()
-
 .requestMatchers(
         "/bomon/**",
         "/quanly/danhmuc/**"
