@@ -104,6 +104,7 @@
 
               <!-- Form tải tệp báo cáo trực tiếp (Upload Area) -->
               <form th:action="@{/nopbaocao/upload}" method="post" enctype="multipart/form-data" class="report-upload-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <div class="form-field" style="margin-bottom: 14px;">
                   <label for="dangkydetaiid_file">Đề tài đăng ký của nhóm *</label>
                   <select id="dangkydetaiid_file" name="dangkydetaiid" required>
@@ -139,6 +140,7 @@
                   <span>Hoặc nộp liên kết (Google Drive, GitHub, OneDrive)</span>
                 </div>
                 <form th:action="@{/nopbaocao/nop}" th:object="${nopRequest}" method="post" class="link-submit-form">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                   <div class="form-field" style="min-width: 240px; flex: 1;">
                     <label for="dangkydetaiid_link">Đề tài đăng ký *</label>
                     <select id="dangkydetaiid_link" name="dangkydetaiid" required>
@@ -217,6 +219,7 @@
                           data-confirm="Bạn có chắc chắn muốn xóa bản ghi nộp báo cáo này không?"
                           data-modal-title="Thông báo"
                           style="margin: 0;">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
                     </form>
                   </div>
@@ -238,6 +241,24 @@
     </main>
   </div>
 </div>
+<!-- Modal xác nhận chung -->
+<div class="portal-modal" id="confirmModal" aria-hidden="true">
+  <div class="portal-modal-backdrop" data-modal-cancel></div>
+  <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="portal-modal-header">
+      <h4 class="portal-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
+      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">&times;</button>
+    </div>
+    <div class="portal-modal-body">
+      <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+    </div>
+    <div class="portal-modal-footer">
+      <button type="button" class="btn btn-secondary" data-modal-cancel>Hủy</button>
+      <button type="button" class="btn btn-primary" id="confirmModalAccept">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
 <script th:src="@{/js/app.js}"></script>
 
 <div th:if="${page != null and vaitro == 'TRUONGKHOA'}" style="margin:16px 0;display:flex;gap:12px;align-items:center">

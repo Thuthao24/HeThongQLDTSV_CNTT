@@ -84,6 +84,7 @@
         </div>
         <div class="form-card">
           <form th:action="@{/nhom/tao}" th:object="${taoNhomRequest}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <div class="form-grid">
               <div class="form-field">
                 <label for="tennhom">Tên nhóm sinh viên *</label>
@@ -108,10 +109,15 @@
         </div>
       </section>
 
-      <!-- Danh sách nhóm sinh viên -->
-      <section class="panel-card">
+      <!-- Thông báo hướng dẫn cho sinh viên chưa có nhóm -->
+      <div th:if="${vaitro == 'SINHVIEN' && !daCoNhom}" class="alert-box alert-info" style="margin-top: 16px;">
+        <span>Nếu bạn tham gia nhóm cùng bạn khác (không làm nhóm trưởng), bạn chỉ cần gửi MSSV của mình để nhóm trưởng thêm bạn vào nhóm trong trang chi tiết nhóm.</span>
+      </div>
+
+      <!-- Danh sách tất cả nhóm trong hệ thống (Chỉ hiển thị cho Trưởng khoa) -->
+      <section class="panel-card" th:if="${vaitro == 'TRUONGKHOA'}">
         <div class="panel-heading" style="padding-bottom: 8px;">
-          <h3 th:text="${vaitro == 'TRUONGKHOA' ? 'TẤT CẢ CÁC NHÓM TRONG HỆ THỐNG' : 'DANH SÁCH NHÓM CỦA BẠN'}">DANH SÁCH NHÓM</h3>
+          <h3>TẤT CẢ CÁC NHÓM TRONG HỆ THỐNG</h3>
         </div>
         <div class="table-toolbar">
           <div class="search-box">

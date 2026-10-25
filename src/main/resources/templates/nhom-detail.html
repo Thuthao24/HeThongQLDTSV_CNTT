@@ -40,14 +40,16 @@
                   data-confirm="Bạn có chắc chắn muốn xóa nhóm này không? Toàn bộ thành viên sẽ được rời nhóm và lượt đăng ký đề tài (nếu có) sẽ bị hủy."
                   data-modal-title="Thông báo"
                   style="margin: 0;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
               <button type="submit" class="btn btn-danger btn-sm">Xóa nhóm</button>
             </form>
           </div>
-          <div th:if="${!laNhomTruong && vaitro == 'SINHVIEN'}">
+          <div th:if="${!laNhomTruong &amp;&amp; vaitro == 'SINHVIEN'}">
             <form th:action="@{'/nhom/' + ${nhom.id} + '/roi-nhom'}" method="post"
                   data-confirm="Bạn có chắc chắn muốn rời khỏi nhóm này không?"
                   data-modal-title="Thông báo"
                   style="margin: 0;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
               <button type="submit" class="btn btn-warning btn-sm">Rời khỏi nhóm</button>
             </form>
           </div>
@@ -128,11 +130,12 @@
                   <span th:if="${!tv.nhomtruong}" class="role-badge role-member">Thành viên</span>
                 </td>
                 <td th:if="${laNhomTruong}">
-                  <div th:if="${!tv.nhomtruong && nhom.trangthaiDangky != 'DADUYET'}" class="action-group">
+                  <div th:if="${!tv.nhomtruong &amp;&amp; nhom.trangthaiDangky != 'DADUYET'}" class="action-group">
                     <form th:action="@{'/nhom/' + ${nhom.id} + '/doi-nhom-truong'}" method="post"
                           data-confirm="Bạn có chắc muốn chuyển quyền nhóm trưởng cho sinh viên này?"
                           data-modal-title="Thông báo"
                           style="margin: 0;">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <input type="hidden" name="sinhvienid" th:value="${tv.sinhvienid}">
                       <button type="submit" class="btn btn-secondary btn-sm">Chuyển nhóm trưởng</button>
                     </form>
@@ -141,6 +144,7 @@
                           data-confirm="Bạn có chắc muốn xóa thành viên này khỏi nhóm?"
                           data-modal-title="Thông báo"
                           style="margin: 0;">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <input type="hidden" name="sinhvienid" th:value="${tv.sinhvienid}">
                       <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
                     </form>
@@ -153,12 +157,12 @@
         </div>
 
         <!-- Thông báo khi đề tài đã duyệt chính thức -->
-        <div class="alert-box alert-info" th:if="${laNhomTruong && nhom.trangthaiDangky == 'DADUYET'}" style="margin: 15px 0 0 0;">
+        <div class="alert-box alert-info" th:if="${laNhomTruong &amp;&amp; nhom.trangthaiDangky == 'DADUYET'}" style="margin: 15px 0 0 0;">
           <span>Đề tài của nhóm đã được duyệt chính thức. Danh sách thành viên đã được cố định và không thể chỉnh sửa.</span>
         </div>
 
         <!-- Form Thêm thành viên vào nhóm -->
-        <div class="form-card" th:if="${laNhomTruong && nhom.soThanhvien < 5 && nhom.trangthaiDangky != 'DADUYET'}">
+        <div class="form-card" th:if="${laNhomTruong &amp;&amp; nhom.soThanhvien &lt; 5 &amp;&amp; nhom.trangthaiDangky != 'DADUYET'}">
           <form th:action="@{'/nhom/' + ${nhom.id} + '/them-thanh-vien'}" th:object="${themThanhVienRequest}" method="post"
                 class="nhom-inline-form">
             <div class="form-field" style="width: 280px;">
@@ -168,7 +172,7 @@
             <button type="submit" class="btn btn-primary" style="height: 34px;">Thêm thành viên</button>
           </form>
         </div>
-        <div class="alert-box alert-info" th:if="${laNhomTruong && nhom.soThanhvien >= 5 && nhom.trangthaiDangky != 'DADUYET'}" style="margin: 15px 0 0 0;">
+        <div class="alert-box alert-info" th:if="${laNhomTruong &amp;&amp; nhom.soThanhvien &gt;= 5 &amp;&amp; nhom.trangthaiDangky != 'DADUYET'}" style="margin: 15px 0 0 0;">
           <span>Nhóm đã đạt số lượng tối đa 05 sinh viên theo quy định. Không thể thêm thành viên mới.</span>
         </div>
       </section>
@@ -178,12 +182,12 @@
 </div>
 
 <!-- Hộp thoại xác nhận (Modal Thông báo) -->
-<div class="portal-modal" id="confirmModal" aria-hidden="true" style="display: none;">
+<div class="portal-modal" id="confirmModal" aria-hidden="true">
   <div class="portal-modal-backdrop" data-modal-cancel></div>
   <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
     <div class="portal-modal-header">
       <h4 class="portal-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
-      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">×</button>
+      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">&times;</button>
     </div>
     <div class="portal-modal-body">
       <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
