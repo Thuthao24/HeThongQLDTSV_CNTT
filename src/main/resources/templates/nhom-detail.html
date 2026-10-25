@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title}">Chi tiết nhóm sinh viên</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+  <div th:replace="~{fragments :: portalHeader}"></div>
+  <div class="portal-body">
+    <div th:replace="~{fragments :: sidebar('nhom')}"></div>
+    <main class="main-panel nhom-detail-page">
+
+      <div class="page-heading">
+        <div>
+          <div class="breadcrumb">Cổng thông tin đào tạo / Nhóm sinh viên / Chi tiết</div>
+          <h1 th:text="${nhom.tennhom}">CHI TIẾT NHÓM</h1>
+        </div>
+        <div>
+          <a th:href="@{/nhom}" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; padding: 0 14px;">Quay lại danh sách</a>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <div th:if="${successMessage}" class="alert-box alert-success">
+        <span th:text="${successMessage}">Thao tác thành công!</span>
+      </div>
+      <div th:if="${errorMessage}" class="alert-box alert-error">
+        <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+      </div>
+
+      <!-- Khu vực Thông tin nhóm -->
+      <section class="panel-card">
+        <div class="panel-heading">
+          <h3>THÔNG TIN NHÓM</h3>
+          <div th:if="${laNhomTruong and nhom.trangthaiDangky == null}">
+            <form th:action="@{'/nhom/' + ${nhom.id} + '/xoa'}" method="post"
+                  data-confirm="Bạn có chắc chắn muốn xóa nhóm này không? Toàn bộ thành viên sẽ được rời nhóm và lượt đăng ký đề tài (nếu có) sẽ bị hủy."
+                  data-modal-title="Thông báo"
+                  style="margin: 0;">
+              <button type="submit" class="btn btn-danger btn-sm">Xóa nhóm</button>
+            </form>
+          </div>
+          <div th:if="${!laNhomTruong && vaitro == 'SINHVIEN'}">
+            <form th:action="@{'/nhom/' + ${nhom.id} + '/roi-nhom'}" method="post"
+                  data-confirm="Bạn có chắc chắn muốn rời khỏi nhóm này không?"
+                  data-modal-title="Thông báo"
+                  style="margin: 0;">
+              <button type="submit" class="btn btn-warning btn-sm">Rời khỏi nhóm</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="nhom-info-grid">
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Mã nhóm</span>
+            <span class="nhom-info-value" th:text="${'#' + nhom.id}">#1</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Tên nhóm</span>
+            <span class="nhom-info-value" th:text="${nhom.tennhom}">Nhóm 01</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Đợt đăng ký</span>
+            <span class="nhom-info-value" th:text="${nhom.tendot != null ? nhom.tendot : ('Đợt #' + nhom.dotdangkyid)}">Đợt KLTN</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Nhóm trưởng hiện tại</span>
+            <span class="nhom-info-value leader-highlight" th:text="${nhom.tenNhomtruong}">Nguyễn Văn A</span>
+          </div>
+          <div class="nhom-info-item">
+            <span class="nhom-info-label">Số thành viên hiện tại</span>
+            <span class="nhom-info-value" th:text="${nhom.soThanhvien + ' / 5 sinh viên'}">3 / 5 sinh viên</span>
+          </div>
+          <div class="nhom-info-item span-topic">
+            <span class="nhom-info-label">Đề tài đăng ký</span>
+            <div class="nhom-info-value nhom-topic-inline">
+              <span th:if="${nhom.tendetai != null}" th:text="${nhom.tendetai}">Đề tài ABC</span>
+              <span th:if="${nhom.trangthaiDangky != null}"
+                    class="status-badge"
+                    th:classappend="${nhom.trangthaiDangky == 'DADUYET' ? 'badge-success' : (nhom.trangthaiDangky == 'TUCHOI' ? 'badge-danger' : 'badge-warning')}"
+                    th:text="${nhom.trangthaiDangky == 'DADUYET' ? 'ĐÃ DUYỆT' : (nhom.trangthaiDangky == 'TUCHOI' ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHỜ DUYỆT</span>
+              <span th:if="${nhom.tendetai == null}" class="empty-text">Chưa đăng ký</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form đổi tên nhóm (chỉ nhóm trưởng hoặc admin) -->
+        <div class="form-card" th:if="${laNhomTruong and nhom.trangthaiDangky != 'DADUYET'}">
+          <form th:action="@{'/nhom/' + ${nhom.id} + '/capnhat'}" method="post" class="nhom-inline-form">
+            <div class="form-field" style="flex: 1; max-width: 380px;">
+              <label for="tennhomMoi">Đổi tên nhóm</label>
+              <input type="text" id="tennhomMoi" name="tennhom" th:value="${nhom.tennhom}" required maxlength="100">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: 34px;">Lưu tên mới</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Danh sách thành viên nhóm -->
+      <section class="panel-card">
+        <div class="panel-heading">
+          <h3>DANH SÁCH THÀNH VIÊN TRONG NHÓM</h3>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">MSSV</th>
+                <th>Họ và tên</th>
+                <th>Email</th>
+                <th style="width: 130px;">Lớp</th>
+                <th style="width: 140px;">Vai trò</th>
+                <th th:if="${laNhomTruong}" style="width: 210px;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="tv : ${nhom.danhSachThanhVien}">
+                <td><strong th:text="${tv.masinhvien}">23110001</strong></td>
+                <td th:text="${tv.hoten}">Nguyễn Văn A</td>
+                <td th:text="${tv.email}">sv@student.hcmute.edu.vn</td>
+                <td th:text="${tv.lop}">23110CLC</td>
+                <td>
+                  <span th:if="${tv.nhomtruong}" class="role-badge role-leader">NHÓM TRƯỞNG</span>
+                  <span th:if="${!tv.nhomtruong}" class="role-badge role-member">Thành viên</span>
+                </td>
+                <td th:if="${laNhomTruong}">
+                  <div th:if="${!tv.nhomtruong && nhom.trangthaiDangky != 'DADUYET'}" class="action-group">
+                    <form th:action="@{'/nhom/' + ${nhom.id} + '/doi-nhom-truong'}" method="post"
+                          data-confirm="Bạn có chắc muốn chuyển quyền nhóm trưởng cho sinh viên này?"
+                          data-modal-title="Thông báo"
+                          style="margin: 0;">
+                      <input type="hidden" name="sinhvienid" th:value="${tv.sinhvienid}">
+                      <button type="submit" class="btn btn-secondary btn-sm">Chuyển nhóm trưởng</button>
+                    </form>
+
+                    <form th:action="@{'/nhom/' + ${nhom.id} + '/xoa-thanh-vien'}" method="post"
+                          data-confirm="Bạn có chắc muốn xóa thành viên này khỏi nhóm?"
+                          data-modal-title="Thông báo"
+                          style="margin: 0;">
+                      <input type="hidden" name="sinhvienid" th:value="${tv.sinhvienid}">
+                      <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                    </form>
+                  </div>
+                  <span th:if="${tv.nhomtruong || nhom.trangthaiDangky == 'DADUYET'}" style="color: #94a3b8; font-size: 12px;">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Thông báo khi đề tài đã duyệt chính thức -->
+        <div class="alert-box alert-info" th:if="${laNhomTruong && nhom.trangthaiDangky == 'DADUYET'}" style="margin: 15px 0 0 0;">
+          <span>Đề tài của nhóm đã được duyệt chính thức. Danh sách thành viên đã được cố định và không thể chỉnh sửa.</span>
+        </div>
+
+        <!-- Form Thêm thành viên vào nhóm -->
+        <div class="form-card" th:if="${laNhomTruong && nhom.soThanhvien < 5 && nhom.trangthaiDangky != 'DADUYET'}">
+          <form th:action="@{'/nhom/' + ${nhom.id} + '/them-thanh-vien'}" th:object="${themThanhVienRequest}" method="post"
+                class="nhom-inline-form">
+            <div class="form-field" style="width: 280px;">
+              <label for="masinhvien">Thêm thành viên (Nhập MSSV)</label>
+              <input type="text" id="masinhvien" th:field="*{masinhvien}" placeholder="Nhập mã số sinh viên" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: 34px;">Thêm thành viên</button>
+          </form>
+        </div>
+        <div class="alert-box alert-info" th:if="${laNhomTruong && nhom.soThanhvien >= 5 && nhom.trangthaiDangky != 'DADUYET'}" style="margin: 15px 0 0 0;">
+          <span>Nhóm đã đạt số lượng tối đa 05 sinh viên theo quy định. Không thể thêm thành viên mới.</span>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Hộp thoại xác nhận (Modal Thông báo) -->
+<div class="portal-modal" id="confirmModal" aria-hidden="true" style="display: none;">
+  <div class="portal-modal-backdrop" data-modal-cancel></div>
+  <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="portal-modal-header">
+      <h4 class="portal-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
+      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">×</button>
+    </div>
+    <div class="portal-modal-body">
+      <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+    </div>
+    <div class="portal-modal-footer">
+      <button type="button" class="btn btn-secondary" data-modal-cancel>Hủy</button>
+      <button type="button" class="btn btn-primary" id="confirmModalAccept">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

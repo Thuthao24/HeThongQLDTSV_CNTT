@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nộp báo cáo</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+  <div th:replace="~{fragments :: portalHeader}"></div>
+  <div class="portal-body">
+    <div th:replace="~{fragments :: sidebar('nopbaocao')}"></div>
+    <main class="main-panel nopbaocao-page">
+
+      <div class="page-heading">
+        <div>
+          <div class="breadcrumb">Cổng thông tin đào tạo / Nộp báo cáo</div>
+          <h1>NỘP BÁO CÁO KHÓA LUẬN</h1>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <div th:if="${successMessage}" class="alert-box alert-success">
+        <span th:text="${successMessage}">Thao tác thành công!</span>
+      </div>
+      <div th:if="${errorMessage}" class="alert-box alert-error">
+        <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+      </div>
+
+      <!-- KHU VỰC NỘP BÁO CÁO TRỰC QUAN -->
+      <section class="report-card">
+        <div class="report-card-header">
+          <div class="report-header-left">
+            <h3 class="report-card-title">NỘP BÁO CÁO ĐỀ TÀI</h3>
+            <p class="report-card-sub" th:if="${dangKyCuaNhom != null}"
+               th:text="${dangKyCuaNhom.tendetai + ' — ' + dangKyCuaNhom.tennhom}">Đề tài của nhóm</p>
+            <p class="report-card-sub" th:if="${dangKyCuaNhom == null}">Tải tệp báo cáo hoặc đính kèm liên kết tài liệu nghiệm thu của nhóm</p>
+          </div>
+
+          <!-- Thời hạn nộp (Deadline) -->
+          <div class="report-deadline-box" th:if="${dangKyCuaNhom != null && dangKyCuaNhom.hanNop != null}"
+               th:with="isOverdue=${dangKyCuaNhom.hanNop.isBefore(#temporals.createNow())}">
+            <span class="deadline-label">Hạn chót nộp báo cáo:</span>
+            <span class="deadline-value" th:classappend="${isOverdue ? 'deadline-overdue' : ''}"
+                  th:text="${#temporals.format(dangKyCuaNhom.hanNop, 'dd/MM/yyyy HH:mm')}">30/12/2026 23:59</span>
+          </div>
+          <div class="report-deadline-box" th:if="${dangKyCuaNhom == null && !#lists.isEmpty(dsDangKy) && dsDangKy[0].hanNop != null}">
+            <span class="deadline-label">Hạn chót đợt hiện tại:</span>
+            <span class="deadline-value" th:text="${#temporals.format(dsDangKy[0].hanNop, 'dd/MM/yyyy HH:mm')}">30/12/2026 23:59</span>
+          </div>
+        </div>
+
+        <div class="report-card-body">
+
+          <!-- Ràng buộc khi sinh viên chưa có đề tài hoặc chưa có nhóm -->
+          <div th:if="${vaitro == 'SINHVIEN' && dangKyCuaNhom == null}" class="alert-box alert-error" style="background: #f8fafc; border-left: 4px solid #64748b; color: #334155; margin-bottom: 16px;">
+            <span>Nhóm của bạn chưa đăng ký đề tài hoặc bạn chưa tham gia nhóm nào. Vui lòng tạo nhóm và đăng ký đề tài trước khi thực hiện nộp báo cáo.</span>
+          </div>
+
+          <!-- Ràng buộc khi đề tài chưa được duyệt -->
+          <div th:if="${vaitro == 'SINHVIEN' && dangKyCuaNhom != null && !deTaiDaDuyet}" class="alert-box alert-error" style="background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e; margin-bottom: 16px;">
+            <span>Đề tài <strong><span th:text="${dangKyCuaNhom.tendetai}">Tên đề tài</span></strong> hiện đang ở trạng thái <strong><span th:text="${dangKyCuaNhom.trangthai}">CHODUYET</span></strong>. Báo cáo chỉ có thể được nộp sau khi đề tài của nhóm đã được phê duyệt chính thức (ĐÃ DUYỆT).</span>
+          </div>
+
+          <!-- Ràng buộc quyền nộp: nếu tài khoản hiện tại không phải là nhóm trưởng -->
+          <div th:if="${!laNhomTruong && vaitro == 'SINHVIEN'}" class="leader-only-notice">
+            <span>Chỉ nhóm trưởng được nộp báo cáo.</span>
+          </div>
+
+          <!-- Nếu là nhóm trưởng (hoặc quản trị viên) -->
+          <div th:if="${laNhomTruong && (deTaiDaDuyet || vaitro != 'SINHVIEN')}">
+
+            <!-- TRẠNG THÁI 2: KHI ĐÃ NỘP BÁO CÁO (Hiển thị File Card gọn gàng) -->
+            <div th:if="${baoCaoDaNop != null}" class="submitted-state-wrap" id="submittedFileCard">
+              <div class="file-card">
+                <div class="file-card-main">
+                  <div class="file-type-icon" th:text="${baoCaoDaNop.dinhDangFile}">PDF</div>
+                  <div class="file-card-info">
+                    <div class="file-card-title-row">
+                      <strong class="file-card-name" th:text="${baoCaoDaNop.tenFileHienThi}">baocao_khoaluan.pdf</strong>
+                      <span class="status-submitted-badge">ĐÃ NỘP</span>
+                    </div>
+                    <div class="file-card-meta">
+                      <span>Thời gian nộp: <strong th:text="${#temporals.format(baoCaoDaNop.ngaynop, 'dd/MM/yyyy HH:mm')}">12/10/2026 14:30</strong></span>
+                      <span>·</span>
+                      <span>Người nộp: <span th:text="${baoCaoDaNop.hoten + ' (' + baoCaoDaNop.masinhvien + ')'}">Nguyễn Văn A</span></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="file-card-actions">
+                  <a th:href="@{'/nopbaocao/' + ${baoCaoDaNop.id} + '/download'}" target="_blank" class="btn btn-secondary btn-sm file-action-btn">
+                    Tải xuống
+                  </a>
+                  <button type="button" class="btn btn-primary btn-sm file-action-btn" id="btnToggleResubmit">
+                    Nộp lại / Cập nhật file
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TRẠNG THÁI 1: KHI CHƯA NỘP BÁO CÁO (hoặc khi bấm Nộp lại / Cập nhật file) -->
+            <div id="uploadFormContainer" th:classappend="${baoCaoDaNop != null ? 'is-collapsed' : ''}">
+
+              <!-- Form tải tệp báo cáo trực tiếp (Upload Area) -->
+              <form th:action="@{/nopbaocao/upload}" method="post" enctype="multipart/form-data" class="report-upload-form">
+                <div class="form-field" style="margin-bottom: 14px;">
+                  <label for="dangkydetaiid_file">Đề tài đăng ký của nhóm *</label>
+                  <select id="dangkydetaiid_file" name="dangkydetaiid" required>
+                    <option value="">-- Chọn đề tài nhóm đã đăng ký --</option>
+                    <option th:each="dk : ${dsDangKy}"
+                            th:value="${dk.id}"
+                            th:selected="${dangKyCuaNhom != null && dk.id == dangKyCuaNhom.id}"
+                            th:text="${(dk.tendetai != null ? dk.tendetai : ('Đề tài #' + dk.detaiid)) + ' — ' + dk.tennhom}"></option>
+                  </select>
+                </div>
+
+                <div class="upload-dropzone" id="uploadDropzone">
+                  <input type="file" id="file" name="file" accept=".pdf,.doc,.docx,.zip,.rar" required class="upload-input-hidden">
+                  <div class="upload-icon-box">📄</div>
+                  <div class="upload-dropzone-text">
+                    <strong>Kéo thả tệp báo cáo vào đây hoặc nhấn để chọn tệp</strong>
+                    <span id="selectedFileName" class="upload-selected-name">Chưa có tệp nào được chọn</span>
+                  </div>
+                  <label for="file" class="btn btn-secondary btn-sm upload-choose-btn">Chọn tệp</label>
+                  <small class="upload-hint">Định dạng hợp lệ: .pdf, .docx, .zip, .rar — Dung lượng tối đa 20MB</small>
+                </div>
+
+                <div class="upload-submit-row">
+                  <button type="submit" class="btn btn-primary report-submit-btn">Nộp báo cáo</button>
+                  <button type="button" class="btn btn-secondary" id="btnCancelResubmit"
+                          th:if="${baoCaoDaNop != null}">Đóng khung cập nhật</button>
+                </div>
+              </form>
+
+              <!-- Tùy chọn phụ: Nộp bằng đường dẫn liên kết (Google Drive / GitHub) -->
+              <div class="link-submit-section">
+                <div class="link-submit-divider">
+                  <span>Hoặc nộp liên kết (Google Drive, GitHub, OneDrive)</span>
+                </div>
+                <form th:action="@{/nopbaocao/nop}" th:object="${nopRequest}" method="post" class="link-submit-form">
+                  <div class="form-field" style="min-width: 240px; flex: 1;">
+                    <label for="dangkydetaiid_link">Đề tài đăng ký *</label>
+                    <select id="dangkydetaiid_link" name="dangkydetaiid" required>
+                      <option value="">-- Chọn đề tài nhóm đã đăng ký --</option>
+                      <option th:each="dk : ${dsDangKy}"
+                              th:value="${dk.id}"
+                              th:selected="${dangKyCuaNhom != null && dk.id == dangKyCuaNhom.id}"
+                              th:text="${(dk.tendetai != null ? dk.tendetai : ('Đề tài #' + dk.detaiid)) + ' — ' + dk.tennhom}"></option>
+                    </select>
+                  </div>
+                  <div class="form-field" style="flex: 2; min-width: 260px;">
+                    <label for="duongdanfile">Liên kết báo cáo (URL) *</label>
+                    <input type="text" id="duongdanfile" th:field="*{duongdanfile}"
+                           placeholder="https://drive.google.com/file/d/..." required>
+                  </div>
+                  <div>
+                    <button type="submit" class="btn btn-primary" >Nộp liên kết</button>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Danh sách báo cáo đã nộp trong hệ thống -->
+      <section class="panel-card">
+        <div class="table-toolbar">
+          <div style="font-weight: 600; font-size: 15px; color: #1e293b;"
+               th:text="${vaitro == 'SINHVIEN' ? 'LỊCH SỬ NỘP BÁO CÁO CỦA NHÓM' : 'DANH SÁCH BÁO CÁO ĐÃ NỘP TOÀN HỆ THỐNG'}">
+            LỊCH SỬ BÁO CÁO
+          </div>
+          <div class="record-count"><b th:text="${#lists.size(items)}">0</b> lượt nộp</div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">ID</th>
+                <th>Đề tài & Nhóm</th>
+                <th>Người nộp (Nhóm trưởng)</th>
+                <th style="width: 150px;">Thời gian nộp</th>
+                <th style="width: 140px;">Trạng thái</th>
+                <th style="width: 210px;">Tệp báo cáo & Thao tác</th>
+              </tr>
+            </thead>
+            <tbody data-table-body>
+              <tr th:each="item : ${items}">
+                <td th:text="${item.id}">1</td>
+                <td>
+                  <strong style="color: #06649a;" th:text="${item.tendetai != null ? item.tendetai : ('Đề tài #' + item.detaiid)}">Hệ thống ABC</strong>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 2px;" th:if="${item.tennhom != null}">
+                    Nhóm: <span th:text="${item.tennhom}">Nhóm 01</span>
+                  </div>
+                </td>
+                <td>
+                  <strong th:text="${item.hoten != null ? item.hoten : ('SV #' + item.sinhvienid)}">Nguyễn Văn An</strong>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 2px;" th:if="${item.masinhvien != null}">
+                    MSSV: <span th:text="${item.masinhvien}">23110001</span>
+                  </div>
+                </td>
+                <td th:text="${#temporals.format(item.ngaynop, 'dd/MM/yyyy HH:mm')}">01/10/2026 20:00</td>
+                <td>
+                  <span class="status-submitted-badge">ĐÃ NỘP</span>
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <a th:href="@{'/nopbaocao/' + ${item.id} + '/download'}" target="_blank" class="btn btn-secondary btn-sm"
+                       style="text-decoration: none; display: inline-flex; align-items: center;">
+                      Tải xuống
+                    </a>
+                    <form th:if="${(laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA'}"
+                          th:action="@{'/nopbaocao/' + ${item.id} + '/xoa'}" method="post"
+                          data-confirm="Bạn có chắc chắn muốn xóa bản ghi nộp báo cáo này không?"
+                          data-modal-title="Thông báo"
+                          style="margin: 0;">
+                      <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(items)}">
+                <td colspan="6">
+                  <div class="empty-state">
+                    <strong>Chưa có báo cáo nào được nộp</strong>
+                    <span th:text="${vaitro == 'SINHVIEN' ? 'Nhóm của bạn hiện tại chưa nộp báo cáo nào.' : 'Danh sách nộp báo cáo hiện tại chưa có bản ghi.'}">Danh sách nộp báo cáo hiện tại chưa có bản ghi.</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
+
+<div th:if="${page != null and vaitro == 'TRUONGKHOA'}" style="margin:16px 0;display:flex;gap:12px;align-items:center">
+  <a th:if="${page > 0}" th:href="@{/nopbaocao(page=${page - 1})}">← Trang trước</a>
+  <span th:text="'Trang ' + ${page + 1}"></span>
+  <a th:if="${items != null and items.size() == 50}" th:href="@{/nopbaocao(page=${page + 1})}">Trang sau →</a>
+</div>
+</body>
+</html>

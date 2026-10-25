@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title != null ? title : 'Soạn thảo thông báo'}">Soạn thảo thông báo</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/thongbao.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('thongbao')}"></div>
+        <main class="main-panel">
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">
+                        <span>Cổng thông tin đào tạo</span> / 
+                        <a th:href="@{/thongbao}" style="color: inherit; text-decoration: underline;">Thông báo</a> / 
+                        <span th:text="${formMode == 'EDIT' ? 'Chỉnh sửa' : 'Tạo mới'}">Soạn thảo</span>
+                    </div>
+                    <h1 th:text="${title != null ? #strings.toUpperCase(title) : (formMode == 'EDIT' ? 'CHỈNH SỬA THÔNG BÁO' : 'THÊM THÔNG BÁO MỚI')}">SOẠN THẢO THÔNG BÁO</h1>
+                </div>
+                <div>
+                    <a th:href="@{/thongbao}" class="btn btn-secondary" title="Quay về danh sách thông báo">← Danh sách thông báo</a>
+                </div>
+            </div>
+
+            <!-- Flash messages -->
+            <div th:if="${successMessage}" class="publication-message success" role="status" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="publication-message error" role="alert" th:text="${errorMessage}"></div>
+
+            <section class="portal-form-card">
+                <form th:action="@{${formAction}}" th:object="${thongbaoForm}" method="post" data-notice-form th:data-notice-mode="${formMode}">
+                    <input th:if="${formMode == 'CREATE' and submissionToken != null}" type="hidden" name="submissionToken" th:value="${submissionToken}">
+                    <input th:if="${formMode == 'EDIT'}" type="hidden" th:field="*{revision}">
+                    <input th:if="${formMode == 'EDIT'}" type="hidden" name="originalRecipientRoles" th:value="${originalRecipientRoles}">
+                    <!-- Global validation errors -->
+                    <div th:if="${#fields.hasGlobalErrors()}" class="publication-message error" role="alert">
+                        <div th:each="err : ${#fields.globalErrors()}" th:text="${err}">Lỗi dữ liệu biểu mẫu</div>
+                    </div>
+
+                    <!-- Trường Tiêu đề -->
+                    <div class="form-group">
+                        <label for="tieude" class="form-label">
+                            Tiêu đề thông báo <span class="required">*</span>
+                        </label>
+                        <input type="text"
+                               id="tieude"
+                               th:field="*{tieude}"
+                               maxlength="255" required aria-describedby="tieudeHint"
+                               class="form-control"
+                               th:classappend="${#fields.hasErrors('tieude')} ? ' is-invalid' : ''"
+                               placeholder="Ví dụ: Lịch báo cáo khóa luận tốt nghiệp đợt 1 năm 2026..."
+                               autofocus>
+                        <small id="tieudeHint">Tối đa 255 ký tự. Không để trống hoặc chỉ nhập khoảng trắng.</small>
+                        <div class="form-feedback-error"
+                             th:if="${#fields.hasErrors('tieude')}"
+                             th:errors="*{tieude}">
+                            Tiêu đề không được để trống hoặc không hợp lệ.
+                        </div>
+                    </div>
+
+                    <fieldset class="notice-audience" th:aria-describedby="${#fields.hasErrors('recipientRoles')} ? 'recipientRolesError' : null">
+                        <legend>Đối tượng nhận thông báo <span class="required">*</span></legend>
+                        <label class="notice-audience-option">
+                            <input type="checkbox" id="noticeAllRecipients" data-audience-all>
+                            <span>Tất cả đối tượng</span>
+                        </label>
+                        <label class="notice-audience-option" th:each="role : ${T(com.example.quanlydetaisinhvien.entity.DoituongThongbao).values()}">
+                            <input type="checkbox" th:field="*{recipientRoles}" th:value="${role}" data-audience-role>
+                            <span th:text="${role.label}">Đối tượng</span>
+                        </label>
+                        <div id="recipientRolesError" class="form-feedback-error" role="alert"
+                             th:if="${#fields.hasErrors('recipientRoles')}">Vui lòng chọn ít nhất một đối tượng hợp lệ: Sinh viên, Giảng viên hoặc Trưởng bộ môn.</div>
+                    </fieldset>
+
+                    <!-- Trường Nội dung -->
+                    <div class="form-group">
+                        <label for="noidung" class="form-label">
+                            Nội dung thông báo <span class="required">*</span>
+                        </label>
+                        <textarea id="noidung"
+                                  th:field="*{noidung}"
+                                  maxlength="10000" required aria-describedby="noidungHint"
+                                  class="form-control form-textarea"
+                                  th:classappend="${#fields.hasErrors('noidung')} ? ' is-invalid' : ''"
+                                  placeholder="Nhập nội dung chi tiết, các mốc thời gian, hướng dẫn nộp tài liệu hoặc yêu cầu cụ thể..."></textarea>
+                        <small id="noidungHint">Tối đa 10000 ký tự. Nội dung được hiển thị dạng văn bản.</small>
+                        <div class="form-feedback-error"
+                             th:if="${#fields.hasErrors('noidung')}"
+                             th:errors="*{noidung}">
+                            Nội dung thông báo không được để trống.
+                        </div>
+                    </div>
+
+                    <!-- Nút thao tác -->
+                    <div class="form-actions">
+                        <a th:if="${formMode == 'EDIT'}" th:href="@{/thongbao/{id}/edit(id=${thongbaoId})}" class="btn btn-secondary">Mở lại bản mới nhất</a>
+                        <button type="submit"
+                                class="btn btn-primary"
+                                th:text="${formMode == 'EDIT' ? 'Cập nhật thông báo' : 'Đăng thông báo'}">
+                            Lưu thông báo
+                        </button>
+                        <a th:href="${thongbaoId != null ? '/thongbao/' + thongbaoId : '/thongbao'}"
+                           class="btn btn-secondary">
+                            Hủy bỏ
+                        </a>
+                    </div>
+                </form>
+                <dialog th:if="${formMode == 'EDIT'}" id="noticeAudienceDialog" class="notice-audience-dialog"
+                        aria-labelledby="noticeAudienceDialogTitle" aria-describedby="noticeAudienceDialogMessage">
+                    <h2 id="noticeAudienceDialogTitle">Xác nhận thay đổi đối tượng nhận</h2>
+                    <p id="noticeAudienceDialogMessage">Bạn đang thay đổi đối tượng nhận thông báo. Những đối tượng bị loại sẽ không còn xem được thông báo này. Bạn có chắc chắn muốn lưu thay đổi?</p>
+                    <div class="notice-audience-dialog-actions">
+                        <button type="button" id="noticeAudienceCancel" class="btn btn-secondary" autofocus>Hủy bỏ</button>
+                        <button type="button" id="noticeAudienceConfirm" class="btn btn-primary">Xác nhận lưu</button>
+                    </div>
+                </dialog>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/thongbao.js}"></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thống kê &amp; Báo cáo</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/morong-thongke.css}">
+    <link rel="stylesheet" th:href="@{/css/morong-export.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments :: portalHeader}"></div>
+    <div class="portal-body">
+        <div th:replace="~{fragments :: sidebar('thongke')}"></div>
+        <main class="main-panel morong-statistics" data-statistics
+              th:attr="data-selected-round=${filter.dotdangkyid != null ? filter.dotdangkyid : ''}">
+            <div class="statistics-heading">
+                <h1>THỐNG KÊ &amp; BÁO CÁO</h1>
+                <div class="statistics-actions">
+                    <form th:action="@{/morong/thongke}" method="get" id="filterForm">
+                        <select id="dotdangkyid" name="dotdangkyid" aria-label="Phạm vi đợt đăng ký">
+                            <option value="" th:selected="${filter.dotdangkyid == null}">Tất cả đợt đăng ký</option>
+                            <option th:each="opt : ${filterOptions.dotdangky}" th:value="${opt.value}"
+                                    th:text="${opt.label}"
+                                    th:selected="${filter.dotdangkyid != null and filter.dotdangkyid.toString() == opt.value}"></option>
+                        </select>
+                    </form>
+                    <div class="morong-export-wrap" th:if="${exportOptions != null and exportOptions.enabled}">
+                        <button type="button" class="morong-export-btn" id="exportDropdownBtn"
+                                aria-expanded="false" aria-haspopup="true" aria-controls="exportDropdownMenu">
+                            <span>Xuất</span><span class="morong-export-arrow" aria-hidden="true">▾</span>
+                        </button>
+                        <div class="morong-export-dropdown" id="exportDropdownMenu" role="menu">
+                            <a th:href="${exportOptions.excelUrl}" class="morong-export-item" role="menuitem"
+                               data-export-format="xlsx" data-export-label="Excel">Excel (.xlsx)</a>
+                            <a th:href="${exportOptions.pdfUrl}" class="morong-export-item" role="menuitem"
+                               data-export-format="pdf" data-export-label="PDF">PDF (.pdf)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section class="statistics-kpis" aria-label="Chỉ số chính">
+                <article class="statistics-kpi"><h2>Tổng đề tài</h2><strong data-kpi="topics" th:text="${summary.tongDetai}">0</strong></article>
+                <article class="statistics-kpi"><h2>Nhóm sinh viên</h2><strong data-kpi="groups" th:text="${summary.tongNhom}">0</strong></article>
+                <article class="statistics-kpi"><h2>Lượt đăng ký</h2><strong data-kpi="registrations" th:text="${summary.tongDangky}">0</strong></article>
+                <article class="statistics-kpi"><h2>Kết quả đã công bố</h2><strong data-kpi="publication" th:text="|${summary.daCongbo} / ${summary.tongKetqua}|">0 / 0</strong></article>
+            </section>
+
+            <div class="statistics-charts">
+                <section class="statistics-card" data-chart="topics">
+                    <h2>Trạng thái đề tài</h2>
+                    <p class="statistics-empty" th:if="${summary.tongDetai == 0}">Không có dữ liệu</p>
+                    <div class="statistics-bars">
+                        <div class="statistics-status" th:each="item : ${detaiByStatus}"
+                             th:attr="data-status=${item.code},data-count=${item.count},data-percentage=${item.percentage}">
+                            <div class="statistics-status-label"><span th:text="${item.label}"></span><strong th:text="${item.count}">0</strong></div>
+                            <div class="statistics-track" aria-hidden="true"><div class="statistics-fill" th:style="|width: ${item.percentage}%;|"></div></div>
+                        </div>
+                    </div>
+                </section>
+                <section class="statistics-card" data-chart="publication">
+                    <h2>Công bố kết quả</h2>
+                    <p class="statistics-empty" th:if="${summary.tongKetqua == 0}">Không có dữ liệu</p>
+                    <div class="statistics-ratio" th:if="${summary.tongKetqua > 0}" aria-hidden="true">
+                        <div th:each="item : ${ketquaByStatus}" th:class="|statistics-ratio-${item.code}|" th:style="|width: ${item.percentage}%;|"></div>
+                    </div>
+                    <ul class="statistics-legend">
+                        <li th:each="item : ${ketquaByStatus}"
+                            th:attr="data-status=${item.code},data-count=${item.count},data-percentage=${item.percentage}">
+                            <span><i th:class="|statistics-dot statistics-ratio-${item.code}|" aria-hidden="true"></i><span th:text="${item.label}"></span></span>
+                            <strong><span th:text="${item.count}">0</span><small th:if="${summary.tongKetqua > 0}" th:text="| (${item.percentage}%)|"></small></strong>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+
+            <section class="statistics-attention" th:if="${summary.nhomChuaDangky > 0 or summary.ketquaThieuDiemCuoi > 0}">
+                <h2>Cần xử lý</h2>
+                <span>Nhóm chưa đăng ký <strong th:text="${summary.nhomChuaDangky}">0</strong></span>
+                <span>Kết quả thiếu điểm <strong th:text="${summary.ketquaThieuDiemCuoi}">0</strong></span>
+            </section>
+
+            <section class="statistics-card statistics-rounds">
+                <h2>Theo đợt đăng ký</h2>
+                <div class="statistics-table-scroll" role="region" aria-label="Bảng thống kê theo đợt" tabindex="0">
+                    <table>
+                        <thead><tr><th scope="col">Tên đợt đăng ký</th><th scope="col">Số đề tài</th><th scope="col">Số nhóm</th><th scope="col">Số lượt đăng ký</th><th scope="col">Kết quả công bố</th></tr></thead>
+                        <tbody>
+                        <tr th:each="row : ${byRound}" th:attr="data-round-id=${row.id}">
+                            <th scope="row" th:text="${row.tendot}"></th>
+                            <td th:text="${row.soDetai}">0</td><td th:text="${row.soNhom}">0</td><td th:text="${row.soDangky}">0</td>
+                            <td th:text="|${row.soDaCongbo} / ${row.soKetqua}|">0 / 0</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(byRound)}"><td colspan="5" class="statistics-empty">Không có dữ liệu</td></tr>
+                        </tbody>
+                        <tfoot th:if="${!#lists.isEmpty(byRound)}"><tr><th scope="row">Tổng</th>
+                            <td th:text="${summary.tongDetai}">0</td><td th:text="${summary.tongNhom}">0</td><td th:text="${summary.tongDangky}">0</td>
+                            <td th:text="|${summary.daCongbo} / ${summary.tongKetqua}|">0 / 0</td>
+                        </tr></tfoot>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/app.js}" defer></script>
+<script th:src="@{/js/morong-thongke.js}" defer></script>
+<script th:src="@{/js/morong-export.js}" defer></script>
+</body>
+</html>

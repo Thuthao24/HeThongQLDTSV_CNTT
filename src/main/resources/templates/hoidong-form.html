@@ -1,0 +1,626 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title th:text="${title ?: 'Quản lý hội đồng'}">
+        Quản lý hội đồng
+    </title>
+
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <style>
+        .form-card {
+            background: #fff;
+            border: 1px solid #d5dfe9;
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .form-control {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background: #fff;
+            color: #1e293b;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: 2px solid #bae6fd;
+            border-color: #0284c7;
+        }
+
+        .rule-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #f59e0b;
+            border-radius: 5px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            color: #92400e;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .members-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        .members-section h3 {
+            color: #075985;
+            margin: 0 0 10px;
+            font-size: 15px;
+        }
+
+        .members-table-wrap {
+            overflow-x: auto;
+        }
+
+        .members-table {
+            width: 100%;
+            min-width: 550px;
+            border-collapse: collapse;
+        }
+
+        .members-table th {
+            background: #f0f9ff;
+            color: #075985;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #bae6fd;
+        }
+
+        .members-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .btn-add-member {
+            background: #eff6ff;
+            border: 1px dashed #38bdf8;
+            border-radius: 5px;
+            color: #0369a1;
+            padding: 10px 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-remove-row {
+            background: #fff;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            border-radius: 5px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+
+        .btn-remove-row:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        .validation-message {
+            margin: 12px 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #b42318;
+        }
+
+        .member-counter {
+            margin-left: 12px;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        .btn-cancel {
+            color: #475569;
+            text-decoration: none;
+            padding: 9px 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 12px;
+            margin-bottom: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-card {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app-shell">
+
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <div th:replace="~{fragments :: sidebar('hoidong')}"></div>
+
+        <main class="main-panel">
+
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo / Hội đồng
+                    </div>
+
+                    <h1 th:text="${form.id != null
+                        ? 'CHỈNH SỬA HỘI ĐỒNG'
+                        : 'THÊM MỚI HỘI ĐỒNG'}">
+                        THÊM MỚI HỘI ĐỒNG
+                    </h1>
+
+                    <p>
+                        Quản lý thông tin và phân công
+                        thành viên hội đồng.
+                    </p>
+                </div>
+            </div>
+
+            <div class="alert-error"
+                 th:if="${errorMessage}"
+                 role="alert"
+                 th:text="${errorMessage}">
+            </div>
+
+            <div class="rule-box">
+                <strong>QUY TẮC THÀNH LẬP HỘI ĐỒNG</strong>
+
+                <div>• Có từ 3 đến 5 giảng viên.</div>
+                <div>• Đúng 1 Chủ tịch và 1 Thư ký.</div>
+                <div>• Các giảng viên không được trùng nhau.</div>
+                <div>• Chỉ hiện nút Lưu khi đủ điều kiện.</div>
+            </div>
+
+            <div class="form-card">
+
+                <form id="councilForm"
+                      th:action="${form.id != null}
+                          ? @{/hoidong/sua/{id}(id=${form.id})}
+                          : @{/hoidong/them}"
+                      method="post"
+                      th:object="${form}">
+
+                    <input type="hidden"
+                           th:name="${_csrf.parameterName}"
+                           th:value="${_csrf.token}">
+
+                    <input type="hidden" th:field="*{id}">
+
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label for="tenhoidong">
+                                Tên hội đồng *
+                            </label>
+
+                            <input id="tenhoidong"
+                                   type="text"
+                                   class="form-control"
+                                   th:field="*{tenhoidong}"
+                                   placeholder="Nhập tên hội đồng"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dotdangkyid">
+                                Đợt đăng ký *
+                            </label>
+
+                            <select id="dotdangkyid"
+                                    class="form-control"
+                                    th:field="*{dotdangkyid}"
+                                    required>
+
+                                <option value="">
+                                    -- Chọn đợt --
+                                </option>
+
+                                <option th:each="dot : ${dotdangkys}"
+                                        th:value="${dot.id}"
+                                        th:text="${dot.tendot}">
+                                    Đợt đăng ký
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ngaybaocao">
+                                Ngày báo cáo
+                            </label>
+
+                            <input id="ngaybaocao"
+                                   type="datetime-local"
+                                   class="form-control"
+                                   th:field="*{ngaybaocao}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phong">
+                                Phòng báo cáo
+                            </label>
+
+                            <input id="phong"
+                                   type="text"
+                                   class="form-control"
+                                   th:field="*{phong}"
+                                   placeholder="Ví dụ: A201">
+                        </div>
+
+                    </div>
+
+                    <div class="members-section">
+
+                        <h3>
+                            THÀNH VIÊN HỘI ĐỒNG (3–5 GIẢNG VIÊN)
+                        </h3>
+
+                        <div class="members-table-wrap">
+                            <table class="members-table">
+                                <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Giảng viên</th>
+                                    <th>Vai trò</th>
+                                    <th>Xóa</th>
+                                </tr>
+                                </thead>
+
+                                <tbody id="membersTableBody">
+
+                                <tr th:each="tv, stat : ${form.thanhviens}">
+
+                                    <td class="row-index"
+                                        th:text="${stat.index + 1}">
+                                        1
+                                    </td>
+
+                                    <td>
+                                        <select class="form-control gv-select"
+                                                th:name="|thanhviens[${stat.index}].giangvienid|"
+                                                required>
+
+                                            <option value="">
+                                                -- Chọn giảng viên --
+                                            </option>
+
+                                            <option th:each="gv : ${giangviens}"
+                                                    th:value="${gv.id}"
+                                                    th:text="${gv.hienthi}"
+                                                    th:selected="${gv.id == tv.giangvienid}">
+                                                Giảng viên
+                                            </option>
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        <select class="form-control role-select"
+                                                th:name="|thanhviens[${stat.index}].vaitro|"
+                                                required>
+
+                                            <option value="CHUTICH"
+                                                    th:selected="${tv.vaitro != null and tv.vaitro.name() == 'CHUTICH'}">
+                                                Chủ tịch
+                                            </option>
+
+                                            <option value="THUKY"
+                                                    th:selected="${tv.vaitro != null and tv.vaitro.name() == 'THUKY'}">
+                                                Thư ký
+                                            </option>
+
+                                            <option value="THANHVIEN"
+                                                    th:selected="${tv.vaitro == null or tv.vaitro.name() == 'THANHVIEN'}">
+                                                Thành viên
+                                            </option>
+
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        <button type="button"
+                                                class="btn-remove-row">
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p id="membersValidity"
+                           class="validation-message"
+                           role="status"
+                           aria-live="polite">
+                            Vui lòng chọn đầy đủ thành viên.
+                        </p>
+
+                        <button type="button"
+                                id="btnAddMember"
+                                class="btn-add-member">
+                            + Thêm giảng viên
+                        </button>
+
+                        <span id="memberCounter"
+                              class="member-counter">
+                            0/5 thành viên
+                        </span>
+                    </div>
+
+                    <div class="form-actions">
+
+                        <button type="submit"
+                                id="saveCouncilButton"
+                                class="btn btn-primary"
+                                disabled
+                                hidden
+                                style="display:none">
+                            Lưu hội đồng
+                        </button>
+
+                        <a th:href="@{/hoidong}"
+                           class="btn-cancel">
+                            Hủy bỏ
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- MẪU THÀNH VIÊN MỚI -->
+<template id="memberRowTemplate">
+    <tr>
+        <td class="row-index"></td>
+
+        <td>
+            <select class="form-control gv-select" required>
+                <option value="">
+                    -- Chọn giảng viên --
+                </option>
+
+                <option th:each="gv : ${giangviens}"
+                        th:value="${gv.id}"
+                        th:text="${gv.hienthi}">
+                    Giảng viên
+                </option>
+            </select>
+        </td>
+
+        <td>
+            <select class="form-control role-select" required>
+                <option value="THANHVIEN">Thành viên</option>
+                <option value="CHUTICH">Chủ tịch</option>
+                <option value="THUKY">Thư ký</option>
+            </select>
+        </td>
+
+        <td>
+            <button type="button" class="btn-remove-row">
+                ✕
+            </button>
+        </td>
+    </tr>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const MIN = 3;
+    const MAX = 5;
+
+    const form = document.getElementById('councilForm');
+    const tbody = document.getElementById('membersTableBody');
+    const template = document.getElementById('memberRowTemplate');
+    const btnAdd = document.getElementById('btnAddMember');
+    const btnSave = document.getElementById('saveCouncilButton');
+    const message = document.getElementById('membersValidity');
+    const counter = document.getElementById('memberCounter');
+
+    function rows() {
+        return Array.from(tbody.querySelectorAll('tr'));
+    }
+
+    function validate() {
+        const list = rows();
+
+        if (list.length < MIN || list.length > MAX) {
+            return {
+                ok: false,
+                text: 'Hội đồng phải có từ 3 đến 5 thành viên.'
+            };
+        }
+
+        const ids = [];
+        const roles = [];
+
+        for (const row of list) {
+            const id = row.querySelector('.gv-select').value;
+            const role = row.querySelector('.role-select').value;
+
+            if (!id) {
+                return {
+                    ok: false,
+                    text: 'Vui lòng chọn đủ giảng viên.'
+                };
+            }
+
+            ids.push(id);
+            roles.push(role);
+        }
+
+        if (new Set(ids).size !== ids.length) {
+            return {
+                ok: false,
+                text: 'Không được chọn trùng giảng viên.'
+            };
+        }
+
+        if (roles.filter(x => x === 'CHUTICH').length !== 1) {
+            return {
+                ok: false,
+                text: 'Phải có đúng 1 Chủ tịch.'
+            };
+        }
+
+        if (roles.filter(x => x === 'THUKY').length !== 1) {
+            return {
+                ok: false,
+                text: 'Phải có đúng 1 Thư ký.'
+            };
+        }
+
+        if (roles.some(x => !['CHUTICH','THUKY','THANHVIEN'].includes(x))) {
+            return {
+                ok: false,
+                text: 'Vai trò thành viên không hợp lệ.'
+            };
+        }
+
+        return {
+            ok: true,
+            text: 'Danh sách hợp lệ, có thể lưu hội đồng.'
+        };
+    }
+
+    function refresh() {
+        const list = rows();
+
+        list.forEach((row, i) => {
+            row.querySelector('.row-index').textContent = i + 1;
+
+            row.querySelector('.gv-select').name =
+                `thanhviens[${i}].giangvienid`;
+
+            row.querySelector('.role-select').name =
+                `thanhviens[${i}].vaitro`;
+
+            row.querySelector('.btn-remove-row').disabled =
+                list.length <= MIN;
+        });
+
+        btnAdd.hidden = list.length >= MAX;
+        btnAdd.style.display =
+            list.length >= MAX ? 'none' : 'inline-block';
+
+        counter.textContent = `${list.length}/${MAX} thành viên`;
+
+        const result = validate();
+
+        btnSave.disabled = !result.ok;
+        btnSave.hidden = !result.ok;
+        btnSave.style.display =
+            result.ok ? 'inline-flex' : 'none';
+
+        message.textContent = result.text;
+        message.style.color = result.ok ? '#15803d' : '#b42318';
+    }
+
+    function addRow() {
+        if (rows().length >= MAX) return;
+
+        const row = template.content
+            .firstElementChild.cloneNode(true);
+
+        tbody.appendChild(row);
+        refresh();
+    }
+
+    btnAdd.addEventListener('click', addRow);
+
+    tbody.addEventListener('change', refresh);
+
+    tbody.addEventListener('click', e => {
+        const button = e.target.closest('.btn-remove-row');
+
+        if (!button || rows().length <= MIN) return;
+
+        button.closest('tr').remove();
+        refresh();
+    });
+
+    form.addEventListener('submit', e => {
+        const result = validate();
+
+        if (!result.ok) {
+            e.preventDefault();
+            alert(result.text);
+            refresh();
+        }
+    });
+
+    // Khởi tạo tối thiểu 3 dòng.
+    while (rows().length < MIN) {
+        addRow();
+    }
+
+    // Mặc định vai trò cho form tạo mới trống.
+    const initialRows = rows();
+
+    if (initialRows.length === MIN &&
+        initialRows.every(
+            row => !row.querySelector('.gv-select').value
+        )) {
+
+        initialRows[0].querySelector('.role-select').value = 'CHUTICH';
+        initialRows[1].querySelector('.role-select').value = 'THUKY';
+        initialRows[2].querySelector('.role-select').value = 'THANHVIEN';
+    }
+
+    refresh();
+});
+</script>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+/* Scoped to /morong/thongke; shared shell and search pages are unchanged. */
+.morong-statistics { min-width: 0; }
+.morong-statistics .statistics-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 22px; }
+.morong-statistics h1 { margin: 0; color: var(--ute-title); font-size: 24px; line-height: 1.3; }
+.morong-statistics h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.morong-statistics .statistics-actions { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
+.morong-statistics #filterForm { min-width: 0; }
+.morong-statistics select { max-width: 100%; width: 280px; border: 1px solid var(--ute-border); border-radius: 6px; background: white; color: var(--ute-text); padding: 9px 30px 9px 12px; }
+.morong-statistics :is(select,button,a,.statistics-table-scroll):focus-visible { outline: 2px solid var(--ute-blue); outline-offset: 3px; }
+.morong-statistics .statistics-kpis { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 20px; }
+.morong-statistics .statistics-kpi,.morong-statistics .statistics-card { background: white; border: 1px solid #dde4eb; border-radius: 8px; padding: 20px; }
+.morong-statistics .statistics-kpi h2 { font-size: 13px; color: #58677b; font-weight: 500; }
+.morong-statistics .statistics-kpi strong { display: block; margin-top: 10px; font-size: 30px; line-height: 1.25; color: var(--ute-blue-dark); overflow-wrap: anywhere; }
+.morong-statistics .statistics-charts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin-bottom: 20px; }
+.morong-statistics .statistics-card > h2 { margin-bottom: 22px; }
+.morong-statistics .statistics-bars { display: grid; gap: 17px; }
+.morong-statistics .statistics-status-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 13px; }
+.morong-statistics .statistics-track { height: 8px; background: #edf2f7; border-radius: 6px; overflow: hidden; }
+.morong-statistics .statistics-fill { height: 100%; background: var(--ute-blue); border-radius: inherit; }
+.morong-statistics [data-status="CHODUYET"] .statistics-fill { background: #d49a35; }
+.morong-statistics [data-status="DADUYET"] .statistics-fill { background: #409b85; }
+.morong-statistics [data-status="TUCHOI"] .statistics-fill { background: #d06d76; }
+.morong-statistics .statistics-ratio { display: flex; height: 24px; border-radius: 6px; overflow: hidden; margin: 30px 0; background: #edf2f7; }
+.morong-statistics .statistics-ratio-DACONGBO { background: var(--ute-blue); }
+.morong-statistics .statistics-ratio-CHUACONGBO { background: #c8d4e3; }
+.morong-statistics .statistics-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.morong-statistics .statistics-legend li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.morong-statistics .statistics-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.morong-statistics .statistics-legend small { font-size: 12px; color: #58677b; font-weight: 400; }
+.morong-statistics .statistics-attention { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; padding: 14px 18px; margin-bottom: 20px; background: #fff9ee; border: 1px solid #eadfc8; border-radius: 6px; font-size: 13px; }
+.morong-statistics .statistics-attention h2 { font-size: 14px; color: #8b5c18; }
+.morong-statistics .statistics-attention strong { margin-left: 8px; }
+.morong-statistics .statistics-rounds { padding: 20px 0 0; overflow: hidden; }
+.morong-statistics .statistics-rounds > h2 { padding: 0 20px; }
+.morong-statistics .statistics-table-scroll { overflow-x: auto; max-width: 100%; }
+.morong-statistics table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 13px; }
+.morong-statistics th,.morong-statistics td { padding: 13px 16px; border-top: 1px solid #e6ebf1; text-align: right; }
+.morong-statistics th:first-child { text-align: left; width: 38%; overflow-wrap: anywhere; }
+.morong-statistics thead { background: #f4f7fb; }
+.morong-statistics tbody th { font-weight: 400; }
+.morong-statistics tbody tr:hover { background: #fafcfe; }
+.morong-statistics tfoot { background: #f4f7fb; font-weight: 650; }
+.morong-statistics .statistics-empty { color: #66788f; text-align: center; margin: 0 0 16px; font-size: 13px; }
+.morong-statistics [aria-busy="true"] { opacity: .65; }
+@media (max-width: 1100px) { .morong-statistics .statistics-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 760px) {
+  .morong-statistics h1 { font-size: 20px; }
+  .morong-statistics .statistics-charts { grid-template-columns: minmax(0,1fr); }
+  .morong-statistics .statistics-actions { width: 100%; }
+  .morong-statistics #filterForm { flex: 1; }
+  .morong-statistics select { width: 100%; }
+  .morong-statistics .statistics-kpis { gap: 10px; }
+  .morong-statistics .statistics-kpi { padding: 14px; }
+  .morong-statistics .statistics-kpi strong { font-size: 25px; }
+}

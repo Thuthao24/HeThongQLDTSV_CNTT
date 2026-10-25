@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title th:text="${title ?: 'Thông tin cá nhân'}">
+        Thông tin cá nhân
+    </title>
+
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <style>
+        .detail-card {
+            padding: 24px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .profile-avatar-large {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #e0f2fe;
+            color: #075985;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .profile-header h2 {
+            margin: 0 0 8px;
+            color: #1e3a5f;
+            font-size: 22px;
+        }
+
+        .profile-header p {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .detail-section-title {
+            font-size: 15px;
+            color: #075985;
+            font-weight: 700;
+            margin: 26px 0 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+        }
+
+        .detail-item {
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8fafc;
+        }
+
+        .detail-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .detail-value {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            overflow-wrap: anywhere;
+        }
+
+        .account-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 600px) {
+            .detail-card {
+                padding: 15px;
+            }
+
+            .profile-avatar-large {
+                width: 55px;
+                height: 55px;
+                font-size: 22px;
+            }
+
+            .profile-header h2 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- HEADER -->
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <!-- SIDEBAR THEO LOẠI HỒ SƠ -->
+        <div th:if="${kind == 'Giảng viên'}"
+             th:replace="~{fragments :: sidebar('giangvien')}">
+        </div>
+
+        <div th:if="${kind == 'Sinh viên'}"
+             th:replace="~{fragments :: sidebar('sinhvien')}">
+        </div>
+
+        <main class="main-panel">
+
+            <!-- TIÊU ĐỀ -->
+            <div class="page-heading">
+
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo /
+                        <span th:text="${kind}">Giảng viên</span> /
+                        Chi tiết
+                    </div>
+
+                    <h1 th:text="${title}">
+                        THÔNG TIN CÁ NHÂN
+                    </h1>
+
+                    <p>
+                        Hồ sơ và thông tin tài khoản
+                        được liên kết trong hệ thống.
+                    </p>
+                </div>
+
+                <a class="btn"
+                   th:href="${backUrl}">
+                    ← Quay lại danh sách
+                </a>
+
+            </div>
+
+            <!-- THÔNG TIN HỒ SƠ -->
+            <section class="panel-card detail-card">
+
+                <!-- THÔNG TIN ĐẠI DIỆN -->
+                <div class="profile-header">
+
+                    <div class="profile-avatar-large"
+                         th:text="${account != null
+                            and account.hoten != null
+                            and !#strings.isEmpty(account.hoten)
+                            ? #strings.substring(account.hoten, 0, 1)
+                            : 'U'}">
+                        U
+                    </div>
+
+                    <div>
+                        <h2 th:text="${account?.hoten ?: 'Chưa cập nhật họ tên'}">
+                            Nguyễn Văn A
+                        </h2>
+
+                        <p>
+                            <span th:text="${kind}">
+                                Giảng viên
+                            </span>
+
+                            <span> • </span>
+
+                            <span th:text="${departmentName ?: 'Chưa xác định'}">
+                                Công nghệ phần mềm
+                            </span>
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- THÔNG TIN CÁ NHÂN -->
+                <h3 class="detail-section-title">
+                    I. THÔNG TIN HỒ SƠ
+                </h3>
+
+                <div class="detail-grid">
+
+                    <!-- ID HỒ SƠ -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            ID hồ sơ
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.id}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- MÃ GIẢNG VIÊN -->
+                    <div class="detail-item"
+                         th:if="${kind == 'Giảng viên'}">
+
+                        <span class="detail-label">
+                            Mã giảng viên
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.magiangvien ?: '—'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- MÃ SINH VIÊN -->
+                    <div class="detail-item"
+                         th:if="${kind == 'Sinh viên'}">
+
+                        <span class="detail-label">
+                            Mã sinh viên
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.masinhvien ?: '—'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- HỌ VÀ TÊN -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            Họ và tên
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${account?.hoten ?: 'Chưa cập nhật'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- LỚP -->
+                    <div class="detail-item"
+                         th:if="${kind == 'Sinh viên'}">
+
+                        <span class="detail-label">
+                            Lớp
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.lop ?: 'Chưa cập nhật'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- BỘ MÔN -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            Bộ môn
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${departmentName ?: 'Chưa xác định'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- ID BỘ MÔN -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            ID bộ môn
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.bomonid ?: '—'}">
+                            —
+                        </span>
+                    </div>
+
+                </div>
+
+                <!-- THÔNG TIN TÀI KHOẢN -->
+                <h3 class="detail-section-title">
+                    II. THÔNG TIN TÀI KHOẢN
+                </h3>
+
+                <div class="detail-grid">
+
+                    <!-- ID TÀI KHOẢN -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            ID tài khoản
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${person.taikhoanid ?: '—'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- TÊN ĐĂNG NHẬP -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            Tên đăng nhập
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${account?.tendangnhap ?: '—'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            Email
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${account?.email ?: 'Chưa cập nhật'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- VAI TRÒ -->
+                    <div class="detail-item">
+                        <span class="detail-label">
+                            Vai trò
+                        </span>
+
+                        <span class="detail-value"
+                              th:text="${account?.vaitro ?: 'Chưa xác định'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- TRẠNG THÁI -->
+                    <div class="detail-item">
+
+                        <span class="detail-label">
+                            Trạng thái tài khoản
+                        </span>
+
+                        <span th:if="${account != null}"
+                              class="account-status"
+                              th:classappend="${account.kichhoat}
+                                  ? ' status-active'
+                                  : ' status-inactive'"
+                              th:text="${account.kichhoat}
+                                  ? 'Đang hoạt động'
+                                  : 'Tạm khóa'">
+                            Đang hoạt động
+                        </span>
+
+                        <span th:if="${account == null}"
+                              class="detail-value">
+                            Chưa xác định
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <!-- NÚT THAO TÁC -->
+                <div class="detail-actions">
+
+                    <a class="btn"
+                       th:href="${backUrl}">
+                        ← Quay lại
+                    </a>
+
+                    <!-- SỬA GIẢNG VIÊN -->
+                    <a th:if="${vaitro == 'TRUONGKHOA'
+                               and kind == 'Giảng viên'}"
+                       class="btn btn-primary"
+                       th:href="@{/quanly/danhmuc/giangvien/{id}/sua(id=${person.id})}">
+                        Chỉnh sửa giảng viên
+                    </a>
+
+                    <!-- SỬA SINH VIÊN -->
+                    <a th:if="${vaitro == 'TRUONGKHOA'
+                               and kind == 'Sinh viên'}"
+                       class="btn btn-primary"
+                       th:href="@{/quanly/danhmuc/sinhvien/{id}/sua(id=${person.id})}">
+                        Chỉnh sửa sinh viên
+                    </a>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+
+</body>
+</html>
+

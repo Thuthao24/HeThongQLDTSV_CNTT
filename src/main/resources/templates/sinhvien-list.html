@@ -1,0 +1,383 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Quản lý sinh viên</title>
+
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <style>
+        .student-table {
+            width: 100%;
+            min-width: 1350px;
+            border-collapse: collapse;
+        }
+
+        .student-table th,
+        .student-table td {
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .student-table th {
+            white-space: nowrap;
+        }
+
+        .student-table td {
+            overflow-wrap: anywhere;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        .status-label {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-active {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .status-inactive {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-buttons form {
+            margin: 0;
+        }
+
+        .action-link {
+            display: inline-block;
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            color: #075985;
+            text-decoration: none;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .action-link:hover {
+            background: #eff6ff;
+        }
+
+        .action-delete {
+            padding: 6px 10px;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+            color: #b91c1c;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .action-delete:hover {
+            background: #fef2f2;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- HEADER -->
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <!-- SIDEBAR -->
+        <div th:replace="~{fragments :: sidebar('sinhvien')}"></div>
+
+        <main class="main-panel">
+
+            <!-- TIÊU ĐỀ -->
+            <div class="page-heading">
+
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo / Sinh viên
+                    </div>
+
+                    <h1>QUẢN LÝ SINH VIÊN</h1>
+
+                    <p>
+                        Danh sách sinh viên, thông tin cá nhân,
+                        tài khoản, lớp và bộ môn trực thuộc.
+                    </p>
+                </div>
+
+                <!-- THÊM SINH VIÊN -->
+                <a th:if="${vaitro == 'TRUONGKHOA'}"
+                   class="btn btn-primary"
+                   th:href="@{/quanly/danhmuc/sinhvien/tao}">
+
+                    + Thêm sinh viên
+                </a>
+
+            </div>
+
+            <section class="panel-card">
+
+                <!-- THÔNG BÁO -->
+                <p th:if="${successMessage}"
+                   style="color:#15803d;padding:10px"
+                   th:text="${successMessage}">
+                </p>
+
+                <p th:if="${errorMessage}"
+                   style="color:#b42318;padding:10px"
+                   th:text="${errorMessage}">
+                </p>
+
+                <!-- TÌM KIẾM -->
+                <div class="table-toolbar">
+
+                    <form class="search-box"
+                          th:action="@{/sinhvien}"
+                          method="get">
+
+                        <span>⌕</span>
+
+                        <input type="search"
+                               name="q"
+                               th:value="${q}"
+                               placeholder="Tìm kiếm sinh viên...">
+
+                        <button type="submit" class="btn">
+                            Tìm kiếm
+                        </button>
+
+                    </form>
+
+                    <div class="record-count">
+                        Tổng cộng
+                        <b th:text="${pageData.totalElements}">0</b>
+                        sinh viên
+                    </div>
+
+                </div>
+
+                <!-- BẢNG SINH VIÊN -->
+                <div class="table-wrap">
+
+                    <table class="data-table student-table">
+
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Mã sinh viên</th>
+                            <th>Họ và tên</th>
+                            <th>Lớp</th>
+                            <th>Bộ môn</th>
+                            <th>ID tài khoản</th>
+                            <th>Tên đăng nhập</th>
+                            <th>Email</th>
+                            <th>Vai trò</th>
+                            <th>Trạng thái</th>
+                            <th>Chi tiết</th>
+
+                            <th th:if="${vaitro == 'TRUONGKHOA'}">
+                                Thao tác
+                            </th>
+                        </tr>
+                        </thead>
+
+                        <tbody data-table-body>
+
+                        <!-- DANH SÁCH SINH VIÊN -->
+                        <tr th:each="item : ${items}">
+
+                            <!-- ID SINH VIÊN -->
+                            <td th:text="${item.id}">
+                                1
+                            </td>
+
+                            <!-- MÃ SINH VIÊN -->
+                            <td th:text="${item.masinhvien ?: '—'}">
+                                SV001
+                            </td>
+
+                            <!-- HỌ VÀ TÊN -->
+                            <td>
+                                <span class="student-name"
+                                      th:text="${accountNames[item.taikhoanid] ?: 'Chưa cập nhật'}">
+                                    Nguyễn Văn A
+                                </span>
+                            </td>
+
+                            <!-- LỚP -->
+                            <td th:text="${item.lop ?: 'Chưa cập nhật'}">
+                                22DTH1
+                            </td>
+
+                            <!-- BỘ MÔN -->
+                            <td th:text="${departmentNames[item.bomonid] ?: 'Chưa xác định'}">
+                                Công nghệ phần mềm
+                            </td>
+
+                            <!-- ID TÀI KHOẢN -->
+                            <td th:text="${item.taikhoanid ?: '—'}">
+                                10
+                            </td>
+
+                            <!-- TÊN ĐĂNG NHẬP -->
+                            <td th:text="${accountProfiles[item.taikhoanid]?.tendangnhap ?: '—'}">
+                                sinhvien01
+                            </td>
+
+                            <!-- EMAIL -->
+                            <td th:text="${accountProfiles[item.taikhoanid]?.email ?: '—'}">
+                                example@university.edu.vn
+                            </td>
+
+                            <!-- VAI TRÒ -->
+                            <td>
+                                <span th:text="${accountProfiles[item.taikhoanid]?.vaitro ?: '—'}">
+                                    Sinh viên
+                                </span>
+                            </td>
+
+                            <!-- TRẠNG THÁI -->
+                            <td>
+
+                                <span th:if="${accountProfiles[item.taikhoanid] != null}"
+                                      class="status-label"
+                                      th:classappend="${accountProfiles[item.taikhoanid].kichhoat} ? ' status-active' : ' status-inactive'"
+                                      th:text="${accountProfiles[item.taikhoanid].kichhoat} ? 'Đang hoạt động' : 'Tạm khóa'">
+                                    Đang hoạt động
+                                </span>
+
+                                <span th:if="${accountProfiles[item.taikhoanid] == null}">
+                                    Chưa xác định
+                                </span>
+
+                            </td>
+
+                            <!-- XEM ĐẦY ĐỦ -->
+                            <td>
+                                <a class="action-link"
+                                   th:href="@{/sinhvien/{id}(id=${item.id})}">
+                                    Xem đầy đủ
+                                </a>
+                            </td>
+
+                            <!-- THAO TÁC QUẢN LÝ -->
+                            <td th:if="${vaitro == 'TRUONGKHOA'}">
+
+                                <div class="action-buttons">
+
+                                    <!-- SỬA -->
+                                    <a class="action-link"
+                                       th:href="@{/quanly/danhmuc/sinhvien/{id}/sua(id=${item.id})}">
+                                        Sửa
+                                    </a>
+
+                                    <!-- XÓA -->
+                                    <form th:action="@{/quanly/danhmuc/sinhvien/{id}/xoa(id=${item.id})}"
+                                          method="post"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa sinh viên này?')">
+
+                                        <button type="submit"
+                                                class="action-delete">
+                                            Xóa
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                        <!-- DANH SÁCH RỖNG -->
+                        <tr th:if="${#lists.isEmpty(items)}">
+
+                            <td th:colspan="${vaitro == 'TRUONGKHOA' ? 12 : 11}">
+
+                                <div class="empty-state">
+
+                                    <strong>
+                                        Chưa có dữ liệu sinh viên
+                                    </strong>
+
+                                    <span>
+                                        Danh sách hiện chưa có bản ghi.
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                        </tbody>
+                    </table>
+
+                </div>
+
+                <!-- PHÂN TRANG -->
+                <nav th:if="${pageData.totalPages > 1}"
+                     class="pagination"
+                     aria-label="Phân trang"
+                     style="
+                         display:flex;
+                         gap:12px;
+                         align-items:center;
+                         justify-content:flex-end;
+                         padding:14px;
+                         flex-wrap:wrap;
+                     ">
+
+                    <!-- TRANG TRƯỚC -->
+                    <a th:if="${pageData.hasPrevious()}"
+                       th:href="@{/sinhvien(page=${pageData.number - 1},q=${q})}">
+                        ← Trang trước
+                    </a>
+
+                    <!-- TRANG HIỆN TẠI -->
+                    <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} sinh viên|">
+                        Trang 1
+                    </span>
+
+                    <!-- TRANG SAU -->
+                    <a th:if="${pageData.hasNext()}"
+                       th:href="@{/sinhvien(page=${pageData.number + 1},q=${q})}">
+                        Trang sau →
+                    </a>
+
+                </nav>
+
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+
+</body>
+</html>

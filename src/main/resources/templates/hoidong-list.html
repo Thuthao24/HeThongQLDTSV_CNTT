@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title>Quản lý hội đồng</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .council-roster {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .council-roster-card {
+            padding: 18px;
+            border: 1px solid #dbe5ef;
+            background: #f8fbff;
+            border-radius: 8px;
+        }
+
+        .council-roster-card h4 {
+            margin: 0 0 12px;
+            color: #075985;
+        }
+
+        .council-member-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        .council-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .council-actions form {
+            margin: 0;
+        }
+
+        .council-actions .btn {
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .council-empty {
+            padding: 16px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+<div class="app-shell">
+
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <div th:replace="~{fragments :: sidebar('hoidong')}">
+        </div>
+
+        <main class="main-panel">
+
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo / Hội đồng
+                    </div>
+
+                    <h1>QUẢN LÝ HỘI ĐỒNG</h1>
+
+                    <p>
+                        Quản lý lịch báo cáo, phòng và danh sách
+                        3–5 giảng viên trong hội đồng.
+                    </p>
+                </div>
+
+                <!-- THÊM HỘI ĐỒNG -->
+                <a th:if="${canManage}"
+                   class="btn btn-primary"
+                   th:href="@{/hoidong/them}">
+                    + Thêm hội đồng
+                </a>
+            </div>
+
+            <!-- THÔNG BÁO -->
+            <div th:if="${errorMessage}"
+                 role="alert"
+                 style="color:#b42318;padding:12px"
+                 th:text="${errorMessage}">
+            </div>
+
+            <div th:if="${successMessage}"
+                 role="status"
+                 style="color:#15803d;padding:12px"
+                 th:text="${successMessage}">
+            </div>
+
+            <!-- DANH SÁCH THÀNH VIÊN -->
+            <section class="panel-card">
+
+                <h3 style="padding:16px 16px 0">
+                    DANH SÁCH THÀNH VIÊN HỘI ĐỒNG
+                </h3>
+
+                <p style="padding:0 16px;color:#64748b">
+                    Mỗi hội đồng gồm 3–5 giảng viên,
+                    đúng 1 Chủ tịch và 1 Thư ký.
+                </p>
+
+                <div class="council-roster">
+
+                    <div class="council-roster-card"
+                         th:each="council : ${items}">
+
+                        <h4 th:text="${council.tenhoidong}">
+                            Hội đồng 01
+                        </h4>
+
+                        <div class="council-member-row"
+                             th:each="member : ${roster[council.id]}">
+
+                            <strong th:text="${lecturerNames[member.giangvienid] ?: 'Chưa xác định'}">
+                                Giảng viên
+                            </strong>
+
+                            <span> — </span>
+
+                            <span th:switch="${member.vaitro?.name()}">
+                                <span th:case="'CHUTICH'">
+                                    Chủ tịch
+                                </span>
+                                <span th:case="'THUKY'">
+                                    Thư ký
+                                </span>
+                                <span th:case="'THANHVIEN'">
+                                    Thành viên
+                                </span>
+                                <span th:case="*">
+                                    Chưa xác định
+                                </span>
+                            </span>
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(roster[council.id])}"
+                             class="council-empty">
+                            Chưa có thành viên.
+                        </div>
+
+                        <!-- SỬA TOÀN BỘ HỘI ĐỒNG -->
+                        <div th:if="${canManage}"
+                             style="margin-top:14px">
+
+                            <a class="btn"
+                               th:href="@{/hoidong/sua/{id}(id=${council.id})}">
+                                Chỉnh sửa thành viên
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(items)}"
+                     class="council-empty">
+                    Chưa có hội đồng nào được thành lập.
+                </div>
+
+            </section>
+
+            <!-- BẢNG HỘI ĐỒNG -->
+            <section class="panel-card">
+
+                <div class="table-toolbar">
+
+                    <div class="search-box">
+                        <span>⌕</span>
+                        <input type="search"
+                               data-table-search
+                               placeholder="Tìm kiếm hội đồng...">
+                    </div>
+
+                    <div class="record-count">
+                        <b th:text="${pageData.totalElements}">0</b>
+                        hội đồng
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+
+                    <table class="data-table">
+
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên hội đồng</th>
+                            <th>Đợt đăng ký</th>
+                            <th>Ngày báo cáo</th>
+                            <th>Phòng</th>
+                            <th th:if="${canManage}">
+                                Thao tác
+                            </th>
+                        </tr>
+                        </thead>
+
+                        <tbody data-table-body>
+
+                        <tr th:each="item : ${items}">
+
+                            <td th:text="${item.id}">1</td>
+
+                            <td th:text="${item.tenhoidong}">
+                                Hội đồng 01
+                            </td>
+
+                            <td th:text="${roundNames[item.dotdangkyid] ?: 'Chưa xác định'}">
+                                Đợt đăng ký
+                            </td>
+
+                            <td th:text="${item.ngaybaocao != null
+                                ? #temporals.format(item.ngaybaocao, 'dd/MM/yyyy HH:mm')
+                                : 'Chưa xếp lịch'}">
+                                —
+                            </td>
+
+                            <td th:text="${item.phong ?: 'Chưa cập nhật'}">
+                                —
+                            </td>
+
+                            <td th:if="${canManage}">
+
+                                <div class="council-actions">
+
+                                    <a class="btn"
+                                       th:href="@{/hoidong/sua/{id}(id=${item.id})}">
+                                        Sửa
+                                    </a>
+
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        <tr th:if="${#lists.isEmpty(items)}">
+                            <td th:colspan="${canManage ? 6 : 5}">
+
+                                <div class="empty-state">
+                                    <strong>Chưa có hội đồng</strong>
+                                    <span>
+                                        Danh sách chưa có dữ liệu.
+                                    </span>
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PHÂN TRANG -->
+                <nav th:if="${pageData.totalPages > 1}"
+                     class="pagination"
+                     aria-label="Phân trang"
+                     style="
+                        display:flex;
+                        gap:12px;
+                        align-items:center;
+                        justify-content:flex-end;
+                        padding:14px;
+                        flex-wrap:wrap;
+                     ">
+
+                    <a th:if="${pageData.hasPrevious()}"
+                       th:href="@{/hoidong(page=${pageData.number - 1})}">
+                        ← Trang trước
+                    </a>
+
+                    <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages}|">
+                        Trang 1
+                    </span>
+
+                    <a th:if="${pageData.hasNext()}"
+                       th:href="@{/hoidong(page=${pageData.number + 1})}">
+                        Trang sau →
+                    </a>
+
+                </nav>
+
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>
