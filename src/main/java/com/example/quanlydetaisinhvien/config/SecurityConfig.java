@@ -26,7 +26,22 @@ public class SecurityConfig {
             .userDetailsService(userDetailsService)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/login", "/403").permitAll()
-                .requestMatchers("/taikhoan/**", "/bomon/**", "/quanly/danhmuc/**").hasAnyRole("TRUONGKHOA")
+
+.requestMatchers(
+        HttpMethod.GET,
+        "/taikhoan",
+        "/taikhoan/canhan"
+).authenticated()
+
+.requestMatchers(
+        "/taikhoan/quanly",
+        "/taikhoan/quanly/**",
+        "/bomon/**",
+        "/quanly/danhmuc/**"
+).hasRole("TRUONGKHOA")
+
+.requestMatchers("/taikhoan/**").denyAll()
+
                 .requestMatchers("/giai-doan-1/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")

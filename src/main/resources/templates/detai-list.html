@@ -1,35 +1,298 @@
+
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đề tài</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý đề tài</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
 <body>
 <div class="app-shell">
-<div th:replace="~{fragments :: portalHeader}"></div>
-<div class="portal-body">
-<div th:replace="~{fragments :: sidebar('detai')}"></div>
-<main class="main-panel">
-<div class="page-heading">
-  <div><div class="breadcrumb">Cổng thông tin đào tạo / Đề tài</div><h1>ĐỀ TÀI</h1><p>Theo dõi đề tài theo đợt, bộ môn và trạng thái phê duyệt.</p></div>
-  <a th:if="${canProposeTopic}" class="btn btn-primary" th:href="@{/giai-doan-1/detai/tao}">+ Đề xuất đề tài</a>
+
+    <div th:replace="~{fragments :: portalHeader}"></div>
+
+    <div class="portal-body">
+
+        <div th:replace="~{fragments :: sidebar('detai')}"></div>
+
+        <main class="main-panel">
+
+            <!-- TIÊU ĐỀ -->
+            <div class="page-heading">
+                <div>
+                    <div class="breadcrumb">
+                        Cổng thông tin đào tạo / Đề tài
+                    </div>
+
+                    <h1>QUẢN LÝ ĐỀ TÀI</h1>
+
+                    <p>
+                        Theo dõi, xét duyệt và công bố đề tài
+                        theo đợt đăng ký.
+                    </p>
+                </div>
+
+                <a th:if="${canProposeTopic}"
+                   class="btn btn-primary"
+                   th:href="@{/giai-doan-1/detai/tao}">
+                    + Đề xuất đề tài
+                </a>
+            </div>
+
+            <section class="panel-card">
+
+                <!-- THÔNG BÁO -->
+                <p th:if="${successMessage}"
+                   style="color:#15803d;padding:12px"
+                   th:text="${successMessage}">
+                </p>
+
+                <p th:if="${errorMessage}"
+                   style="color:#b42318;padding:12px"
+                   th:text="${errorMessage}">
+                </p>
+
+                <!-- TÌM KIẾM -->
+                <div class="table-toolbar">
+
+                    <form class="search-box"
+                          th:action="@{/detai}"
+                          method="get">
+
+                        <span>⌕</span>
+
+                        <input type="search"
+                               name="q"
+                               th:value="${q}"
+                               placeholder="Tìm kiếm đề tài...">
+
+                        <button type="submit" class="btn">
+                            Tìm kiếm
+                        </button>
+                    </form>
+
+                    <div class="record-count">
+                        <b th:text="${pageData.totalElements}">0</b>
+                        đề tài
+                    </div>
+
+                </div>
+
+                <!-- BẢNG DANH SÁCH -->
+                <div class="table-wrap">
+
+                    <table class="data-table">
+
+                        <thead>
+                        <tr>
+                            <th>Mã đề tài</th>
+                            <th>Tên đề tài</th>
+                            <th>Đợt đăng ký</th>
+                            <th>Bộ môn</th>
+                            <th>Giảng viên đề xuất</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+
+                        <tbody data-table-body>
+
+                        <tr th:each="item : ${items}">
+
+                            <!-- MÃ ĐỀ TÀI -->
+                            <td th:text="${item.id}">
+                                1
+                            </td>
+
+                            <!-- TÊN ĐỀ TÀI -->
+                            <td>
+                                <strong th:text="${item.tendetai}">
+                                    Tên đề tài
+                                </strong>
+                            </td>
+
+                            <!-- TÊN ĐỢT ĐĂNG KÝ -->
+                            <td th:text="${roundNames[item.dotdangkyid] ?: 'Chưa xác định'}">
+                                Đợt đăng ký
+                            </td>
+
+                            <!-- TÊN BỘ MÔN -->
+                            <td th:text="${departmentNames[item.bomonid] ?: 'Chưa xác định'}">
+                                Bộ môn
+                            </td>
+
+                            <!-- TÊN GIẢNG VIÊN ĐỀ XUẤT -->
+                            <td th:text="${lecturerNames[item.giangviendexuatid] ?: 'Chưa xác định'}">
+                                Giảng viên đề xuất
+                            </td>
+
+                            <!-- TRẠNG THÁI TIẾNG VIỆT -->
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${
+                                          item.trangthai.name() == 'CONGBO'
+                                          ? ' badge-success'
+                                          : (
+                                              item.trangthai.name() == 'TUCHOI'
+                                              ? ' badge-danger'
+                                              : ' badge-warning'
+                                          )
+                                      }"
+                                      th:text="${item.trangthai.hienthi}">
+                                    Chờ duyệt
+                                </span>
+                            </td>
+
+                            <!-- THAO TÁC -->
+                            <td style="min-width:260px">
+
+                                <div style="
+                                    display:flex;
+                                    align-items:center;
+                                    flex-wrap:wrap;
+                                    gap:6px;
+                                ">
+
+                                    <!-- XEM CHI TIẾT -->
+                                    <a class="btn btn-sm"
+                                       th:href="@{/detai/{id}(id=${item.id})}">
+                                        Chi tiết
+                                    </a>
+
+                                    <!-- SỬA -->
+                                    <a class="btn btn-sm"
+                                       th:if="${editableIds != null
+                                           and editableIds.contains(item.id)}"
+                                       th:href="@{/giai-doan-1/detai/{id}/sua(id=${item.id})}">
+                                        Sửa
+                                    </a>
+
+                                    <!-- XÓA -->
+                                    <form th:if="${editableIds != null
+                                            and editableIds.contains(item.id)}"
+                                          th:action="@{/giai-doan-1/detai/{id}/xoa(id=${item.id})}"
+                                          method="post"
+                                          style="display:inline;margin:0"
+                                          onsubmit="return confirm('Bạn chắc chắn muốn xóa đề tài này?')">
+
+                                        <button type="submit"
+                                                class="btn btn-sm">
+                                            Xóa
+                                        </button>
+                                    </form>
+
+                                    <!-- DUYỆT ĐỀ TÀI -->
+                                    <form th:if="${vaitro == 'TRUONGKHOA'
+                                            and item.trangthai.name() == 'CHODUYET'}"
+                                          th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}"
+                                          method="post"
+                                          style="display:inline;margin:0"
+                                          onsubmit="return confirm('Xác nhận duyệt đề tài này?')">
+
+                                        <input type="hidden"
+                                               name="chapnhan"
+                                               value="true">
+
+                                        <button type="submit"
+                                                class="btn btn-sm btn-primary">
+                                            Duyệt
+                                        </button>
+                                    </form>
+
+                                    <!-- TỪ CHỐI ĐỀ TÀI -->
+                                    <form th:if="${vaitro == 'TRUONGKHOA'
+                                            and item.trangthai.name() == 'CHODUYET'}"
+                                          th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}"
+                                          method="post"
+                                          style="display:inline;margin:0"
+                                          onsubmit="return confirm('Bạn chắc chắn muốn từ chối đề tài này?')">
+
+                                        <input type="hidden"
+                                               name="chapnhan"
+                                               value="false">
+
+                                        <button type="submit"
+                                                class="btn btn-sm"
+                                                style="color:#b42318">
+                                            Từ chối
+                                        </button>
+                                    </form>
+
+                                    <!-- CÔNG BỐ ĐỀ TÀI -->
+                                    <form th:if="${vaitro == 'TRUONGKHOA'
+                                            and item.trangthai.name() == 'DADUYET'}"
+                                          th:action="@{/giai-doan-1/detai/{id}/congbo(id=${item.id})}"
+                                          method="post"
+                                          style="display:inline;margin:0"
+                                          onsubmit="return confirm('Xác nhận công bố đề tài này?')">
+
+                                        <button type="submit"
+                                                class="btn btn-sm btn-primary">
+                                            Công bố
+                                        </button>
+                                    </form>
+
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        <!-- KHÔNG CÓ DỮ LIỆU -->
+                        <tr th:if="${#lists.isEmpty(items)}">
+                            <td colspan="7">
+
+                                <div class="empty-state">
+                                    <strong>Chưa có đề tài</strong>
+                                    <span>
+                                        Danh sách hiện chưa có bản ghi.
+                                    </span>
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        </tbody>
+                    </table>
+
+                </div>
+
+                <!-- PHÂN TRANG -->
+                <nav th:if="${pageData.totalPages > 1}"
+                     class="pagination"
+                     aria-label="Phân trang"
+                     style="
+                        display:flex;
+                        gap:12px;
+                        align-items:center;
+                        justify-content:flex-end;
+                        padding:14px;
+                        flex-wrap:wrap
+                     ">
+
+                    <a th:if="${pageData.hasPrevious()}"
+                       th:href="@{/detai(page=${pageData.number - 1},q=${q})}">
+                        ← Trang trước
+                    </a>
+
+                    <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} đề tài|">
+                        Trang 1
+                    </span>
+
+                    <a th:if="${pageData.hasNext()}"
+                       th:href="@{/detai(page=${pageData.number + 1},q=${q})}">
+                        Trang sau →
+                    </a>
+
+                </nav>
+
+            </section>
+
+        </main>
+    </div>
 </div>
-<section class="panel-card"><p th:if="${successMessage}" style="color:green;padding:10px" th:text="${successMessage}"></p><p th:if="${errorMessage}" style="color:#b42318;padding:10px" th:text="${errorMessage}"></p>
-<div class="table-toolbar">
-  <form class="search-box" th:action="@{/detai}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
-  <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
-</div>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đề tài</th><th>Đợt ID</th><th>Bộ môn ID</th><th>GV đề xuất ID</th><th>Trạng thái</th><th>Thao tác GĐ1</th></tr></thead><tbody data-table-body>
-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendetai}">---</td><td th:text="${item.dotdangkyid}">---</td><td th:text="${item.bomonid}">---</td><td th:text="${item.giangviendexuatid}">---</td><td><span class="badge" th:text="${item.trangthai}">---</span></td><td style="min-width:250px">
-<a th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:href="@{/giai-doan-1/detai/{id}/sua(id=${item.id})}">Sửa</a>
-<form th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:action="@{/giai-doan-1/detai/{id}/xoa(id=${item.id})}" method="post" style="display:inline" onsubmit="return confirm('Xóa đề tài này?')"><button type="submit">Xóa</button></form>
-<form th:if="${(vaitro == 'TRUONGKHOA') and item.trangthai.name() == 'CHODUYET'}" th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}" method="post" style="display:inline"><input type="hidden" name="chapnhan" value="true"><button type="submit">Duyệt</button></form>
-<form th:if="${(vaitro == 'TRUONGKHOA') and item.trangthai.name() == 'CHODUYET'}" th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}" method="post" style="display:inline"><input type="hidden" name="chapnhan" value="false"><button type="submit">Từ chối</button></form>
-<form th:if="${(vaitro == 'TRUONGKHOA') and item.trangthai.name() == 'DADUYET'}" th:action="@{/giai-doan-1/detai/{id}/congbo(id=${item.id})}" method="post" style="display:inline"><button type="submit">Công bố</button></form>
-</td></tr>
-<tr th:if="${#lists.isEmpty(items)}"><td colspan="7"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
-</tbody></table></div>
-<nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
- <a th:if="${pageData.hasPrevious()}" th:href="@{/detai(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
- <span th:text="|Trang ${pageData.number + 1}/${pageData.totalPages} — ${pageData.totalElements} bản ghi|">Trang 1</span>
- <a th:if="${pageData.hasNext()}" th:href="@{/detai(page=${pageData.number + 1},q=${q})}">Trang sau →</a>
-</nav>
-</section>
-</main></div></div><script th:src="@{/js/app.js}"></script></body></html>
+
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>
