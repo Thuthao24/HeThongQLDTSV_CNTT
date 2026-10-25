@@ -32,7 +32,7 @@ public class SecurityConfig {
                         "/taikhoan",
                         "/taikhoan/canhan"
                 ).authenticated()
-                
+
                 .requestMatchers(
                         "/bomon/**",
                         "/quanly/danhmuc/**"
@@ -44,13 +44,13 @@ public class SecurityConfig {
                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")
                 .requestMatchers("/detai/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
-                
+
                 // Duyệt đăng ký đề tài sinh viên
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/huy").hasRole("SINHVIEN")
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/dangkydetai", "/dangkydetai/**").hasAnyRole("SINHVIEN", "TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/nhom/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
-                
+
                 // ==================== CẤU HÌNH PHÂN CÔNG GVPB ====================
                 // 1. Giảng viên, Trưởng BM, Trưởng khoa đều được XEM trang phân công
                 .requestMatchers(HttpMethod.GET, "/phanbien", "/phanbien/").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
@@ -61,11 +61,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/hoidong/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/diem/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/hoidong/**", "/diem/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
-                
+
                 .requestMatchers("/ketqua/*/congbo", "/ketqua/*/phancong", "/ketqua/email/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/ketqua", "/ketqua/**").hasAnyRole("SINHVIEN", "TRUONGKHOA")
                 .requestMatchers("/ketqua", "/ketqua/**").hasRole("TRUONGKHOA")
-                
+
                 .requestMatchers("/thongbao/create", "/thongbao/*/edit").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/thongbao/*/dadoc")
                     .hasAnyRole("SINHVIEN", "GIANGVIEN", "TRUONGBOMON")
@@ -73,7 +73,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/thongbao", "/thongbao/**")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN", "SINHVIEN")
                 .requestMatchers("/thongbao", "/thongbao/**").denyAll()
-                
+
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/detai")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/**").authenticated()
@@ -84,7 +84,7 @@ public class SecurityConfig {
                     .hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/**").authenticated()
                 .requestMatchers("/morong", "/morong/**").denyAll()
-                
+
                 .requestMatchers("/").authenticated()
                 .anyRequest().authenticated()
             )

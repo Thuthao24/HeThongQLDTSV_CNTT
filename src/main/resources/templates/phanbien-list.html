@@ -71,7 +71,7 @@
                        th:href="@{/phanbien/them}" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center;">
                         + Phân công GVPB mới
                     </a>
-                    
+
                     <a th:href="@{/dangkydetai}" class="btn" style="background:#fff; color:#06649a; border:1px solid #7cbfe6; text-decoration:none; display:inline-flex; align-items:center;">
                         Xem Đăng ký đề tài
                     </a>
@@ -102,7 +102,7 @@
                             <th>Nhóm SV</th>
                             <th>Giảng viên hướng dẫn (GVHD)</th>
                             <th>Giảng viên phản biện (GVPB)</th>
-                            
+
                             <!-- 2. Chỉ Trưởng Khoa và Trưởng Bộ Môn mới thấy tiêu đề cột Thao tác -->
                             <th sec:authorize="hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')" style="width: 100px;">Thao tác</th>
                         </tr>
