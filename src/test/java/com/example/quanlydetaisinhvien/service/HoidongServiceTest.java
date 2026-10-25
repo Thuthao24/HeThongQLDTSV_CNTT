@@ -122,6 +122,7 @@ class HoidongServiceTest {
     @Test
     @DisplayName("FAIL: Chặn hội đồng không có Chủ tịch")
     void testKiemtraHoidongHopLe_ThatBai_KhongCoChuTich() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.THANHVIEN),
                 createMember(2L, VaitroHoidong.THUKY),
@@ -136,7 +137,9 @@ class HoidongServiceTest {
     // --- TEST FAIL: Có 2 Chủ tịch ---
     @Test
     @DisplayName("FAIL: Chặn hội đồng có 2 Chủ tịch")
+    
     void testKiemtraHoidongHopLe_ThatBai_HaiChuTich() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.CHUTICH),
                 createMember(2L, VaitroHoidong.CHUTICH),
@@ -152,6 +155,7 @@ class HoidongServiceTest {
     @Test
     @DisplayName("FAIL: Chặn hội đồng không có Thư ký")
     void testKiemtraHoidongHopLe_ThatBai_KhongCoThuKy() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.CHUTICH),
                 createMember(2L, VaitroHoidong.THANHVIEN),
@@ -167,6 +171,7 @@ class HoidongServiceTest {
     @Test
     @DisplayName("FAIL: Chặn trùng lặp giảng viên trong cùng một hội đồng")
     void testKiemtraHoidongHopLe_ThatBai_TrungGiangVien() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.CHUTICH),
                 createMember(1L, VaitroHoidong.THUKY), // Trùng GV 1
@@ -182,6 +187,8 @@ class HoidongServiceTest {
     @Test
     @DisplayName("PASS: Thêm mới hội đồng thành công và lưu danh sách thành viên")
     void testLuuHoidong_ThanhCong() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
+        when(dotdangkyRepository.existsById(1L)).thenReturn(true);
         HoidongFormDto form = new HoidongFormDto();
         form.setTenhoidong("Hội đồng Đánh giá KLTN 01");
         form.setDotdangkyid(1L);
@@ -193,9 +200,6 @@ class HoidongServiceTest {
         tvList.add(new ThanhvienHoidongItemDto(2L, VaitroHoidong.THUKY));
         tvList.add(new ThanhvienHoidongItemDto(3L, VaitroHoidong.THANHVIEN));
         form.setThanhviens(tvList);
-
-        when(dotdangkyRepository.existsById(1L))
-        .thenReturn(true);
         
         when(hoidongRepository.save(any(Hoidong.class))).thenAnswer(inv -> {
             Hoidong hd = inv.getArgument(0);
