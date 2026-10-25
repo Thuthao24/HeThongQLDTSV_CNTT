@@ -208,6 +208,19 @@ class KetquaAuthorizationTests {
     }
 
     @Test
+    void resultsPageNeverRendersDisabledEmailNoticeForAnyRole() throws Exception {
+        MvcResult chiefResult = mvc.perform(get("/ketqua").with(user("chief").roles("TRUONGKHOA")))
+                .andExpect(status().isOk()).andReturn();
+        String chiefHtml = chiefResult.getResponse().getContentAsString();
+        assertThat(chiefHtml).doesNotContain("Dịch vụ gửi email", "tạm tắt", "đang tắt", "ghi nhận an toàn trong Outbox");
+
+        MvcResult studentResult = mvc.perform(get("/ketqua").with(user("student-a").roles("SINHVIEN")))
+                .andExpect(status().isOk()).andReturn();
+        String studentHtml = studentResult.getResponse().getContentAsString();
+        assertThat(studentHtml).doesNotContain("Dịch vụ gửi email", "tạm tắt", "đang tắt", "ghi nhận an toàn trong Outbox", "eval-modal", "email-modal");
+    }
+
+    @Test
     void emptyPageExplainsWhyNoResultIsAvailable() throws Exception {
         mvc.perform(get("/ketqua").with(user("no-group").roles("SINHVIEN")))
                 .andExpect(status().isOk())

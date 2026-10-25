@@ -133,9 +133,26 @@ document.addEventListener("DOMContentLoaded", function () {
   <div class="search-box"><span>⌕</span><input type="search" data-table-search placeholder="Tìm kiếm trong danh sách..."></div>
   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
 </div>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã đăng ký</th><th>Mã giảng viên</th><th>Điểm</th><th>Nhận xét</th></tr></thead><tbody data-table-body>
-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.dangkydetaiid}">---</td><td th:text="${item.giangvienid}">---</td><td th:text="${item.diemso}">---</td><td th:text="${item.nhanxet}">---</td></tr>
-<tr th:if="${#lists.isEmpty(items)}"><td colspan="5"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Chưa có điểm đánh giá.</span></div></td></tr>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Đề tài</th><th>Nhóm SV</th><th>Giảng viên</th><th>Điểm</th><th>Nhận xét</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}">
+  <td th:text="${item.id}">---</td>
+  <td>
+    <strong th:if="${topicNames != null and topicNames.containsKey(item.dangkydetaiid)}" th:text="${topicNames.get(item.dangkydetaiid)}">Đề tài</strong>
+    <strong th:if="${topicNames == null or !topicNames.containsKey(item.dangkydetaiid)}" th:text="'ĐK #' + ${item.dangkydetaiid}">Đề tài</strong>
+    <div style="font-size:11px;color:#64748b;" th:text="'ĐK #' + ${item.dangkydetaiid}"></div>
+  </td>
+  <td>
+    <span class="badge" th:if="${groupNames != null and groupNames.containsKey(item.dangkydetaiid)}" th:text="${groupNames.get(item.dangkydetaiid)}">Nhóm</span>
+    <span class="badge" th:if="${groupNames == null or !groupNames.containsKey(item.dangkydetaiid)}" th:text="'---'">Nhóm</span>
+  </td>
+  <td>
+    <span th:if="${lecturerNames != null and lecturerNames.containsKey(item.giangvienid)}" th:text="${lecturerNames.get(item.giangvienid)}">GV</span>
+    <span th:if="${lecturerNames == null or !lecturerNames.containsKey(item.giangvienid)}" th:text="'GV #' + ${item.giangvienid}">GV</span>
+  </td>
+  <td><b th:text="${item.diemso}">---</b></td>
+  <td th:text="${item.nhanxet}">---</td>
+</tr>
+<tr th:if="${#lists.isEmpty(items)}"><td colspan="6"><div class="empty-state"><strong>Chưa có điểm đánh giá</strong><span>Chưa có điểm đánh giá nào trong danh sách.</span></div></td></tr>
 </tbody></table></div>
 <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
  <a th:if="${pageData.hasPrevious()}" th:href="@{/diem(page=${pageData.number - 1})}">← Trang trước</a>

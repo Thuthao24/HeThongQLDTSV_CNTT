@@ -27,6 +27,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     private final SinhvienRepository sinhvienRepository;
     private final TaikhoanRepository taikhoanRepository;
     private final NopbaocaoRepository nopbaocaoRepository;
+    private final KetquaRepository ketquaRepository;
 
     public DangkydetaiServiceImpl(
             DangkydetaiRepository repository,
@@ -36,7 +37,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             DotdangkyRepository dotdangkyRepository,
             SinhvienRepository sinhvienRepository,
             TaikhoanRepository taikhoanRepository,
-            NopbaocaoRepository nopbaocaoRepository) {
+            NopbaocaoRepository nopbaocaoRepository, KetquaRepository ketquaRepository) {
         this.repository = repository;
         this.nhomsinhvienRepository = nhomsinhvienRepository;
         this.thanhviennhomRepository = thanhviennhomRepository;
@@ -45,6 +46,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         this.sinhvienRepository = sinhvienRepository;
         this.taikhoanRepository = taikhoanRepository;
         this.nopbaocaoRepository = nopbaocaoRepository;
+        this.ketquaRepository = ketquaRepository;
     }
 
     @Override
@@ -364,6 +366,13 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             if (daCoNhomKhac) {
                 throw new NghiepvuException(
                         "Đề tài này đã được duyệt cho nhóm khác");
+            }
+            // The existing topic/registration locks also serialize result initialization.
+            if (ketquaRepository.findByDangkydetaiid(dangkydetaiid).isEmpty()) {
+                Ketqua result = new Ketqua();
+                result.setDangkydetaiid(dangkydetaiid);
+                result.setDacongbo(false);
+                ketquaRepository.save(result);
             }
         }
 

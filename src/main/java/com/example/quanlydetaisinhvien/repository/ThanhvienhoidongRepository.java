@@ -10,4 +10,6 @@ public interface ThanhvienhoidongRepository extends JpaRepository<Thanhvienhoido
     List<Thanhvienhoidong> findByHoidongidIn(java.util.Collection<Long> ids);
     long countByHoidongid(Long id);
     boolean existsByHoidongidAndVaitro(Long hoidongid, com.example.quanlydetaisinhvien.entity.VaitroHoidong vaitro);
+    void deleteByHoidongid(Long hoidongid);
+    boolean existsByHoidongidAndGiangvienid(Long hoidongid, Long giangvienid);
 }

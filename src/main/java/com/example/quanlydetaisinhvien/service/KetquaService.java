@@ -1,23 +1,23 @@
 package com.example.quanlydetaisinhvien.service;
 
-import com.example.quanlydetaisinhvien.entity.Ketqua;
+import com.example.quanlydetaisinhvien.dto.KetquaDoiChieuDto;
 import com.example.quanlydetaisinhvien.entity.HinhthucDanhgia;
+import com.example.quanlydetaisinhvien.entity.Ketqua;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * Reads (including inherited findAll/findById) are scoped to the current user.
- * Students see only published group results; Trưởng khoa sees all results.
- * Inherited write operations require Trưởng khoa.
- */
 public interface KetquaService extends CrudService<Ketqua, Long> {
-    /** Uses the authenticated account; never accepts a student or group ID from the client. */
     List<Ketqua> findVisibleToCurrentUser();
-
-    org.springframework.data.domain.Page<Ketqua> findVisiblePage(
-            org.springframework.data.domain.Pageable pageable);
-    Map<Long, KetquaPublicationInfo> publicationInfo(List<Ketqua> results);
-    void phanCongHoiDong(Long ketquaid, HinhthucDanhgia hinhthuc, Long hoidongid);
+    Page<Ketqua> findVisiblePage(Pageable pageable);
     Ketqua congboKetqua(Long ketquaid);
+    void phanCongHoiDong(Long ketquaid, HinhthucDanhgia hinhthuc, Long hoidongid);
+    Map<Long, KetquaPublicationInfo> publicationInfo(List<Ketqua> results);
+
+    List<KetquaDoiChieuDto> findAllDoiChieuDto();
+    void tinhLaiKetQua(Long dangkydetaiid);
+    void tinhLaiTatCaKetQua();
+    boolean doiChieuKetQua(Long dangkydetaiid);
 }

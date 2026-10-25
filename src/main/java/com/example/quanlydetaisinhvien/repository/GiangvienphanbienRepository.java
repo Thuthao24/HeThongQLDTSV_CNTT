@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface GiangvienphanbienRepository extends JpaRepository<Giangvienphanbien, Long> {
     List<Giangvienphanbien> findByDangkydetaiid(Long id);
+    boolean existsByDangkydetaiidAndGiangvienid(Long dangkydetaiid, Long giangvienid);
+    void deleteByDangkydetaiidAndGiangvienid(Long dangkydetaiid, Long giangvienid);
 }

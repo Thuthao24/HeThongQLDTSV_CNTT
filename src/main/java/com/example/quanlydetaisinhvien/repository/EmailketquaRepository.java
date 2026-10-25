@@ -15,6 +15,7 @@ public interface EmailketquaRepository extends JpaRepository<Emailketqua, Long> 
     List<Emailketqua> findTop100ByTrangthaiOrderByIdAsc(TrangthaiEmailketqua status);
     List<Emailketqua> findByKetquaidInOrderByIdAsc(List<Long> ids);
     List<Emailketqua> findByKetquaidOrderByIdAsc(Long id);
+    boolean existsByKetquaidAndSinhvienid(Long ketquaid, Long sinhvienid);
 
     @Modifying
     @Query("""

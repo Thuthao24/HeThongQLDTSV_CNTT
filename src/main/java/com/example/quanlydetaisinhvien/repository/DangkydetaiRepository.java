@@ -40,27 +40,29 @@ public interface DangkydetaiRepository
     void deleteByNhomid(Long nhomid);
 
     // Danh sách đăng ký có thể chấm điểm
-    @Query("""
+    @org.springframework.data.jpa.repository.Query("""
         select d.id, r.id, r.tendot, t.tendetai, n.tennhom
-        from Dangkydetai d, Detai t, Dotdangky r,
-             Nhomsinhvien n, Phanconghoidong p, Ketqua k
-        where t.id = d.detaiid
-          and r.id = t.dotdangkyid
-          and n.id = d.nhomid
-          and p.dangkydetaiid = d.id
-          and k.dangkydetaiid = d.id
-          and d.trangthai = :approved
-          and k.dacongbo = false
+        from Dangkydetai d
+        join Detai t on t.id = d.detaiid
+        join Dotdangky r on r.id = t.dotdangkyid
+        join Nhomsinhvien n on n.id = d.nhomid
+        where d.trangthai = :approved
+          and not exists (
+             select k.id from Ketqua k
+             where k.dangkydetaiid = d.id
+               and k.dacongbo = true
+          )
           and (
              exists (
-                select tv.hoidongid from Thanhvienhoidong tv
-                where tv.hoidongid = p.hoidongid
-                  and tv.giangvienid = :lecturerId
-             )
-             or exists (
                 select pb.id from Giangvienphanbien pb
                 where pb.dangkydetaiid = d.id
                   and pb.giangvienid = :lecturerId
+             )
+             or exists (
+                select p.dangkydetaiid from Phanconghoidong p, Thanhvienhoidong tv
+                where p.dangkydetaiid = d.id
+                  and tv.hoidongid = p.hoidongid
+                  and tv.giangvienid = :lecturerId
              )
           )
           and not exists (

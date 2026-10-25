@@ -34,6 +34,8 @@ public class SecurityConfig {
                 // Duyệt đăng ký là thao tác quản trị; kiểm tra trước rule bao quát.
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasRole("TRUONGKHOA")
                 .requestMatchers("/nhom/**", "/dangkydetai/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
+                .requestMatchers(HttpMethod.POST, "/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON")
+                .requestMatchers("/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers(HttpMethod.POST, "/hoidong/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/diem/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/hoidong/**", "/diem/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")

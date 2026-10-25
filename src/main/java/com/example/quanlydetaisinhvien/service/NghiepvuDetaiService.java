@@ -25,6 +25,7 @@ public class NghiepvuDetaiService {
     private final DiemRepository diemRepository;
     private final KetquaRepository ketquaRepository;
     private final KetquaPublicationService publicationService;
+    private final GiangvienphanbienRepository giangvienphanbienRepository;
 
     public NghiepvuDetaiService(
             DotdangkyRepository dotdangkyRepository,
@@ -36,7 +37,8 @@ public class NghiepvuDetaiService {
             NopbaocaoRepository nopbaocaoRepository,
             DiemRepository diemRepository,
             KetquaRepository ketquaRepository,
-            KetquaPublicationService publicationService) {
+            KetquaPublicationService publicationService,
+            GiangvienphanbienRepository giangvienphanbienRepository) {
         this.dotdangkyRepository = dotdangkyRepository;
         this.detaiRepository = detaiRepository;
         this.giangvienhuongdanRepository = giangvienhuongdanRepository;
@@ -47,6 +49,7 @@ public class NghiepvuDetaiService {
         this.diemRepository = diemRepository;
         this.ketquaRepository = ketquaRepository;
         this.publicationService = publicationService;
+        this.giangvienphanbienRepository = giangvienphanbienRepository;
     }
 
     // GIAI DOAN 1: GV de xuat de tai -> duyet -> cong bo
@@ -134,6 +137,7 @@ public class NghiepvuDetaiService {
     public Nopbaocao nopBaocao(Long dangkydetaiid, Long sinhvienid, String duongdanfile) {
         Dangkydetai dk = dangkydetaiRepository.findById(dangkydetaiid)
                 .orElseThrow(() -> new NghiepvuException("Khong tim thay dang ky de tai"));
+
         Nhomsinhvien nhom = nhomsinhvienRepository.findById(dk.getNhomid())
                 .orElseThrow(() -> new NghiepvuException("Khong tim thay nhom"));
         if (!nhom.getNhomtruongid().equals(sinhvienid)) {
@@ -152,15 +156,15 @@ public class NghiepvuDetaiService {
     public Ketqua tinhVaLuuKetqua(Long dangkydetaiid) {
         List<Diem> ds = diemRepository.findByDangkydetaiid(dangkydetaiid);
         if (ds.isEmpty()) {
-            throw new NghiepvuException("Chua co diem de tinh ket qua");
+            throw new NghiepvuException("Chưa có điểm thành phần để tính kết quả");
         }
         BigDecimal tong = ds.stream()
                 .map(Diem::getDiemso)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal tb = tong.divide(BigDecimal.valueOf(ds.size()), 2, RoundingMode.HALF_UP);
 
-        // Giữ ID của kết quả hiện có, tránh vi phạm UNIQUE(Dangkydetaiid).
-        // Không được tính lại kết quả đã công bố.
+        // Giu ID cua ket qua hien co, tranh vi pham UNIQUE(Dangkydetaiid).
+        // Khong duoc tinh lai ket qua da cong bo.
         Ketqua kq = ketquaRepository.findByDangkydetaiid(dangkydetaiid)
                 .orElseGet(Ketqua::new);
         if (Boolean.TRUE.equals(kq.getDacongbo())) {
@@ -170,6 +174,89 @@ public class NghiepvuDetaiService {
         kq.setDiemcuoi(tb);
         kq.setDacongbo(false);
         return ketquaRepository.save(kq);
+    }
+
+    // Query doi chieu giua Diemcuoi va trung binh cong cac diem thanh phan
+    public boolean doiChieuKetQua(Long dangkydetaiid) {
+        Ketqua kq = ketquaRepository.findByDangkydetaiid(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException("Chưa có kết quả cho đề tài đăng ký này"));
+        List<Diem> ds = diemRepository.findByDangkydetaiid(dangkydetaiid);
+        if (ds.isEmpty()) {
+            return false;
+        }
+        BigDecimal tong = ds.stream()
+                .map(Diem::getDiemso)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal tb = tong.divide(BigDecimal.valueOf(ds.size()), 2, RoundingMode.HALF_UP);
+        return kq.getDiemcuoi() != null && kq.getDiemcuoi().compareTo(tb) == 0;
+    }
+
+    // Phan GVPB cho dang ky de tai; chan GV trung GVHD
+    public Giangvienphanbien phanGiangvienPhanbien(Long dangkydetaiid, Long giangvienid) {
+        Dangkydetai dk = dangkydetaiRepository.findById(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException("Khong tim thay dang ky de tai"));
+
+        // Chan: Dang ky chua duoc duyet khong duoc phan bien
+        if (dk.getTrangthai() != null && dk.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
+            throw new NghiepvuException("Đăng ký đề tài chưa được duyệt, không thể phân công phản biện.");
+        }
+
+        // Chan: Giang vien huong dan khong duoc lam phan bien cho de tai cua minh
+        boolean laGvhd = giangvienhuongdanRepository.existsByDetaiidAndGiangvienid(dk.getDetaiid(), giangvienid);
+        if (laGvhd) {
+            throw new NghiepvuException("Giang vien huong dan khong duoc lam giang vien phan bien cho de tai nay");
+        }
+
+        // Chan: Khong phan trung 1 GV 2 lan cho 1 de tai
+        if (giangvienphanbienRepository.existsByDangkydetaiidAndGiangvienid(dangkydetaiid, giangvienid)) {
+            throw new NghiepvuException("Giang vien nay da duoc phan bien cho de tai nay roi");
+        }
+
+        // Chan: Ket qua da cong bo khong duoc thay doi phan cong
+        if (ketquaRepository.existsByDangkydetaiidAndDacongboTrue(dangkydetaiid)) {
+            throw new NghiepvuException("Kết quả đã công bố, không thể thay đổi phân công.");
+        }
+
+        Giangvienphanbien pb = new Giangvienphanbien();
+        pb.setDangkydetaiid(dangkydetaiid);
+        pb.setGiangvienid(giangvienid);
+        return giangvienphanbienRepository.save(pb);
+    }
+
+    // Cham diem: Nhap diem 0-10, nhan xet; Chan GV cham de tai minh dang huong dan
+    public Diem chamDiem(Long dangkydetaiid, Long giangvienid, BigDecimal diemso, String nhanxet) {
+        // Rang buoc: Diem ngoai 0-10 bi tu choi
+        if (diemso == null || diemso.compareTo(BigDecimal.ZERO) < 0 || diemso.compareTo(BigDecimal.TEN) > 0) {
+            throw new NghiepvuException("Điểm phải nằm trong thang điểm từ 0 đến 10");
+        }
+
+        Dangkydetai dk = dangkydetaiRepository.findById(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException("Khong tim thay dang ky de tai"));
+
+        // Chan: Dang ky chua duoc duyet khong duoc nhap diem
+        if (dk.getTrangthai() != null && dk.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
+            throw new NghiepvuException("Đăng ký đề tài chưa được duyệt, không thể nhập điểm.");
+        }
+
+        // Chan: Khong the cham de tai minh huong dan
+        boolean laGvhd = giangvienhuongdanRepository.existsByDetaiidAndGiangvienid(dk.getDetaiid(), giangvienid);
+        if (laGvhd) {
+            throw new NghiepvuException("Giang vien khong the cham diem de tai do minh huong dan");
+        }
+
+        // Chan: Ket qua da cong bo khong duoc sua diem
+        if (ketquaRepository.existsByDangkydetaiidAndDacongboTrue(dangkydetaiid)) {
+            throw new NghiepvuException("Kết quả đã công bố, không được sửa điểm.");
+        }
+
+        Diem diem = diemRepository.findByDangkydetaiidAndGiangvienid(dangkydetaiid, giangvienid)
+                .orElseGet(Diem::new);
+
+        diem.setDangkydetaiid(dangkydetaiid);
+        diem.setGiangvienid(giangvienid);
+        diem.setDiemso(diemso);
+        diem.setNhanxet(nhanxet);
+        return diemRepository.save(diem);
     }
 
     public Ketqua congboKetqua(Long ketquaid) {

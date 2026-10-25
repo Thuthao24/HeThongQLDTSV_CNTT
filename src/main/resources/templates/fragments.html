@@ -119,6 +119,7 @@
 
         <div class="nav-section">ĐÁNH GIÁ</div>
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/hoidong" class="nav-item" th:classappend="${active == 'hoidong'} ? ' active' : ''"><span class="nav-icon">▱</span>Hội đồng</a>
+        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/phanbien" class="nav-item" th:classappend="${active == 'phanbien'} ? ' active' : ''"><span class="nav-icon">⚖</span>Phản biện</a>
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/diem" class="nav-item" th:classappend="${active == 'diem'} ? ' active' : ''"><span class="nav-icon">★</span>Chấm điểm</a>
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'SINHVIEN'}" href="/ketqua" class="nav-item" th:classappend="${active == 'ketqua'} ? ' active' : ''"><span class="nav-icon">◎</span>Kết quả</a>
         <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN' or vaitro == 'SINHVIEN'}">TRA CỨU & TIỆN ÍCH</div>

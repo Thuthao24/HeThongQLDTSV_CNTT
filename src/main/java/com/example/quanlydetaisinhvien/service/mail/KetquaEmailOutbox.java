@@ -19,15 +19,21 @@ public class KetquaEmailOutbox {
     private final ThanhviennhomRepository members;
     private final SinhvienRepository students;
     private final TaikhoanRepository accounts;
+    private final DetaiRepository detais;
+    private final NhomsinhvienRepository groups;
     private final KetquaSchema schema;
     private final ApplicationEventPublisher events;
+    private final EmailLinks links;
 
     public KetquaEmailOutbox(EmailketquaRepository emails, DangkydetaiRepository registrations,
             ThanhviennhomRepository members, SinhvienRepository students,
-            TaikhoanRepository accounts, KetquaSchema schema, ApplicationEventPublisher events) {
+            TaikhoanRepository accounts, DetaiRepository detais, NhomsinhvienRepository groups,
+            KetquaSchema schema, ApplicationEventPublisher events, EmailLinks links) {
         this.emails = emails; this.registrations = registrations; this.members = members;
-        this.students = students; this.accounts = accounts; this.schema = schema;
+        this.students = students; this.accounts = accounts; this.detais = detais; this.groups = groups;
+        this.schema = schema;
         this.events = events;
+        this.links = links;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -37,22 +43,43 @@ public class KetquaEmailOutbox {
         var registration = registrations.findById(result.getDangkydetaiid()).orElseThrow();
         var groupMembers = members.findByNhomid(registration.getNhomid());
         if (groupMembers.isEmpty()) throw new NghiepvuException("Nhóm chưa có thành viên để nhận kết quả.");
+
+        Detai detai = detais.findById(registration.getDetaiid()).orElse(null);
+        Nhomsinhvien nhom = groups.findById(registration.getNhomid()).orElse(null);
+        String tenDetai = detai != null ? detai.getTendetai() : ("Đề tài #" + result.getDangkydetaiid());
+        String tenNhom = nhom != null ? nhom.getTennhom() : ("Nhóm #" + registration.getNhomid());
+
         for (var member : groupMembers) {
+            if (emails.existsByKetquaidAndSinhvienid(result.getId(), member.getSinhvienid())) {
+                continue;
+            }
             var account = accountOf(member.getSinhvienid());
             String address = MailAddress.validOrNull(account.getEmail());
             var email = new Emailketqua();
             email.setKetquaid(result.getId()); email.setSinhvienid(member.getSinhvienid());
-            email.setEmail(address); email.setTieude("Kết quả đề tài sinh viên HCMUTE");
-            email.setNoidung("Xin chào " + account.getHoten() + ",\nKết quả đăng ký đề tài "
-                    + result.getDangkydetaiid() + " đã được công bố.\nĐiểm cuối: "
-                    + result.getDiemcuoi().toPlainString() + "\nNgày công bố: " + result.getNgaycongbo()
-                    + "\nVui lòng đăng nhập hệ thống để tra cứu kết quả của nhóm mình.");
+            email.setEmail(address); email.setTieude(subject(tenDetai));
+            email.setNoidung("Xin chào " + account.getHoten() + ",\n\n"
+                    + "Kết quả đánh giá đề tài của nhóm bạn đã được công bố chính thức.\n"
+                    + "• Đề tài: " + tenDetai + "\n"
+                    + "• Nhóm thực hiện: " + tenNhom + "\n"
+                    + "• Điểm cuối: " + (result.getDiemcuoi() != null ? result.getDiemcuoi().toPlainString() : "---") + "\n"
+                    + "• Ngày công bố: " + (result.getNgaycongbo() != null ? result.getNgaycongbo().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")) : "—") + "\n\n"
+                    + "Vui lòng đăng nhập hệ thống để tra cứu kết quả chi tiết: " + links.results());
             email.setNgaytao(result.getNgaycongbo());
             email.setTrangthai(address == null ? TrangthaiEmailketqua.MISSING_EMAIL : TrangthaiEmailketqua.PENDING);
             if (address == null) email.setLoi("Sinh viên chưa có địa chỉ email hợp lệ.");
             emails.save(email);
         }
         emails.flush();
+    }
+
+    // Match the existing VARCHAR(200) column without changing historical snapshots/schema.
+    static String subject(String topic) {
+        String value = ("Kết quả đề tài sinh viên HCMUTE - " + topic).replaceAll("[\\r\\n]+", " ");
+        if (value.length() <= 200) return value;
+        int end = 199;
+        if (Character.isHighSurrogate(value.charAt(end - 1))) end--;
+        return value.substring(0, end) + "…";
     }
 
     @Transactional(readOnly = true)

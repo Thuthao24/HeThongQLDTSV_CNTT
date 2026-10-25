@@ -56,10 +56,10 @@ public class KetquaEmailWorker {
             status = TrangthaiEmailketqua.SENT;
         } catch (ResultMailSender.DefinitelyNotSentException ex) {
             status = TrangthaiEmailketqua.FAILED;
-            reason = "Chưa gửi thư: kiểm tra cấu hình hoặc kết nối SMTP trước khi thử lại.";
+            reason = "Chưa gửi thư: kiểm tra cấu hình hoặc kết nối Mailjet trước khi thử lại.";
         } catch (RuntimeException ex) {
             status = TrangthaiEmailketqua.UNCERTAIN;
-            reason = "Không xác định SMTP đã nhận thư hay chưa; cần đối soát, không tự gửi lại.";
+            reason = "Không xác định Mailjet đã nhận thư hay chưa; cần đối soát, không tự gửi lại.";
         }
         queue.complete(claim, status, reason);
     }
