@@ -31,5 +31,18 @@ public class DetaiController {
         model.addAttribute("canProposeTopic", gd1.canPropose(authentication.getName()));
         model.addAttribute("editableIds", gd1.editableTopicIds(authentication.getName(), items));
         return "detai-list";
+        
+model.addAttribute("roundNames",
+    lookup.roundNames(items.stream()
+        .map(Detai::getDotdangkyid).toList()));
+
+model.addAttribute("departmentNames",
+    lookup.departmentNames(items.stream()
+        .map(Detai::getBomonid).toList()));
+
+model.addAttribute("lecturerNames",
+    lookup.lecturerNames(items.stream()
+        .map(Detai::getGiangviendexuatid).toList()));
+
     }
 }
