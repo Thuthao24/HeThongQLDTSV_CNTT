@@ -180,6 +180,117 @@ class DangkydetaiControllerTests {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void testStudentLeaderCanRegisterAndCancelTopic() throws Exception {
+        // Tạo sinh viên nhóm trưởng và 2 thành viên khác (tổng 3 thành viên)
+        Bomon bm = em.createQuery("select b from Bomon b", Bomon.class).setMaxResults(1).getSingleResult();
+        Dotdangky dot = em.createQuery("select d from Dotdangky d", Dotdangky.class).setMaxResults(1).getSingleResult();
+
+        Taikhoan tkLeader = new Taikhoan();
+        tkLeader.setTendangnhap("sv_leader");
+        tkLeader.setMatkhau("123456");
+        tkLeader.setHoten("Sinh vien Leader");
+        tkLeader.setVaitro(Vaitro.SINHVIEN);
+        tkLeader.setKichhoat(true);
+        em.persist(tkLeader);
+
+        Sinhvien svLeader = new Sinhvien();
+        svLeader.setTaikhoanid(tkLeader.getId());
+        svLeader.setMasinhvien("sv_leader");
+        svLeader.setBomonid(bm.getId());
+        em.persist(svLeader);
+
+        Taikhoan tkMember2 = new Taikhoan();
+        tkMember2.setTendangnhap("sv_m2");
+        tkMember2.setMatkhau("123456");
+        tkMember2.setHoten("Sinh vien M2");
+        tkMember2.setVaitro(Vaitro.SINHVIEN);
+        tkMember2.setKichhoat(true);
+        em.persist(tkMember2);
+
+        Sinhvien svM2 = new Sinhvien();
+        svM2.setTaikhoanid(tkMember2.getId());
+        svM2.setMasinhvien("sv_m2");
+        svM2.setBomonid(bm.getId());
+        em.persist(svM2);
+
+        Taikhoan tkMember3 = new Taikhoan();
+        tkMember3.setTendangnhap("sv_m3");
+        tkMember3.setMatkhau("123456");
+        tkMember3.setHoten("Sinh vien M3");
+        tkMember3.setVaitro(Vaitro.SINHVIEN);
+        tkMember3.setKichhoat(true);
+        em.persist(tkMember3);
+
+        Sinhvien svM3 = new Sinhvien();
+        svM3.setTaikhoanid(tkMember3.getId());
+        svM3.setMasinhvien("sv_m3");
+        svM3.setBomonid(bm.getId());
+        em.persist(svM3);
+
+        Nhomsinhvien newNhom = new Nhomsinhvien();
+        newNhom.setTennhom("Nhom Test Dang Ky");
+        newNhom.setDotdangkyid(dot.getId());
+        newNhom.setNhomtruongid(svLeader.getId());
+        em.persist(newNhom);
+
+        Thanhviennhom tv1 = new Thanhviennhom();
+        tv1.setNhomid(newNhom.getId());
+        tv1.setSinhvienid(svLeader.getId());
+        em.persist(tv1);
+
+        Thanhviennhom tv2 = new Thanhviennhom();
+        tv2.setNhomid(newNhom.getId());
+        tv2.setSinhvienid(svM2.getId());
+        em.persist(tv2);
+
+        Thanhviennhom tv3 = new Thanhviennhom();
+        tv3.setNhomid(newNhom.getId());
+        tv3.setSinhvienid(svM3.getId());
+        em.persist(tv3);
+
+        Detai newDetai = new Detai();
+        newDetai.setTendetai("De tai moi cong bo");
+        newDetai.setDotdangkyid(dot.getId());
+        newDetai.setBomonid(bm.getId());
+        newDetai.setGiangviendexuatid(gv1.getId());
+        newDetai.setTrangthai(TrangthaiDetai.CONGBO);
+        em.persist(newDetai);
+
+        em.flush();
+
+        // 1. Nhóm trưởng đăng ký đề tài
+        mvc.perform(post("/dangkydetai/dangky")
+                        .with(user("sv_leader").roles("SINHVIEN"))
+                        .with(csrf())
+                        .param("nhomid", newNhom.getId().toString())
+                        .param("detaiid", newDetai.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dangkydetai"))
+                .andExpect(flash().attribute("successMessage", "Đăng ký đề tài thành công! Chờ xét duyệt."));
+
+        // Kiểm tra bản ghi đã được lưu
+        Dangkydetai savedDk = em.createQuery("select d from Dangkydetai d where d.nhomid = :nhomid", Dangkydetai.class)
+                .setParameter("nhomid", newNhom.getId())
+                .getSingleResult();
+        org.junit.jupiter.api.Assertions.assertNotNull(savedDk);
+        org.junit.jupiter.api.Assertions.assertEquals(TrangthaiDangkydetai.CHODUYET, savedDk.getTrangthai());
+
+        // 2. Nhóm trưởng hủy đăng ký đề tài
+        mvc.perform(post("/dangkydetai/" + savedDk.getId() + "/huy")
+                        .with(user("sv_leader").roles("SINHVIEN"))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dangkydetai"))
+                .andExpect(flash().attribute("successMessage", "Đã hủy đăng ký đề tài thành công!"));
+
+        // Kiểm tra bản ghi đã bị xóa
+        boolean exists = !em.createQuery("select d from Dangkydetai d where d.id = :id", Dangkydetai.class)
+                .setParameter("id", savedDk.getId())
+                .getResultList().isEmpty();
+        org.junit.jupiter.api.Assertions.assertFalse(exists);
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class TestViews {
         @Bean

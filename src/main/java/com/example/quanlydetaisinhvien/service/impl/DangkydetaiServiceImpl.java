@@ -332,16 +332,20 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElseThrow(() -> new NghiepvuException(
             "Không tìm thấy tài khoản"));
 
-        if (tk.getVaitro() != Vaitro.SINHVIEN) { throw new NghiepvuException("Chỉ sinh viên là nhóm trưởng mới được đăng ký");
+        if (tk.getVaitro() != Vaitro.SINHVIEN && tk.getVaitro() != Vaitro.TRUONGKHOA) {
+            throw new NghiepvuException("Chỉ sinh viên là nhóm trưởng hoặc Trưởng khoa mới được đăng ký");
         }
 
-        Sinhvien sv = sinhvienRepository.findByTaikhoanid(tk.getId()) .orElseThrow(() -> new NghiepvuException( "Không tìm thấy thông tin sinh viên"));
+        if (tk.getVaitro() == Vaitro.SINHVIEN) {
+            Sinhvien sv = sinhvienRepository.findByTaikhoanid(tk.getId()).orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin sinh viên"));
 
-        if (!sv.getId().equals(nhom.getNhomtruongid())) {  throw new NghiepvuException(  "Chỉ nhóm trưởng mới được đăng ký đề tài");
-        }
+            if (!sv.getId().equals(nhom.getNhomtruongid())) {
+                throw new NghiepvuException("Chỉ nhóm trưởng mới được đăng ký đề tài");
+            }
 
-        if (!thanhviennhomRepository.existsByNhomidAndSinhvienid( nhom.getId(), sv.getId())) { throw new NghiepvuException(
-        "Nhóm trưởng phải thuộc danh sách thành viên nhóm");
+            if (!thanhviennhomRepository.existsByNhomidAndSinhvienid(nhom.getId(), sv.getId())) {
+                throw new NghiepvuException("Nhóm trưởng phải thuộc danh sách thành viên nhóm");
+            }
         }
 
 
