@@ -110,6 +110,7 @@
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/detai" class="nav-item" th:classappend="${active == 'detai'} ? ' active' : ''"><span class="nav-icon">▤</span>Đề tài</a>
         <a th:if="${vaitro == 'SINHVIEN'}" href="/nhom" class="nav-item" th:classappend="${active == 'nhom'} ? ' active' : ''"><span class="nav-icon">●</span>Nhóm sinh viên</a>
         <a th:if="${vaitro == 'SINHVIEN'}" href="/dangkydetai" class="nav-item" th:classappend="${active == 'dangkydetai'} ? ' active' : ''"><span class="nav-icon">✓</span>Đăng ký đề tài</a>
+        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/dangkydetai" class="nav-item" th:classappend="${active == 'dangkydetai'} ? ' active' : ''"><span class="nav-icon">✓</span>Duyệt đăng ký đề tài</a>
         <a th:if="${vaitro == 'SINHVIEN'}" href="/nopbaocao" class="nav-item" th:classappend="${active == 'nopbaocao'} ? ' active' : ''"><span class="nav-icon">⇧</span>Nộp báo cáo</a>
 
         <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}">DANH MỤC</div>

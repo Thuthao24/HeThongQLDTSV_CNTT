@@ -163,10 +163,13 @@
         <span>Nhóm của bạn (<strong><span th:text="${nhomCuaToi.tennhom}">Nhóm</span></strong>) chưa đăng ký đề tài. Chức năng gửi đăng ký đề tài dành cho nhóm trưởng (<strong th:text="${nhomCuaToi.tenNhomtruong}">Nhóm trưởng</strong>).</span>
       </div>
 
-      <!-- Danh sách đề tài đã đăng ký: Chỉ dành cho Trưởng khoa quản lý duyệt/từ chối -->
-      <section class="panel-card" th:if="${vaitro == 'TRUONGKHOA'}">
+      <!-- Danh sách đề tài đã đăng ký: Dành cho Giảng viên, Trưởng bộ môn và Trưởng khoa duyệt/từ chối -->
+      <section class="panel-card" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}">
         <div class="panel-heading" style="padding-bottom: 8px;">
-          <h3>TẤT CẢ CÁC ĐĂNG KÝ ĐỀ TÀI</h3>
+          <h3 th:text="${vaitro == 'GIANGVIEN' ? 'DANH SÁCH NHÓM ĐĂNG KÝ ĐỀ TÀI CỦA BẠN' : (vaitro == 'TRUONGBOMON' ? 'DANH SÁCH ĐĂNG KÝ ĐỀ TÀI BỘ MÔN' : 'TẤT CẢ CÁC ĐĂNG KÝ ĐỀ TÀI')}">TẤT CẢ CÁC ĐĂNG KÝ ĐỀ TÀI</h3>
+          <p th:if="${vaitro == 'GIANGVIEN'}">Xét duyệt các nhóm sinh viên đăng ký đề tài do bạn hướng dẫn</p>
+          <p th:if="${vaitro == 'TRUONGBOMON'}">Xét duyệt các nhóm sinh viên đăng ký đề tài thuộc bộ môn</p>
+          <p th:if="${vaitro == 'TRUONGKHOA'}">Theo dõi và xét duyệt đề tài của toàn bộ sinh viên trong khoa</p>
         </div>
         <div class="table-toolbar">
           <div class="search-box">
@@ -209,8 +212,8 @@
                         th:text="${item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).DADUYET ? 'ĐÃ DUYỆT' : (item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).TUCHOI ? 'TỪ CHỐI' : 'CHỜ DUYỆT')}">CHODUYET</span>
                 </td>
                 <td>
-                  <div th:if="${vaitro == 'TRUONGKHOA' and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" style="display: flex; gap: 4px;">
-                    <!-- Duyệt / Từ chối: chỉ quản trị và đăng ký đang chờ -->
+                  <div th:if="${(vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN') and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" style="display: flex; gap: 4px;">
+                    <!-- Duyệt / Từ chối -->
                     <form th:action="@{'/dangkydetai/' + ${item.id} + '/duyet'}" method="post"
                           data-confirm="Xác nhận duyệt đề tài cho nhóm này?"
                           data-modal-title="Thông báo"
@@ -226,7 +229,7 @@
                       <button type="submit" class="btn btn-danger btn-sm">Từ chối</button>
                     </form>
                   </div>
-                  <span th:unless="${vaitro == 'TRUONGKHOA' and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" class="badge">Không có thao tác</span>
+                  <span th:unless="${(vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN') and item.trangthai == T(com.example.quanlydetaisinhvien.entity.TrangthaiDangkydetai).CHODUYET}" class="badge">Không có thao tác</span>
                 </td>
               </tr>
               <tr th:if="${#lists.isEmpty(items)}">
@@ -247,16 +250,17 @@
 </div>
 
 <!-- Modal xác nhận chung -->
-<div class="ute-modal-backdrop" id="confirmModal" aria-hidden="true">
-  <div class="ute-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-    <div class="ute-modal-header">
-      <h4 class="ute-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
-      <button type="button" class="ute-modal-close" data-modal-cancel aria-label="Đóng">×</button>
+<div class="portal-modal" id="confirmModal" aria-hidden="true" style="display: none;">
+  <div class="portal-modal-backdrop" data-modal-cancel></div>
+  <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="portal-modal-header">
+      <h4 class="portal-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
+      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">×</button>
     </div>
-    <div class="ute-modal-body">
+    <div class="portal-modal-body">
       <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
     </div>
-    <div class="ute-modal-footer">
+    <div class="portal-modal-footer">
       <button type="button" class="btn btn-secondary" data-modal-cancel>Hủy</button>
       <button type="button" class="btn btn-primary" id="confirmModalAccept">Xác nhận</button>
     </div>

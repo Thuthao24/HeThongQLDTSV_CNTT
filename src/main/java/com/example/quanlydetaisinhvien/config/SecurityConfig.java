@@ -31,9 +31,10 @@ public class SecurityConfig {
                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")
                 .requestMatchers("/detai/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
-                // Duyệt đăng ký là thao tác quản trị; kiểm tra trước rule bao quát.
-                .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasRole("TRUONGKHOA")
-                .requestMatchers("/nhom/**", "/dangkydetai/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
+                // Duyệt đăng ký đề tài sinh viên: Giảng viên hướng dẫn, Trưởng bộ môn, Trưởng khoa
+                .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
+                .requestMatchers("/dangkydetai", "/dangkydetai/**").hasAnyRole("SINHVIEN", "TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
+                .requestMatchers("/nhom/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON")
                 .requestMatchers("/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers(HttpMethod.POST, "/hoidong/**").hasRole("TRUONGKHOA")

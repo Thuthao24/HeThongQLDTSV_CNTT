@@ -2160,6 +2160,10 @@ button.btn-primary {
 }
 
 /* Chi an o input file goc, van giu chon tep bang label */
+.nopbaocao-page #uploadFormContainer.is-collapsed {
+    display: none !important;
+}
+
 .nopbaocao-page .upload-dropzone {
     position: relative;
     box-sizing: border-box;
@@ -2174,6 +2178,12 @@ button.btn-primary {
     background: #f8fbff;
     border: 2px dashed #9db6d7;
     border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.nopbaocao-page .upload-dropzone.dragover {
+    border-color: #173e6b;
+    background: #eaf2fc;
 }
 
 .nopbaocao-page .upload-input-hidden {
@@ -2580,4 +2590,42 @@ button.btn-primary {
     .score-form-actions .btn {
         width: 100%;
     }
+}
+
+/* Fallback / compatibility for ute-modal */
+.ute-modal-backdrop {
+    display: none !important;
+}
+
+/* ===== Alert Boxes ===== */
+.alert-box {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.alert-box.alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    color: #dc2626;
+    font-weight: 500;
+}
+.alert-box.alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #22c55e;
+    color: #15803d;
+    font-weight: 500;
+}
+.alert-box.alert-info {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid #0284c7;
+    color: #0369a1;
+    font-weight: 500;
 }

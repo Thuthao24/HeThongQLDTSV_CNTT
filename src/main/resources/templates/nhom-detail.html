@@ -178,16 +178,17 @@
 </div>
 
 <!-- Hộp thoại xác nhận (Modal Thông báo) -->
-<div class="ute-modal-backdrop" id="confirmModal" aria-hidden="true">
-  <div class="ute-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-    <div class="ute-modal-header">
-      <h4 class="ute-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
-      <button type="button" class="ute-modal-close" data-modal-cancel aria-label="Đóng">×</button>
+<div class="portal-modal" id="confirmModal" aria-hidden="true" style="display: none;">
+  <div class="portal-modal-backdrop" data-modal-cancel></div>
+  <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="portal-modal-header">
+      <h4 class="portal-modal-title modal-title" id="confirmModalTitle">Thông báo</h4>
+      <button type="button" class="portal-modal-close" data-modal-cancel aria-label="Đóng">×</button>
     </div>
-    <div class="ute-modal-body">
+    <div class="portal-modal-body">
       <p id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
     </div>
-    <div class="ute-modal-footer">
+    <div class="portal-modal-footer">
       <button type="button" class="btn btn-secondary" data-modal-cancel>Hủy</button>
       <button type="button" class="btn btn-primary" id="confirmModalAccept">Xác nhận</button>
     </div>

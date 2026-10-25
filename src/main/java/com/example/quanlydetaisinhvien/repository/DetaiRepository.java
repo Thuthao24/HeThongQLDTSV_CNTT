@@ -16,6 +16,8 @@ public interface DetaiRepository extends JpaRepository<Detai, Long> {
     List<Detai> findByDotdangkyid(Long dotdangkyid);
     List<Detai> findByTrangthai(TrangthaiDetai trangthai);
     List<Detai> findByDotdangkyidAndTrangthai(Long dotdangkyid, TrangthaiDetai trangthai);
+    List<Detai> findByGiangviendexuatid(Long giangviendexuatid);
+    List<Detai> findByBomonid(Long bomonid);
 
     boolean existsByDotdangkyid(Long dotdangkyid);
     boolean existsByDotdangkyidAndTrangthai(Long dotdangkyid, TrangthaiDetai trangthai);
