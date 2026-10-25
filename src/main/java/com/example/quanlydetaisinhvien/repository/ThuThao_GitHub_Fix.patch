@@ -1,0 +1,1365 @@
+diff --git a/compose.yaml b/compose.yaml
+index 7d53035..9707b22 100644
+--- a/compose.yaml
++++ b/compose.yaml
+@@ -1,7 +1,10 @@
++# LOCAL DEVELOPMENT ONLY - khong chay Docker Compose nay voi database Render / production.
++# Script trong docker-entrypoint-initdb.d chi tu dong chay tren volume MySQL MOI.
+ services:
+   db:
+     image: mysql:8.4
+     environment:
++      MYSQL_DATABASE: Quanlydetaisinhvien
+       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in your shell or .env}
+     volumes:
+       - mysql_data:/var/lib/mysql
+@@ -10,6 +13,7 @@ services:
+       - ./database/migrations/pending/V003__emailthongbao.sql:/docker-entrypoint-initdb.d/03-v003.sql:ro    
+       - ./database/migrations/pending/V004__thongbao_doituong.sql:/docker-entrypoint-initdb.d/04-v004.sql:ro
+       - ./database/migrations/pending/V005__thongbao_dadoc.sql:/docker-entrypoint-initdb.d/05-v005.sql:ro
++    healthcheck:
+       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+       interval: 10s
+       timeout: 5s
+diff --git a/database/Capnhatdangnhap_masinhvien.sql b/database/Capnhatdangnhap_masinhvien.sql
+index 47e2dd2..82155b1 100644
+--- a/database/Capnhatdangnhap_masinhvien.sql
++++ b/database/Capnhatdangnhap_masinhvien.sql
+@@ -1,3 +1,4 @@
++-- CANH BAO: script thay doi ten dang nhap va mat khau hang loat. KHONG CHAY TREN PRODUCTION.
+ -- =========================================================
+ -- CAP NHAT DANG NHAP SINH VIEN BANG MA SO SINH VIEN
+ -- KHONG XOA DATABASE / KHONG XOA DU LIEU
+@@ -6,19 +7,19 @@
+ USE Quanlydetaisinhvien;
+ 
+ -- Dong bo Tendangnhap cua tai khoan sinh vien = Masinhvien
+-UPDATE Taikhoan tk
+-JOIN Sinhvien sv ON sv.Taikhoanid = tk.Id
++UPDATE taikhoan tk
++JOIN sinhvien sv ON sv.Taikhoanid = tk.Id
+ SET tk.Tendangnhap = sv.Masinhvien
+ WHERE tk.Vaitro = 'SINHVIEN';
+ 
+ -- Cap nhat BCrypt hop le cho tai khoan demo trong database hien tai
+-UPDATE Taikhoan
++UPDATE taikhoan
+ SET Matkhau = '$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.'
+ WHERE Vaitro IN ('SINHVIEN','GIANGVIEN','TRUONGBOMON','TRUONGKHOA');
+ 
+ -- Kiem tra ket qua
+ SELECT sv.Masinhvien, tk.Tendangnhap, tk.Hoten, tk.Vaitro, tk.Kichhoat
+-FROM Sinhvien sv
+-JOIN Taikhoan tk ON tk.Id = sv.Taikhoanid
++FROM sinhvien sv
++JOIN taikhoan tk ON tk.Id = sv.Taikhoanid
+ ORDER BY sv.Masinhvien
+ LIMIT 20;
+diff --git a/database/Quanlydetaisinhvien.sql b/database/Quanlydetaisinhvien.sql
+index d12b959..7423c26 100644
+--- a/database/Quanlydetaisinhvien.sql
++++ b/database/Quanlydetaisinhvien.sql
+@@ -1,16 +1,16 @@
+ 
+-CREATE DATABASE Quanlydetaisinhvien
++CREATE DATABASE IF NOT EXISTS Quanlydetaisinhvien
+ CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ USE Quanlydetaisinhvien;
+ SET FOREIGN_KEY_CHECKS = 0;
+ 
+-CREATE TABLE Bomon (
++CREATE TABLE bomon (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Mabomon VARCHAR(20) NOT NULL UNIQUE,
+     Tenbomon VARCHAR(150) NOT NULL
+ );
+ 
+-CREATE TABLE Taikhoan (
++CREATE TABLE taikhoan (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Tendangnhap VARCHAR(50) NOT NULL UNIQUE,
+     Matkhau VARCHAR(100) NOT NULL,
+@@ -20,26 +20,26 @@ CREATE TABLE Taikhoan (
+     Kichhoat BOOLEAN DEFAULT TRUE
+ );
+ 
+-CREATE TABLE Giangvien (
++CREATE TABLE giangvien (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Taikhoanid BIGINT NOT NULL UNIQUE,
+     Magiangvien VARCHAR(20) NOT NULL UNIQUE,
+     Bomonid BIGINT NOT NULL,
+-    FOREIGN KEY (Taikhoanid) REFERENCES Taikhoan(Id),
+-    FOREIGN KEY (Bomonid) REFERENCES Bomon(Id)
++    FOREIGN KEY (Taikhoanid) REFERENCES taikhoan(Id),
++    FOREIGN KEY (Bomonid) REFERENCES bomon(Id)
+ );
+ 
+-CREATE TABLE Sinhvien (
++CREATE TABLE sinhvien (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Taikhoanid BIGINT NOT NULL UNIQUE,
+     Masinhvien VARCHAR(20) NOT NULL UNIQUE,
+     Bomonid BIGINT NOT NULL,
+     Lop VARCHAR(50),
+-    FOREIGN KEY (Taikhoanid) REFERENCES Taikhoan(Id),
+-    FOREIGN KEY (Bomonid) REFERENCES Bomon(Id)
++    FOREIGN KEY (Taikhoanid) REFERENCES taikhoan(Id),
++    FOREIGN KEY (Bomonid) REFERENCES bomon(Id)
+ );
+ 
+-CREATE TABLE Dotdangky (
++CREATE TABLE dotdangky (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Tendot VARCHAR(200) NOT NULL,
+     Loaidot ENUM('MONHOC','NCKH','TLCN','KLTN') NOT NULL,
+@@ -52,7 +52,7 @@ CREATE TABLE Dotdangky (
+     Trangthai ENUM('NHAP','GIAIDOAN1','CONGBO','GIAIDOAN2','DONG') DEFAULT 'NHAP'
+ );
+ 
+-CREATE TABLE Detai (
++CREATE TABLE detai (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dotdangkyid BIGINT NOT NULL,
+     Bomonid BIGINT NOT NULL,
+@@ -60,117 +60,117 @@ CREATE TABLE Detai (
+     Mota TEXT,
+     Giangviendexuatid BIGINT NOT NULL,
+     Trangthai ENUM('CHODUYET','DADUYET','CONGBO','TUCHOI') DEFAULT 'CHODUYET',
+-    FOREIGN KEY (Dotdangkyid) REFERENCES Dotdangky(Id),
+-    FOREIGN KEY (Bomonid) REFERENCES Bomon(Id),
+-    FOREIGN KEY (Giangviendexuatid) REFERENCES Giangvien(Id)
++    FOREIGN KEY (Dotdangkyid) REFERENCES dotdangky(Id),
++    FOREIGN KEY (Bomonid) REFERENCES bomon(Id),
++    FOREIGN KEY (Giangviendexuatid) REFERENCES giangvien(Id)
+ );
+ 
+-CREATE TABLE Giangvienhuongdan (
++CREATE TABLE giangvienhuongdan (
+     Detaiid BIGINT NOT NULL,
+     Giangvienid BIGINT NOT NULL,
+     PRIMARY KEY (Detaiid, Giangvienid),
+-    FOREIGN KEY (Detaiid) REFERENCES Detai(Id),
+-    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id)
++    FOREIGN KEY (Detaiid) REFERENCES detai(Id),
++    FOREIGN KEY (Giangvienid) REFERENCES giangvien(Id)
+ );
+ 
+-CREATE TABLE Nhomsinhvien (
++CREATE TABLE nhomsinhvien (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dotdangkyid BIGINT NOT NULL,
+     Tennhom VARCHAR(100) NOT NULL,
+     Nhomtruongid BIGINT NOT NULL,
+-    FOREIGN KEY (Dotdangkyid) REFERENCES Dotdangky(Id),
+-    FOREIGN KEY (Nhomtruongid) REFERENCES Sinhvien(Id)
++    FOREIGN KEY (Dotdangkyid) REFERENCES dotdangky(Id),
++    FOREIGN KEY (Nhomtruongid) REFERENCES sinhvien(Id)
+ );
+ 
+-CREATE TABLE Thanhviennhom (
++CREATE TABLE thanhviennhom (
+     Nhomid BIGINT NOT NULL,
+     Sinhvienid BIGINT NOT NULL,
+     PRIMARY KEY (Nhomid, Sinhvienid),
+-    FOREIGN KEY (Nhomid) REFERENCES Nhomsinhvien(Id),
+-    FOREIGN KEY (Sinhvienid) REFERENCES Sinhvien(Id)
++    FOREIGN KEY (Nhomid) REFERENCES nhomsinhvien(Id),
++    FOREIGN KEY (Sinhvienid) REFERENCES sinhvien(Id)
+ );
+ 
+-CREATE TABLE Dangkydetai (
++CREATE TABLE dangkydetai (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Nhomid BIGINT NOT NULL UNIQUE,
+     Detaiid BIGINT NOT NULL,
+     Trangthai ENUM('CHODUYET','DADUYET','TUCHOI') DEFAULT 'CHODUYET',
+     Ngaydangky DATETIME DEFAULT CURRENT_TIMESTAMP,
+-    FOREIGN KEY (Nhomid) REFERENCES Nhomsinhvien(Id),
+-    FOREIGN KEY (Detaiid) REFERENCES Detai(Id)
++    FOREIGN KEY (Nhomid) REFERENCES nhomsinhvien(Id),
++    FOREIGN KEY (Detaiid) REFERENCES detai(Id)
+ );
+ 
+-CREATE TABLE Nopbaocao (
++CREATE TABLE nopbaocao (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dangkydetaiid BIGINT NOT NULL,
+     Sinhvienid BIGINT NOT NULL,
+     Duongdanfile VARCHAR(500) NOT NULL,
+     Ngaynop DATETIME DEFAULT CURRENT_TIMESTAMP,
+-    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id),
+-    FOREIGN KEY (Sinhvienid) REFERENCES Sinhvien(Id)
++    FOREIGN KEY (Dangkydetaiid) REFERENCES dangkydetai(Id),
++    FOREIGN KEY (Sinhvienid) REFERENCES sinhvien(Id)
+ );
+ 
+-CREATE TABLE Hoidong (
++CREATE TABLE hoidong (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dotdangkyid BIGINT NOT NULL,
+     Tenhoidong VARCHAR(150) NOT NULL,
+     Ngaybaocao DATETIME,
+     Phong VARCHAR(50),
+-    FOREIGN KEY (Dotdangkyid) REFERENCES Dotdangky(Id)
++    FOREIGN KEY (Dotdangkyid) REFERENCES dotdangky(Id)
+ );
+ 
+-CREATE TABLE Thanhvienhoidong (
++CREATE TABLE thanhvienhoidong (
+     Hoidongid BIGINT NOT NULL,
+     Giangvienid BIGINT NOT NULL,
+     Vaitro ENUM('CHUTICH','THUKY','THANHVIEN') NOT NULL,
+     PRIMARY KEY (Hoidongid, Giangvienid),
+-    FOREIGN KEY (Hoidongid) REFERENCES Hoidong(Id),
+-    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id)
++    FOREIGN KEY (Hoidongid) REFERENCES hoidong(Id),
++    FOREIGN KEY (Giangvienid) REFERENCES giangvien(Id)
+ );
+ 
+-CREATE TABLE Giangvienphanbien (
++CREATE TABLE giangvienphanbien (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dangkydetaiid BIGINT NOT NULL,
+     Giangvienid BIGINT NOT NULL,
+-    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id),
+-    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id)
++    FOREIGN KEY (Dangkydetaiid) REFERENCES dangkydetai(Id),
++    FOREIGN KEY (Giangvienid) REFERENCES giangvien(Id)
+ );
+ 
+-CREATE TABLE Diem (
++CREATE TABLE diem (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dangkydetaiid BIGINT NOT NULL,
+     Giangvienid BIGINT NOT NULL,
+     Diemso DECIMAL(4,2) NOT NULL,
+     Nhanxet VARCHAR(500),
+-    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id),
+-    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id)
++    FOREIGN KEY (Dangkydetaiid) REFERENCES dangkydetai(Id),
++    FOREIGN KEY (Giangvienid) REFERENCES giangvien(Id)
+ );
+ 
+-CREATE TABLE Ketqua (
++CREATE TABLE ketqua (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Dangkydetaiid BIGINT NOT NULL UNIQUE,
+     Diemcuoi DECIMAL(4,2),
+     Dacongbo BOOLEAN DEFAULT FALSE,
+     Ngaycongbo DATETIME NULL,
+-    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id)
++    FOREIGN KEY (Dangkydetaiid) REFERENCES dangkydetai(Id)
+ );
+ 
+-CREATE TABLE Thongbao (
++CREATE TABLE thongbao (
+     Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     Tieude VARCHAR(255) NOT NULL,
+     Noidung TEXT NOT NULL,
+     Nguoidangid BIGINT NOT NULL,
+     Ngaydang DATETIME DEFAULT CURRENT_TIMESTAMP,
+-    FOREIGN KEY (Nguoidangid) REFERENCES Taikhoan(Id)
++    FOREIGN KEY (Nguoidangid) REFERENCES taikhoan(Id)
+ );
+ 
+-INSERT INTO Bomon(Id,Mabomon,Tenbomon) VALUES
++INSERT INTO bomon(Id,Mabomon,Tenbomon) VALUES
+ (1,'CNPM','Cong nghe phan mem'),
+ (2,'HTTT','He thong thong tin'),
+ (3,'AI','Tri tue nhan tao'),
+ (4,'MMT','Mang may tinh');
+ 
+-INSERT INTO Taikhoan(Id,Tendangnhap,Matkhau,Hoten,Email,Vaitro,Kichhoat) VALUES
++INSERT INTO taikhoan(Id,Tendangnhap,Matkhau,Hoten,Email,Vaitro,Kichhoat) VALUES
+ (1,'dean','$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.','Nguyen Minh Khoa','dean@cntt.edu.vn','TRUONGKHOA',TRUE),
+ (2,'gv001','$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.','Tran Hoang Nam','gv001@cntt.edu.vn','TRUONGBOMON',TRUE),
+ (3,'gv002','$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.','Le Quang Huy','gv002@cntt.edu.vn','TRUONGBOMON',TRUE),
+@@ -244,7 +244,7 @@ INSERT INTO Taikhoan(Id,Tendangnhap,Matkhau,Hoten,Email,Vaitro,Kichhoat) VALUES
+ (159,'23110059','$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.','Pham Minh Thu','23110059@student.edu.vn','SINHVIEN',TRUE),
+ (160,'23110060','$2y$10$3623ddbuke2GzQI7dDicneHEsJ8yMW1mi9LlRNBAQwDsALm5AK3z.','Vo Gia Bao','23110060@student.edu.vn','SINHVIEN',TRUE);
+ 
+-INSERT INTO Giangvien(Id,Taikhoanid,Magiangvien,Bomonid) VALUES
++INSERT INTO giangvien(Id,Taikhoanid,Magiangvien,Bomonid) VALUES
+ (1,1,'GV000',1),
+ (2,2,'GV001',1),
+ (3,3,'GV002',2),
+@@ -258,7 +258,7 @@ INSERT INTO Giangvien(Id,Taikhoanid,Magiangvien,Bomonid) VALUES
+ (11,11,'GV010',2),
+ (12,12,'GV011',3);
+ 
+-INSERT INTO Sinhvien(Id,Taikhoanid,Masinhvien,Bomonid,Lop) VALUES
++INSERT INTO sinhvien(Id,Taikhoanid,Masinhvien,Bomonid,Lop) VALUES
+ (1,101,'23110001',1,'K23-1'),
+ (2,102,'23110002',2,'K23-2'),
+ (3,103,'23110003',3,'K23-3'),
+@@ -320,7 +320,7 @@ INSERT INTO Sinhvien(Id,Taikhoanid,Masinhvien,Bomonid,Lop) VALUES
+ (59,159,'23110059',3,'K23-3'),
+ (60,160,'23110060',4,'K23-4');
+ 
+-INSERT INTO Dotdangky(Id,Tendot,Loaidot,Batdaugiangvien,Ketthucgiangvien,Batdausinhvien,Ketthucsinhvien,Hanchamphanbien,Ngaybaocaohoidong,Trangthai) VALUES
++INSERT INTO dotdangky(Id,Tendot,Loaidot,Batdaugiangvien,Ketthucgiangvien,Batdausinhvien,Ketthucsinhvien,Hanchamphanbien,Ngaybaocaohoidong,Trangthai) VALUES
+ (1,'Dot mon Lap trinh Web HK1 2026-2027','MONHOC','2026-08-01 08:00:00','2026-08-10 17:00:00','2026-08-11 08:00:00','2026-08-20 17:00:00',NULL,NULL,'DONG'),
+ (2,'Dot NCKH sinh vien 2026-2027','NCKH','2026-08-15 08:00:00','2026-08-25 17:00:00','2026-08-26 08:00:00','2026-09-05 17:00:00',NULL,NULL,'DONG'),
+ (3,'Dot TLCN HK1 2026-2027','TLCN','2026-07-01 08:00:00','2026-07-10 17:00:00','2026-07-11 08:00:00','2026-07-20 17:00:00','2026-11-20 17:00:00',NULL,'DONG'),
+@@ -328,7 +328,7 @@ INSERT INTO Dotdangky(Id,Tendot,Loaidot,Batdaugiangvien,Ketthucgiangvien,Batdaus
+ (5,'Dot mon Cong nghe phan mem HK2 2026-2027','MONHOC','2027-01-05 08:00:00','2027-01-15 17:00:00','2027-01-16 08:00:00','2027-01-25 17:00:00',NULL,NULL,'NHAP'),
+ (6,'Dot NCKH sinh vien 2027','NCKH','2027-02-01 08:00:00','2027-02-15 17:00:00','2027-02-16 08:00:00','2027-03-01 17:00:00',NULL,NULL,'NHAP');
+ 
+-INSERT INTO Detai(Id,Dotdangkyid,Bomonid,Tendetai,Mota,Giangviendexuatid,Trangthai) VALUES
++INSERT INTO detai(Id,Dotdangkyid,Bomonid,Tendetai,Mota,Giangviendexuatid,Trangthai) VALUES
+ (1,1,1,'He thong quan ly de tai sinh vien','Mo ta chi tiet cho He thong quan ly de tai sinh vien',2,'CONGBO'),
+ (2,2,2,'He thong dat phong hoc truc tuyen','Mo ta chi tiet cho He thong dat phong hoc truc tuyen',3,'CONGBO'),
+ (3,3,3,'Cong thong tin sinh vien','Mo ta chi tiet cho Cong thong tin sinh vien',4,'CONGBO'),
+@@ -354,7 +354,7 @@ INSERT INTO Detai(Id,Dotdangkyid,Bomonid,Tendetai,Mota,Giangviendexuatid,Trangth
+ (23,3,3,'He thong quan ly su kien sinh vien','Mo ta chi tiet cho He thong quan ly su kien sinh vien',2,'CONGBO'),
+ (24,4,4,'He thong thong bao hoc vu','Mo ta chi tiet cho He thong thong bao hoc vu',3,'CONGBO');
+ 
+-INSERT INTO Giangvienhuongdan(Detaiid,Giangvienid) VALUES
++INSERT INTO giangvienhuongdan(Detaiid,Giangvienid) VALUES
+ (1,2),
+ (2,3),
+ (3,4),
+@@ -388,7 +388,7 @@ INSERT INTO Giangvienhuongdan(Detaiid,Giangvienid) VALUES
+ (24,3),
+ (24,4);
+ 
+-INSERT INTO Nhomsinhvien(Id,Dotdangkyid,Tennhom,Nhomtruongid) VALUES
++INSERT INTO nhomsinhvien(Id,Dotdangkyid,Tennhom,Nhomtruongid) VALUES
+ (1,1,'Nhom 01',1),
+ (2,2,'Nhom 02',4),
+ (3,3,'Nhom 03',7),
+@@ -410,7 +410,7 @@ INSERT INTO Nhomsinhvien(Id,Dotdangkyid,Tennhom,Nhomtruongid) VALUES
+ (19,3,'Nhom 19',55),
+ (20,4,'Nhom 20',58);
+ 
+-INSERT INTO Thanhviennhom(Nhomid,Sinhvienid) VALUES
++INSERT INTO thanhviennhom(Nhomid,Sinhvienid) VALUES
+ (1,1),
+ (1,2),
+ (1,3),
+@@ -472,7 +472,7 @@ INSERT INTO Thanhviennhom(Nhomid,Sinhvienid) VALUES
+ (20,59),
+ (20,60);
+ 
+-INSERT INTO Dangkydetai(Id,Nhomid,Detaiid,Trangthai,Ngaydangky) VALUES
++INSERT INTO dangkydetai(Id,Nhomid,Detaiid,Trangthai,Ngaydangky) VALUES
+ (1,1,1,'DADUYET','2026-09-03 09:00:00'),
+ (2,2,2,'DADUYET','2026-09-04 09:00:00'),
+ (3,3,3,'DADUYET','2026-09-05 09:00:00'),
+@@ -494,7 +494,7 @@ INSERT INTO Dangkydetai(Id,Nhomid,Detaiid,Trangthai,Ngaydangky) VALUES
+ (19,19,19,'DADUYET','2026-09-03 09:00:00'),
+ (20,20,20,'DADUYET','2026-09-04 09:00:00');
+ 
+-INSERT INTO Hoidong(Id,Dotdangkyid,Tenhoidong,Ngaybaocao,Phong) VALUES
++INSERT INTO hoidong(Id,Dotdangkyid,Tenhoidong,Ngaybaocao,Phong) VALUES
+ (1,1,'Hoi dong 01','2026-12-11 08:00:00','A201'),
+ (2,2,'Hoi dong 02','2026-12-12 08:00:00','A202'),
+ (3,3,'Hoi dong 03','2026-12-13 08:00:00','A203'),
+@@ -504,7 +504,7 @@ INSERT INTO Hoidong(Id,Dotdangkyid,Tenhoidong,Ngaybaocao,Phong) VALUES
+ (7,3,'Hoi dong 07','2026-12-17 08:00:00','A207'),
+ (8,4,'Hoi dong 08','2026-12-18 08:00:00','A208');
+ 
+-INSERT INTO Thanhvienhoidong(Hoidongid,Giangvienid,Vaitro) VALUES
++INSERT INTO thanhvienhoidong(Hoidongid,Giangvienid,Vaitro) VALUES
+ (1,1,'CHUTICH'),
+ (1,2,'THUKY'),
+ (1,3,'THANHVIEN'),
+@@ -530,7 +530,7 @@ INSERT INTO Thanhvienhoidong(Hoidongid,Giangvienid,Vaitro) VALUES
+ (8,11,'THUKY'),
+ (8,12,'THANHVIEN');
+ 
+-INSERT INTO Giangvienphanbien(Id,Dangkydetaiid,Giangvienid) VALUES
++INSERT INTO giangvienphanbien(Id,Dangkydetaiid,Giangvienid) VALUES
+ (1,1,5),
+ (2,2,6),
+ (3,3,7),
+@@ -552,7 +552,7 @@ INSERT INTO Giangvienphanbien(Id,Dangkydetaiid,Giangvienid) VALUES
+ (19,19,11),
+ (20,20,12);
+ 
+-INSERT INTO Diem(Id,Dangkydetaiid,Giangvienid,Diemso,Nhanxet) VALUES
++INSERT INTO diem(Id,Dangkydetaiid,Giangvienid,Diemso,Nhanxet) VALUES
+ (1,1,6,7.7,'Nhan xet mau cho du lieu demo'),
+ (2,1,7,8.0,'Nhan xet mau cho du lieu demo'),
+ (3,1,8,8.3,'Nhan xet mau cho du lieu demo'),
+@@ -614,7 +614,7 @@ INSERT INTO Diem(Id,Dangkydetaiid,Giangvienid,Diemso,Nhanxet) VALUES
+ (59,20,2,8.8,'Nhan xet mau cho du lieu demo'),
+ (60,20,3,9.1,'Nhan xet mau cho du lieu demo');
+ 
+-INSERT INTO Ketqua(Id,Dangkydetaiid,Diemcuoi,Dacongbo,Ngaycongbo) VALUES
++INSERT INTO ketqua(Id,Dangkydetaiid,Diemcuoi,Dacongbo,Ngaycongbo) VALUES
+ (1,1,8.0,TRUE,'2026-12-25 08:00:00'),
+ (2,2,8.7,TRUE,'2026-12-25 08:00:00'),
+ (3,3,8.57,TRUE,'2026-12-25 08:00:00'),
+@@ -636,7 +636,7 @@ INSERT INTO Ketqua(Id,Dangkydetaiid,Diemcuoi,Dacongbo,Ngaycongbo) VALUES
+ (19,19,8.1,TRUE,'2026-12-25 08:00:00'),
+ (20,20,8.8,TRUE,'2026-12-25 08:00:00');
+ 
+-INSERT INTO Thongbao(Id,Tieude,Noidung,Nguoidangid) VALUES
++INSERT INTO thongbao(Id,Tieude,Noidung,Nguoidangid) VALUES
+ (1,'Mo dot dang ky de tai','Giang vien dang ky de tai dung thoi gian.',1),
+ (2,'Cong bo danh sach de tai','Danh sach de tai da duoc cong bo.',1),
+ (3,'Mo dang ky cho sinh vien','Cac nhom sinh vien dang ky de tai da cong bo.',1),
+@@ -651,13 +651,13 @@ INSERT INTO Thongbao(Id,Tieude,Noidung,Nguoidangid) VALUES
+ SET FOREIGN_KEY_CHECKS = 1;
+ 
+ -- TEST NHANH
+-SELECT COUNT(*) AS Sobomon FROM Bomon;
+-SELECT COUNT(*) AS Sotaikhoan FROM Taikhoan;
+-SELECT COUNT(*) AS Sogiangvien FROM Giangvien;
+-SELECT COUNT(*) AS Sosinhvien FROM Sinhvien;
+-SELECT COUNT(*) AS Sodotdangky FROM Dotdangky;
+-SELECT COUNT(*) AS Sodetai FROM Detai;
+-SELECT COUNT(*) AS Sonhom FROM Nhomsinhvien;
+-SELECT COUNT(*) AS Sodangky FROM Dangkydetai;
+-SELECT COUNT(*) AS Sodiem FROM Diem;
+-SELECT COUNT(*) AS Soketqua FROM Ketqua;
++SELECT COUNT(*) AS Sobomon FROM bomon;
++SELECT COUNT(*) AS Sotaikhoan FROM taikhoan;
++SELECT COUNT(*) AS Sogiangvien FROM giangvien;
++SELECT COUNT(*) AS Sosinhvien FROM sinhvien;
++SELECT COUNT(*) AS Sodotdangky FROM dotdangky;
++SELECT COUNT(*) AS Sodetai FROM detai;
++SELECT COUNT(*) AS Sonhom FROM nhomsinhvien;
++SELECT COUNT(*) AS Sodangky FROM dangkydetai;
++SELECT COUNT(*) AS Sodiem FROM diem;
++SELECT COUNT(*) AS Soketqua FROM ketqua;
+diff --git a/database/migrations/pending/V004__thongbao_doituong.sql b/database/migrations/pending/V004__thongbao_doituong.sql
+index f8175dd..d87e613 100644
+--- a/database/migrations/pending/V004__thongbao_doituong.sql
++++ b/database/migrations/pending/V004__thongbao_doituong.sql
+@@ -4,7 +4,7 @@
+ -- An existing notice with ZERO rows here remains visible to all three recipient roles.
+ CREATE TABLE thongbaodoituong (
+     Thongbaoid BIGINT NOT NULL,
+-    Vaitro VARCHAR(20) NOT NULL,
++    Vaitro VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+     CONSTRAINT Uk_thongbaodoituong_role PRIMARY KEY (Thongbaoid,Vaitro),
+     KEY Ix_thongbaodoituong_role (Vaitro,Thongbaoid),
+     CONSTRAINT Fk_thongbaodoituong_notice FOREIGN KEY (Thongbaoid) REFERENCES thongbao(Id) ON DELETE CASCADE,
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/config/SecurityConfig.java b/src/main/java/com/example/quanlydetaisinhvien/config/SecurityConfig.java
+index ac599cc..ab110c3 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/config/SecurityConfig.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/config/SecurityConfig.java
+@@ -26,6 +26,7 @@ public class SecurityConfig {
+             .userDetailsService(userDetailsService)
+             .authorizeHttpRequests(auth -> auth
+                 .requestMatchers("/css/**", "/js/**", "/images/**", "/login", "/403").permitAll()
++                .requestMatchers(HttpMethod.GET, "/taikhoan/canhan").authenticated()
+                 .requestMatchers("/taikhoan/**", "/bomon/**", "/quanly/danhmuc/**").hasAnyRole("TRUONGKHOA")
+                 .requestMatchers("/giai-doan-1/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
+                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/DetaiController.java b/src/main/java/com/example/quanlydetaisinhvien/controller/DetaiController.java
+index aa7c99b..6ac3d60 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/DetaiController.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/DetaiController.java
+@@ -1,12 +1,21 @@
+ package com.example.quanlydetaisinhvien.controller;
+ 
++import com.example.quanlydetaisinhvien.entity.Detai;
++import com.example.quanlydetaisinhvien.entity.Giangvienhuongdan;
+ import com.example.quanlydetaisinhvien.service.DetaiService;
++import com.example.quanlydetaisinhvien.service.DisplayLookupService;
+ import com.example.quanlydetaisinhvien.service.GiaiDoan1Service;
++import org.springframework.http.HttpStatus;
+ import org.springframework.security.core.Authentication;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.ui.Model;
+ import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.server.ResponseStatusException;
++
++import java.util.List;
+ 
+ @Controller
+ @RequestMapping("/detai")
+@@ -14,22 +23,52 @@ public class DetaiController {
+ 
+     private final DetaiService service;
+     private final GiaiDoan1Service gd1;
++    private final DisplayLookupService lookup;
+ 
+-    public DetaiController(DetaiService service, GiaiDoan1Service gd1) {
++    public DetaiController(DetaiService service, GiaiDoan1Service gd1,
++                           DisplayLookupService lookup) {
+         this.service = service;
+-        this.gd1=gd1;
++        this.gd1 = gd1;
++        this.lookup = lookup;
+     }
+ 
+     @GetMapping
+-    public String list(Model model, Authentication authentication, @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") int page, @org.springframework.web.bind.annotation.RequestParam(defaultValue="") String q) {
++    public String list(Model model, Authentication authentication,
++                       @RequestParam(defaultValue = "0") int page,
++                       @RequestParam(defaultValue = "") String q) {
+         model.addAttribute("title", "Đề tài");
+-        var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(Math.max(0, page), 25, org.springframework.data.domain.Sort.by("id").descending()));
+-        var items = result.getContent();
++        var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(
++                Math.max(0, page), 25,
++                org.springframework.data.domain.Sort.by("id").descending()));
++        List<Detai> items = result.getContent();
+         model.addAttribute("pageData", result);
+         model.addAttribute("q", q);
+         model.addAttribute("items", items);
++        model.addAttribute("roundNames", lookup.roundNames(items.stream().map(Detai::getDotdangkyid).toList()));
++        model.addAttribute("departmentNames", lookup.departmentNames(items.stream().map(Detai::getBomonid).toList()));
++        model.addAttribute("lecturerNames", lookup.lecturerNames(items.stream().map(Detai::getGiangviendexuatid).toList()));
+         model.addAttribute("canProposeTopic", gd1.canPropose(authentication.getName()));
+         model.addAttribute("editableIds", gd1.editableTopicIds(authentication.getName(), items));
+         return "detai-list";
+     }
++
++    @GetMapping("/{id}")
++    public String detail(@PathVariable Long id, Model model, Authentication authentication) {
++        Detai item = service.findById(id)
++                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đề tài"));
++        var mentors = gd1.dsGvhd(id);
++        model.addAttribute("title", "Chi tiết đề tài");
++        model.addAttribute("item", item);
++        model.addAttribute("roundName", lookup.roundNames(List.of(item.getDotdangkyid())).getOrDefault(item.getDotdangkyid(), "Chưa xác định"));
++        model.addAttribute("departmentName", lookup.departmentNames(List.of(item.getBomonid())).getOrDefault(item.getBomonid(), "Chưa xác định"));
++        var lecturerIds = new java.util.ArrayList<Long>();
++        lecturerIds.add(item.getGiangviendexuatid());
++        lecturerIds.addAll(mentors.stream().map(Giangvienhuongdan::getGiangvienid).toList());
++        var names = lookup.lecturerNames(lecturerIds);
++        model.addAttribute("lecturerName", names.getOrDefault(item.getGiangviendexuatid(), "Chưa xác định"));
++        model.addAttribute("mentors", mentors);
++        model.addAttribute("mentorNames", names);
++        model.addAttribute("canEdit", gd1.canEditTopic(authentication.getName(), item));
++        return "detai-detail";
++    }
+ }
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/GiangvienController.java b/src/main/java/com/example/quanlydetaisinhvien/controller/GiangvienController.java
+index 19c9976..290042a 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/GiangvienController.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/GiangvienController.java
+@@ -23,6 +23,8 @@ public class GiangvienController {
+         model.addAttribute("title", "Giảng viên");
+         var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(Math.max(0, page), 25, org.springframework.data.domain.Sort.by("id").descending()));
+         model.addAttribute("items", result.getContent());
++        model.addAttribute("accountProfiles", lookup.accountProfiles(
++                result.getContent().stream().map(x -> x.getTaikhoanid()).toList()));
+         model.addAttribute("accountNames", lookup.accountNames(
+                 result.getContent().stream().map(g -> g.getTaikhoanid()).toList()));
+         model.addAttribute("departmentNames", lookup.departmentNames(
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/GlobalModelAttributes.java b/src/main/java/com/example/quanlydetaisinhvien/controller/GlobalModelAttributes.java
+index 45291a7..1955369 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/GlobalModelAttributes.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/GlobalModelAttributes.java
+@@ -34,7 +34,7 @@ public class GlobalModelAttributes
+             LoggerFactory.getLogger(GlobalModelAttributes.class);
+ 
+     private static final Set<String> HEADER_VIEWS = Set.of(
+-            "index", "taikhoan-list", "bomon-list",
++            "index", "taikhoan-list", "taikhoan-canhan", "detai-detail", "hoidong-form", "bomon-list",
+             "detai-list", "dotdangky-list",
+             "giai-doan-1/dot-form",
+             "giai-doan-1/detai-form",
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/HoidongController.java b/src/main/java/com/example/quanlydetaisinhvien/controller/HoidongController.java
+index ca7410c..8318bc3 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/HoidongController.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/HoidongController.java
+@@ -56,31 +56,6 @@ public class HoidongController {
+         this.taikhoanRepository = taikhoanRepository;
+     }
+ 
+-    @PostMapping("/tao")
+-    @PreAuthorize("hasRole('TRUONGKHOA')")
+-    public String create(@ModelAttribute Hoidong council, RedirectAttributes flash) {
+-        try {
+-            service.save(council);
+-            flash.addFlashAttribute("successMessage", "Đã tạo hội đồng.");
+-        } catch (NghiepvuException ex) {
+-            flash.addFlashAttribute("errorMessage", ex.getMessage());
+-        }
+-        return "redirect:/hoidong";
+-    }
+-
+-    @PostMapping("/thanhvien/xoa")
+-    @PreAuthorize("hasRole('TRUONGKHOA')")
+-    public String removeMember(@RequestParam Long hoidongid,
+-                               @RequestParam Long giangvienid, RedirectAttributes flash) {
+-        try {
+-            members.remove(hoidongid, giangvienid);
+-            flash.addFlashAttribute("successMessage", "Đã xóa thành viên.");
+-        } catch (NghiepvuException ex) {
+-            flash.addFlashAttribute("errorMessage", ex.getMessage());
+-        }
+-        return "redirect:/hoidong";
+-    }
+-
+     @GetMapping("/them")
+     @PreAuthorize("hasRole('TRUONGKHOA')")
+     public String themForm(Model model) {
+@@ -96,7 +71,7 @@ public class HoidongController {
+         tk.setVaitro(VaitroHoidong.THUKY);
+         thanhviens.add(tk);
+ 
+-        for (int i = 0; i < 3; i++) {
++        for (int i = 0; i < 1; i++) {
+             ThanhvienHoidongItemDto tv = new ThanhvienHoidongItemDto();
+             tv.setVaitro(VaitroHoidong.THANHVIEN);
+             thanhviens.add(tv);
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/SinhvienController.java b/src/main/java/com/example/quanlydetaisinhvien/controller/SinhvienController.java
+index d9244fe..2ebcf85 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/SinhvienController.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/SinhvienController.java
+@@ -23,6 +23,8 @@ public class SinhvienController {
+         model.addAttribute("title", "Sinh viên");
+         var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(Math.max(0, page), 25, org.springframework.data.domain.Sort.by("id").descending()));
+         model.addAttribute("items", result.getContent());
++        model.addAttribute("accountProfiles", lookup.accountProfiles(
++                result.getContent().stream().map(x -> x.getTaikhoanid()).toList()));
+         model.addAttribute("accountNames", lookup.accountNames(
+                 result.getContent().stream().map(s -> s.getTaikhoanid()).toList()));
+         model.addAttribute("departmentNames", lookup.departmentNames(
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/controller/TaikhoanController.java b/src/main/java/com/example/quanlydetaisinhvien/controller/TaikhoanController.java
+index ac181f4..0ad2e13 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/controller/TaikhoanController.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/controller/TaikhoanController.java
+@@ -1,26 +1,76 @@
+ package com.example.quanlydetaisinhvien.controller;
+ 
++import com.example.quanlydetaisinhvien.entity.Giangvien;
++import com.example.quanlydetaisinhvien.entity.Sinhvien;
++import com.example.quanlydetaisinhvien.entity.Taikhoan;
++import com.example.quanlydetaisinhvien.repository.GiangvienRepository;
++import com.example.quanlydetaisinhvien.repository.SinhvienRepository;
++import com.example.quanlydetaisinhvien.service.DisplayLookupService;
+ import com.example.quanlydetaisinhvien.service.TaikhoanService;
++import org.springframework.security.access.prepost.PreAuthorize;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.ui.Model;
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++
++import java.util.Map;
++import java.util.function.Function;
++import java.util.stream.Collectors;
+ 
+ @Controller
+ @RequestMapping("/taikhoan")
+ public class TaikhoanController {
+-
+     private final TaikhoanService service;
++    private final GiangvienRepository teachers;
++    private final SinhvienRepository students;
++    private final DisplayLookupService lookup;
+ 
+-    public TaikhoanController(TaikhoanService service) {
++    public TaikhoanController(TaikhoanService service, GiangvienRepository teachers,
++                              SinhvienRepository students, DisplayLookupService lookup) {
+         this.service = service;
++        this.teachers = teachers;
++        this.students = students;
++        this.lookup = lookup;
++    }
++
++    @GetMapping("/canhan")
++    public String myProfile(Model model, org.springframework.security.core.Authentication authentication) {
++        Taikhoan account = service.layTheoTenDangNhap(authentication.getName())
++                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
++                        org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy tài khoản đăng nhập"));
++        model.addAttribute("title", "Hồ sơ cá nhân");
++        model.addAttribute("profile", account);
++        var teacher = teachers.findByTaikhoanid(account.getId());
++        var student = students.findByTaikhoanid(account.getId());
++        model.addAttribute("teacher", teacher.orElse(null));
++        model.addAttribute("student", student.orElse(null));
++        var deptId = teacher.map(Giangvien::getBomonid).orElseGet(() -> student.map(Sinhvien::getBomonid).orElse(null));
++        model.addAttribute("departmentName", deptId == null ? "—" :
++                lookup.departmentNames(java.util.List.of(deptId)).getOrDefault(deptId, "Chưa xác định"));
++        return "taikhoan-canhan";
+     }
+ 
+     @GetMapping
+-    public String list(Model model, @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") int page, @org.springframework.web.bind.annotation.RequestParam(defaultValue="") String q) {
++    @PreAuthorize("hasRole('TRUONGKHOA')")
++    public String list(Model model,
++                       @RequestParam(defaultValue = "0") int page,
++                       @RequestParam(defaultValue = "") String q) {
+         model.addAttribute("title", "Tài khoản");
+-        var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(Math.max(0, page), 25, org.springframework.data.domain.Sort.by("id").descending()));
+-        model.addAttribute("items", result.getContent());
++        var result = service.searchPage(q, org.springframework.data.domain.PageRequest.of(
++                Math.max(0, page), 25, org.springframework.data.domain.Sort.by("id").descending()));
++        var items = result.getContent();
++        var ids = items.stream().map(Taikhoan::getId).toList();
++        Map<Long, Giangvien> gvByAccount = teachers.findByTaikhoanidIn(ids).stream()
++                .collect(Collectors.toMap(Giangvien::getTaikhoanid, Function.identity()));
++        Map<Long, Sinhvien> svByAccount = students.findByTaikhoanidIn(ids).stream()
++                .collect(Collectors.toMap(Sinhvien::getTaikhoanid, Function.identity()));
++        model.addAttribute("teacherByAccount", gvByAccount);
++        model.addAttribute("studentByAccount", svByAccount);
++        model.addAttribute("departmentNames", lookup.departmentNames(
++                java.util.stream.Stream.concat(gvByAccount.values().stream().map(Giangvien::getBomonid),
++                        svByAccount.values().stream().map(Sinhvien::getBomonid)).toList()));
++        model.addAttribute("items", items);
+         model.addAttribute("pageData", result);
+         model.addAttribute("q", q);
+         return "taikhoan-list";
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Bomon.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Bomon.java
+index bac2966..3754419 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Bomon.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Bomon.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Bomon")
++@Table(name = "bomon")
+ public class Bomon {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Dangkydetai.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Dangkydetai.java
+index 550d63b..23ceb78 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Dangkydetai.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Dangkydetai.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Dangkydetai")
++@Table(name = "dangkydetai")
+ public class Dangkydetai {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Detai.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Detai.java
+index ab57fc7..ded5eb4 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Detai.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Detai.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Detai")
++@Table(name = "detai")
+ public class Detai {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Diem.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Diem.java
+index c5f3fc9..aa74458 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Diem.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Diem.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.math.BigDecimal;
+ 
+ @Entity
+-@Table(name = "Diem")
++@Table(name = "diem")
+ public class Diem {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Dotdangky.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Dotdangky.java
+index 853fe1e..78e08df 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Dotdangky.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Dotdangky.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Dotdangky")
++@Table(name = "dotdangky")
+ public class Dotdangky {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Emailketqua.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Emailketqua.java
+index 3467737..d4b774a 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Emailketqua.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Emailketqua.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Emailketqua", uniqueConstraints = @UniqueConstraint(
++@Table(name = "emailketqua", uniqueConstraints = @UniqueConstraint(
+         name = "Uk_emailketqua_recipient", columnNames = {"Ketquaid", "Sinhvienid"}),
+         indexes = {@Index(name = "Ix_emailketqua_pending", columnList = "Trangthai,Id"),
+                 @Index(name = "Ix_emailketqua_lease", columnList = "Trangthai,Lanthu")})
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvien.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvien.java
+index 55b34b6..deef216 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvien.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvien.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Giangvien")
++@Table(name = "giangvien")
+ public class Giangvien {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienhuongdan.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienhuongdan.java
+index 573e882..8ea8b3d 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienhuongdan.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienhuongdan.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Giangvienhuongdan")
++@Table(name = "giangvienhuongdan")
+ @IdClass(GiangvienhuongdanId.class)
+ public class Giangvienhuongdan {
+     @Id
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienphanbien.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienphanbien.java
+index 6f20770..6eadefc 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienphanbien.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Giangvienphanbien.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Giangvienphanbien")
++@Table(name = "giangvienphanbien")
+ public class Giangvienphanbien {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Hoidong.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Hoidong.java
+index 05f04a7..a9f232f 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Hoidong.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Hoidong.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Hoidong")
++@Table(name = "hoidong")
+ public class Hoidong {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Ketqua.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Ketqua.java
+index de948f6..e5ec787 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Ketqua.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Ketqua.java
+@@ -5,7 +5,7 @@ import java.math.BigDecimal;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Ketqua")
++@Table(name = "ketqua")
+ public class Ketqua {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Nhomsinhvien.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Nhomsinhvien.java
+index 1ae67f2..e9a5373 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Nhomsinhvien.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Nhomsinhvien.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Nhomsinhvien")
++@Table(name = "nhomsinhvien")
+ public class Nhomsinhvien {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Nopbaocao.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Nopbaocao.java
+index e57a4f4..fa0707a 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Nopbaocao.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Nopbaocao.java
+@@ -4,7 +4,7 @@ import jakarta.persistence.*;
+ import java.time.LocalDateTime;
+ 
+ @Entity
+-@Table(name = "Nopbaocao")
++@Table(name = "nopbaocao")
+ public class Nopbaocao {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Phanconghoidong.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Phanconghoidong.java
+index 42f5307..0ef2451 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Phanconghoidong.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Phanconghoidong.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Phanconghoidong", check = @CheckConstraint(name = "Chk_pchd_hinhthuc",
++@Table(name = "phanconghoidong", check = @CheckConstraint(name = "Chk_pchd_hinhthuc",
+         constraint = "(Hinhthuc = 'COHOIDONG' and Hoidongid is not null) or "
+         + "(Hinhthuc = 'KHONGHOIDONG' and Hoidongid is null)"))
+ public class Phanconghoidong {
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Sinhvien.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Sinhvien.java
+index ff7f4b1..c881314 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Sinhvien.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Sinhvien.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Sinhvien")
++@Table(name = "sinhvien")
+ public class Sinhvien {
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhvienhoidong.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhvienhoidong.java
+index 516b8ce..db65bb0 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhvienhoidong.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhvienhoidong.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Thanhvienhoidong")
++@Table(name = "thanhvienhoidong")
+ @IdClass(ThanhvienhoidongId.class)
+ public class Thanhvienhoidong {
+     @Id
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhviennhom.java b/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhviennhom.java
+index 45818a0..226be73 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhviennhom.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/Thanhviennhom.java
+@@ -3,7 +3,7 @@ package com.example.quanlydetaisinhvien.entity;
+ import jakarta.persistence.*;
+ 
+ @Entity
+-@Table(name = "Thanhviennhom")
++@Table(name = "thanhviennhom")
+ @IdClass(ThanhviennhomId.class)
+ public class Thanhviennhom {
+     @Id
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/entity/TrangthaiDetai.java b/src/main/java/com/example/quanlydetaisinhvien/entity/TrangthaiDetai.java
+index 55ed20a..0153f97 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/entity/TrangthaiDetai.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/entity/TrangthaiDetai.java
+@@ -1,5 +1,12 @@
+ package com.example.quanlydetaisinhvien.entity;
+ 
+ public enum TrangthaiDetai {
+-    CHODUYET, DADUYET, CONGBO, TUCHOI
++    CHODUYET("Chờ duyệt"),
++    DADUYET("Đã duyệt"),
++    CONGBO("Đã công bố"),
++    TUCHOI("Từ chối");
++
++    private final String hienthi;
++    TrangthaiDetai(String hienthi) { this.hienthi = hienthi; }
++    public String getHienthi() { return hienthi; }
+ }
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/repository/GiangvienRepository.java b/src/main/java/com/example/quanlydetaisinhvien/repository/GiangvienRepository.java
+index 62879bc..035e292 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/repository/GiangvienRepository.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/repository/GiangvienRepository.java
+@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
+ import java.util.Optional;
+ 
+ public interface GiangvienRepository extends JpaRepository<Giangvien, Long> {
++    java.util.List<Giangvien> findByTaikhoanidIn(java.util.Collection<Long> ids);
+     Optional<Giangvien> findByTaikhoanid(Long taikhoanid);
+     boolean existsByBomonid(Long bomonid);
+     boolean existsByMagiangvienIgnoreCase(String magiangvien);
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/repository/SinhvienRepository.java b/src/main/java/com/example/quanlydetaisinhvien/repository/SinhvienRepository.java
+index e243be7..52f616d 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/repository/SinhvienRepository.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/repository/SinhvienRepository.java
+@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
+ import java.util.Optional;
+ 
+ public interface SinhvienRepository extends JpaRepository<Sinhvien, Long> {
++    java.util.List<Sinhvien> findByTaikhoanidIn(java.util.Collection<Long> ids);
+     Optional<Sinhvien> findByMasinhvien(String masinhvien);
+     Optional<Sinhvien> findByTaikhoanid(Long taikhoanid);
+     boolean existsByMasinhvien(String masinhvien);
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/service/DisplayLookupService.java b/src/main/java/com/example/quanlydetaisinhvien/service/DisplayLookupService.java
+index 954ebb0..055029b 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/service/DisplayLookupService.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/service/DisplayLookupService.java
+@@ -36,6 +36,33 @@ public class DisplayLookupService {
+                 .toList();
+     }
+ 
++    /** View-only profile; intentionally excludes the password hash. */
++    public static final class AccountSummary {
++        private final String hoten;
++        private final String tendangnhap;
++        private final String email;
++        private final boolean kichhoat;
++
++        public AccountSummary(Taikhoan account) {
++            this.hoten = account.getHoten();
++            this.tendangnhap = account.getTendangnhap();
++            this.email = account.getEmail();
++            this.kichhoat = Boolean.TRUE.equals(account.getKichhoat());
++        }
++
++        public String getHoten() { return hoten; }
++        public String getTendangnhap() { return tendangnhap; }
++        public String getEmail() { return email; }
++        public boolean isKichhoat() { return kichhoat; }
++    }
++
++    public Map<Long, AccountSummary> accountProfiles(Collection<Long> input) {
++        var keys = ids(input);
++        if (keys.isEmpty()) return Map.of();
++        return accounts.findAllById(keys).stream()
++                .collect(Collectors.toMap(Taikhoan::getId, AccountSummary::new));
++    }
++
+     public Map<Long, String> accountNames(Collection<Long> input) {
+         var keys = ids(input);
+         if (keys.isEmpty()) return Map.of();
+diff --git a/src/main/java/com/example/quanlydetaisinhvien/service/impl/HoidongServiceImpl.java b/src/main/java/com/example/quanlydetaisinhvien/service/impl/HoidongServiceImpl.java
+index ecf799b..d2dee1d 100644
+--- a/src/main/java/com/example/quanlydetaisinhvien/service/impl/HoidongServiceImpl.java
++++ b/src/main/java/com/example/quanlydetaisinhvien/service/impl/HoidongServiceImpl.java
+@@ -30,6 +30,7 @@ public class HoidongServiceImpl implements HoidongService {
+     private final ThanhvienhoidongRepository thanhvienhoidongRepository;
+     private final PhanconghoidongRepository assignments;
+     private final KetquaRepository results;
++    private final DiemRepository scores;
+ 
+     public HoidongServiceImpl(
+             HoidongRepository repository,
+@@ -38,7 +39,8 @@ public class HoidongServiceImpl implements HoidongService {
+             GiangvienRepository lecturers,
+             ThanhvienhoidongRepository thanhvienhoidongRepository,
+             PhanconghoidongRepository assignments,
+-            KetquaRepository results) {
++            KetquaRepository results,
++            DiemRepository scores) {
+         this.repository = repository;
+         this.rounds = rounds;
+         this.accounts = accounts;
+@@ -46,6 +48,7 @@ public class HoidongServiceImpl implements HoidongService {
+         this.thanhvienhoidongRepository = thanhvienhoidongRepository;
+         this.assignments = assignments;
+         this.results = results;
++        this.scores = scores;
+     }
+ 
+     private boolean isChiefForCouncil() {
+@@ -165,23 +168,32 @@ public class HoidongServiceImpl implements HoidongService {
+         if (form.getTenhoidong() == null || form.getTenhoidong().trim().isEmpty()) {
+             throw new NghiepvuException("Tên hội đồng không được để trống");
+         }
+-        if (form.getDotdangkyid() == null) {
+-            throw new NghiepvuException("Vui lòng chọn đợt đăng ký");
++        if (form.getDotdangkyid() == null || !rounds.existsById(form.getDotdangkyid())) {
++            throw new NghiepvuException("Đợt đăng ký không tồn tại");
++        }
++        if (form.getThanhviens() == null || form.getThanhviens().size() < 3
++                || form.getThanhviens().size() > 5) {
++            throw new NghiepvuException("Hội đồng phải có từ 3 đến 5 giảng viên");
+         }
+ 
+         List<Thanhvienhoidong> listTv = new ArrayList<>();
+         if (form.getThanhviens() != null) {
+             for (ThanhvienHoidongItemDto item : form.getThanhviens()) {
+-                if (item.getGiangvienid() != null) {
+-                    Thanhvienhoidong tv = new Thanhvienhoidong();
+-                    tv.setGiangvienid(item.getGiangvienid());
+-                    tv.setVaitro(item.getVaitro());
+-                    listTv.add(tv);
++                if (item == null || item.getGiangvienid() == null || item.getVaitro() == null) {
++                    throw new NghiepvuException("Vui lòng chọn đủ giảng viên và vai trò cho từng dòng");
+                 }
++                Thanhvienhoidong tv = new Thanhvienhoidong();
++                tv.setGiangvienid(item.getGiangvienid());
++                tv.setVaitro(item.getVaitro());
++                listTv.add(tv);
+             }
+         }
+ 
+         kiemtraHoidongHopLe(listTv);
++        for (Thanhvienhoidong tv : listTv) {
++            if (!lecturers.existsById(tv.getGiangvienid()))
++                throw new NghiepvuException("Giảng viên không tồn tại: " + tv.getGiangvienid());
++        }
+ 
+         Hoidong hd;
+         if (form.getId() != null) {
+@@ -190,23 +202,45 @@ public class HoidongServiceImpl implements HoidongService {
+ 
+             for (var assignment : assignments.findByHoidongid(form.getId())) {
+                 if (results.existsByDangkydetaiidAndDacongboTrue(assignment.getDangkydetaiid()))
+-                    throw new NghiepvuException("Hội đồng đã dùng cho kết quả công bố, không thể thay đổi thành viên.");
++                    throw new NghiepvuException("Hội đồng đã dùng cho kết quả công bố, không thể thay đổi.");
+             }
+-
+-            thanhvienhoidongRepository.deleteByHoidongid(hd.getId());
+         } else {
+             hd = new Hoidong();
+         }
+ 
++        // Không xóa/chèn lại thành viên nếu danh sách không đổi: tránh ghi đè điểm đã nhập.
++        boolean changeMembers = form.getId() == null;
++        if (form.getId() != null) {
++            var oldMembers = thanhvienhoidongRepository.findByHoidongid(form.getId());
++            changeMembers = oldMembers.size() != listTv.size() || oldMembers.stream()
++                    .anyMatch(old -> listTv.stream().noneMatch(current ->
++                            java.util.Objects.equals(old.getGiangvienid(), current.getGiangvienid())
++                                    && old.getVaitro() == current.getVaitro()));
++            if (changeMembers) {
++                for (var assignment : assignments.findByHoidongid(form.getId())) {
++                    for (var old : oldMembers) {
++                        if (scores.existsByDangkydetaiidAndGiangvienid(
++                                assignment.getDangkydetaiid(), old.getGiangvienid())) {
++                            throw new NghiepvuException("Hội đồng đã nhập điểm, không thể sửa thành viên.");
++                        }
++                    }
++                }
++                thanhvienhoidongRepository.deleteByHoidongid(hd.getId());
++                thanhvienhoidongRepository.flush();
++            }
++        }
++
+         hd.setTenhoidong(form.getTenhoidong().trim());
+         hd.setDotdangkyid(form.getDotdangkyid());
+         hd.setNgaybaocao(form.getNgaybaocao());
+         hd.setPhong(form.getPhong() != null ? form.getPhong().trim() : "");
+         Hoidong saved = repository.save(hd);
+ 
+-        for (Thanhvienhoidong tv : listTv) {
+-            tv.setHoidongid(saved.getId());
+-            thanhvienhoidongRepository.save(tv);
++        if (changeMembers) {
++            for (Thanhvienhoidong tv : listTv) {
++                tv.setHoidongid(saved.getId());
++                thanhvienhoidongRepository.save(tv);
++            }
+         }
+ 
+         return saved;
+@@ -280,8 +314,11 @@ public class HoidongServiceImpl implements HoidongService {
+             item.setVaitro(tv.getVaitro());
+             items.add(item);
+         }
+-        while (items.size() < 5) {
+-            items.add(new ThanhvienHoidongItemDto());
++        while (items.size() < 3) {
++            var missing = new ThanhvienHoidongItemDto();
++            missing.setVaitro(items.isEmpty() ? VaitroHoidong.CHUTICH
++                    : items.size() == 1 ? VaitroHoidong.THUKY : VaitroHoidong.THANHVIEN);
++            items.add(missing);
+         }
+         dto.setThanhviens(items);
+         return dto;
+diff --git a/src/main/resources/templates/detai-list.html b/src/main/resources/templates/detai-list.html
+index 5401244..8a64002 100644
+--- a/src/main/resources/templates/detai-list.html
++++ b/src/main/resources/templates/detai-list.html
+@@ -16,8 +16,8 @@
+   <form class="search-box" th:action="@{/detai}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+ </div>
+-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đề tài</th><th>Đợt ID</th><th>Bộ môn ID</th><th>GV đề xuất ID</th><th>Trạng thái</th><th>Thao tác GĐ1</th></tr></thead><tbody data-table-body>
+-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendetai}">---</td><td th:text="${item.dotdangkyid}">---</td><td th:text="${item.bomonid}">---</td><td th:text="${item.giangviendexuatid}">---</td><td><span class="badge" th:text="${item.trangthai}">---</span></td><td style="min-width:250px">
++<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đề tài</th><th>Đợt đăng ký</th><th>Bộ môn</th><th>Giảng viên đề xuất</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody data-table-body>
++<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td><a th:href="@{/detai/{id}(id=${item.id})}" th:text="${item.tendetai}">Tên đề tài</a></td><td th:text="${roundNames[item.dotdangkyid] ?: 'Chưa xác định'}">—</td><td th:text="${departmentNames[item.bomonid] ?: 'Chưa xác định'}">—</td><td th:text="${lecturerNames[item.giangviendexuatid] ?: 'Chưa xác định'}">—</td><td><span class="badge" th:classappend="${item.trangthai.name() == 'CONGBO' ? ' badge-success' : (item.trangthai.name() == 'TUCHOI' ? ' badge-muted' : '')}" th:text="${item.trangthai.hienthi}">—</span></td><td style="min-width:250px"><a class="btn btn-sm" th:href="@{/detai/{id}(id=${item.id})}">Xem chi tiết</a>
+ <a th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:href="@{/giai-doan-1/detai/{id}/sua(id=${item.id})}">Sửa</a>
+ <form th:if="${(vaitro == 'GIANGVIEN' or vaitro == 'TRUONGBOMON' or vaitro == 'TRUONGKHOA') and editableIds != null and editableIds.contains(item.id)}" th:action="@{/giai-doan-1/detai/{id}/xoa(id=${item.id})}" method="post" style="display:inline" onsubmit="return confirm('Xóa đề tài này?')"><button type="submit">Xóa</button></form>
+ <form th:if="${(vaitro == 'TRUONGKHOA') and item.trangthai.name() == 'CHODUYET'}" th:action="@{/giai-doan-1/detai/{id}/duyet(id=${item.id})}" method="post" style="display:inline"><input type="hidden" name="chapnhan" value="true"><button type="submit">Duyệt</button></form>
+diff --git a/src/main/resources/templates/fragments.html b/src/main/resources/templates/fragments.html
+index 82a61cf..55e04e5 100644
+--- a/src/main/resources/templates/fragments.html
++++ b/src/main/resources/templates/fragments.html
+@@ -136,6 +136,7 @@
+            class="nav-item"
+            th:classappend="${active == 'thongke'} ? ' active' : ''"><span class="nav-icon">📊</span>Thống kê & Báo cáo</a>
+         <div class="nav-section">TÀI KHOẢN</div>
++        <a href="/taikhoan/canhan" class="nav-item" th:classappend="${active == 'canhan'} ? ' active' : ''"><span class="nav-icon">◉</span>Hồ sơ của tôi</a>
+         <a th:if="${vaitro == 'TRUONGKHOA'}" href="/taikhoan" class="nav-item" th:classappend="${active == 'taikhoan'} ? ' active' : ''"><span class="nav-icon">⚙</span>Tài khoản</a>
+         <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
+             <button class="nav-item sidebar-logout" type="submit"><span class="nav-icon">↪</span>Đăng xuất</button>
+diff --git a/src/main/resources/templates/giangvien-list.html b/src/main/resources/templates/giangvien-list.html
+index b508511..7dc9fce 100644
+--- a/src/main/resources/templates/giangvien-list.html
++++ b/src/main/resources/templates/giangvien-list.html
+@@ -16,9 +16,9 @@
+   <form class="search-box" th:action="@{/giangvien}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+ </div>
+-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã GV</th><th>Họ tên</th><th>Bộ môn</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
+-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.magiangvien}">---</td><td th:text="${accountNames[item.taikhoanid] ?: '—'}">---</td><td th:text="${departmentNames[item.bomonid] ?: '—'}">---</td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:115px"><a th:href="@{/quanly/danhmuc/giangvien/{id}/sua(id=${item.id})}">Sửa</a> <form style="display:inline" th:action="@{/quanly/danhmuc/giangvien/{id}/xoa(id=${item.id})}" method="post" onsubmit="return confirm('Xác nhận xóa?')"><button type="submit">Xóa</button></form></td></tr>
+-<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 5 : 4}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
++<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã GV</th><th>Họ tên</th><th>Bộ môn</th><th>Tên đăng nhập</th><th>Email</th><th>Tình trạng</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
++<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.magiangvien}">---</td><td th:text="${accountNames[item.taikhoanid] ?: '—'}">---</td><td th:text="${departmentNames[item.bomonid] ?: '—'}">---</td><td th:text="${accountProfiles[item.taikhoanid]?.tendangnhap ?: '—'}">—</td><td th:text="${accountProfiles[item.taikhoanid]?.email ?: '—'}">—</td><td th:text="${accountProfiles[item.taikhoanid] != null ? (accountProfiles[item.taikhoanid].kichhoat ? 'Đang hoạt động' : 'Tạm khóa') : '—'}">—</td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:115px"><a th:href="@{/quanly/danhmuc/giangvien/{id}/sua(id=${item.id})}">Sửa</a> <form style="display:inline" th:action="@{/quanly/danhmuc/giangvien/{id}/xoa(id=${item.id})}" method="post" onsubmit="return confirm('Xác nhận xóa?')"><button type="submit">Xóa</button></form></td></tr>
++<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 8 : 7}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+ </tbody></table></div>
+ <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+  <a th:if="${pageData.hasPrevious()}" th:href="@{/giangvien(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+diff --git a/src/main/resources/templates/hoidong-form.html b/src/main/resources/templates/hoidong-form.html
+index f69d424..747802c 100644
+--- a/src/main/resources/templates/hoidong-form.html
++++ b/src/main/resources/templates/hoidong-form.html
+@@ -192,7 +192,7 @@
+             </div>
+ 
+             <div class="form-card">
+-                <form th:action="@{${form.id != null ? '/hoidong/sua/' + form.id : '/hoidong/them'}}" method="post" th:object="${form}">
++                <form th:action="${form.id != null} ? @{/hoidong/sua/{id}(id=${form.id})} : @{/hoidong/them}" method="post" th:object="${form}">
+                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                     <input type="hidden" th:field="*{id}" />
+ 
+@@ -282,7 +282,8 @@
+ 
+ <script th:inline="javascript">
+     /*<![CDATA[*/
+-    const giangVienOptions = /*[[${giangviens}]]*/ [];
++    // Không chèn tên giảng viên từ JSON vào innerHTML. Sao chép option từ DOM đã escape bởi Thymeleaf.
++    const memberSelectTemplate = document.querySelector('#membersTableBody tr .gv-select').cloneNode(true);
+ 
+     function updateRowIndices() {
+         const rows = document.querySelectorAll('#membersTableBody tr');
+@@ -312,30 +313,34 @@
+ 
+         const newIdx = rows.length;
+         const tr = document.createElement('tr');
+-
+-        let optionsHtml = '<option value="">-- Chọn giảng viên --</option>';
+-        giangVienOptions.forEach(gv => {
+-            optionsHtml += `<option value="${gv.id}">${gv.hienthi}</option>`;
+-        });
+-
+-        tr.innerHTML = `
+-            <td class="row-index">${newIdx + 1}</td>
+-            <td>
+-                <select name="thanhviens[${newIdx}].giangvienid" class="form-control gv-select" required>
+-                    ${optionsHtml}
+-                </select>
+-            </td>
+-            <td>
+-                <select name="thanhviens[${newIdx}].vaitro" class="form-control role-select" required>
+-                    <option value="THANHVIEN">Thành viên</option>
+-                    <option value="CHUTICH">Chủ tịch</option>
+-                    <option value="THUKY">Thư ký</option>
+-                </select>
+-            </td>
+-            <td style="text-align: center;">
+-                <button type="button" class="btn-remove-row" onclick="removeMemberRow(this)">✕</button>
+-            </td>
+-        `;
++        const numberTd = document.createElement('td');
++        numberTd.className = 'row-index';
++        numberTd.textContent = String(newIdx + 1);
++        const lecturerTd = document.createElement('td');
++        const lecturerSelect = memberSelectTemplate.cloneNode(true);
++        lecturerSelect.selectedIndex = 0;
++        lecturerTd.appendChild(lecturerSelect);
++        const roleTd = document.createElement('td');
++        const roleSelect = document.createElement('select');
++        roleSelect.className = 'form-control role-select';
++        roleSelect.required = true;
++        [['THANHVIEN', 'Thành viên'], ['CHUTICH', 'Chủ tịch'], ['THUKY', 'Thư ký']]
++            .forEach(([value, label]) => {
++                const option = document.createElement('option');
++                option.value = value;
++                option.textContent = label;
++                roleSelect.appendChild(option);
++            });
++        roleTd.appendChild(roleSelect);
++        const actionTd = document.createElement('td');
++        actionTd.style.textAlign = 'center';
++        const removeBtn = document.createElement('button');
++        removeBtn.type = 'button';
++        removeBtn.className = 'btn-remove-row';
++        removeBtn.textContent = '✕';
++        removeBtn.addEventListener('click', () => removeMemberRow(removeBtn));
++        actionTd.appendChild(removeBtn);
++        tr.append(numberTd, lecturerTd, roleTd, actionTd);
+         tbody.appendChild(tr);
+         updateRowIndices();
+     }
+diff --git a/src/main/resources/templates/hoidong-list.html b/src/main/resources/templates/hoidong-list.html
+index 8ae80d4..66166b6 100644
+--- a/src/main/resources/templates/hoidong-list.html
++++ b/src/main/resources/templates/hoidong-list.html
+@@ -11,27 +11,20 @@
+   <div><div class="breadcrumb">Cổng thông tin đào tạo / Hội đồng</div><h1>HỘI ĐỒNG</h1><p>Quản lý lịch, phòng và hội đồng đánh giá.</p></div>
+ 
+ </div>
+-<div th:if="${canManage}"><form method="post" th:action="@{/hoidong/tao}" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:12px 0"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><label>Đợt đăng ký <select name="dotdangkyid" required><option value="">Chọn đợt</option><option th:each="d : ${roundOptions}" th:value="${d.id}" th:text="${d.tendot}"></option></select></label> <label>Tên hội đồng <input name="tenhoidong" type="text" required ></label> <label>Phòng <input name="phong" type="text" ></label> <button type="submit" class="btn btn-primary">+ Lưu mới</button></form></div><div th:if="${errorMessage}" th:text="${errorMessage}" role="alert"></div><div th:if="${successMessage}" th:text="${successMessage}" role="status"></div>
+-<section class="panel-card" th:if="${canManage}"><h3>Thêm thành viên hội đồng (3–5 giảng viên, 1 Chủ tịch, 1 Thư ký)</h3>
+-<form method="post" th:action="@{/hoidong/thanhvien}">
+-<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+-<label>Hội đồng <select name="hoidongid" required><option value="">Chọn hội đồng</option><option th:each="h : ${items}" th:value="${h.id}" th:text="${h.tenhoidong}"></option></select></label>
+-<label>Giảng viên <select name="giangvienid" required><option value="">Chọn giảng viên</option><option th:each="g : ${teacherOptions}" th:value="${g.id}" th:text="${(teacherLabels[g.taikhoanid] ?: g.magiangvien) + ' (' + g.magiangvien + ')'}"></option></select></label>
+-<label>Vai trò <select name="vaitro"><option value="CHUTICH">Chủ tịch</option><option value="THUKY">Thư ký</option><option value="THANHVIEN">Thành viên</option></select></label>
+-<button type="submit" class="btn btn-primary">Thêm thành viên</button></form>
+-</section>
++<div style="margin:12px 0" th:if="${canManage}"><a class="btn btn-primary" th:href="@{/hoidong/them}">+ Tạo hội đồng và thêm thành viên</a></div>
++<div th:if="${errorMessage}" th:text="${errorMessage}" role="alert" style="color:#b42318;padding:10px"></div><div th:if="${successMessage}" th:text="${successMessage}" role="status" style="color:#16713a;padding:10px"></div>
+ <section class="panel-card"><h3>Danh sách thành viên theo hội đồng</h3><div class="council-roster">
+-<div class="council-roster-card" th:each="council : ${items}"><h4 th:text="${council.tenhoidong}"></h4>
++<div class="council-roster-card" th:each="council : ${items}"><h4 th:text="${council.tenhoidong}"></h4><p th:if="${#lists.isEmpty(roster[council.id])}">Chưa có thành viên – cần cập nhật hội đồng.</p>
+ <div class="council-member-row" th:each="member : ${roster[council.id]}"><span th:text="${(lecturerNames[member.giangvienid] ?: '—') + ' – ' + (member.vaitro == T(com.example.quanlydetaisinhvien.entity.VaitroHoidong).CHUTICH ? 'Chủ tịch' : (member.vaitro == T(com.example.quanlydetaisinhvien.entity.VaitroHoidong).THUKY ? 'Thư ký' : 'Thành viên'))}"></span>
+-<form th:if="${canManage}" method="post" th:action="@{/hoidong/thanhvien/xoa}" style="display:inline"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="hoidongid" th:value="${council.id}"/><input type="hidden" name="giangvienid" th:value="${member.giangvienid}"/><button type="submit">Xóa</button></form></div></div></div></section>
++</div></div></div></section>
+ <section class="panel-card">
+ <div class="table-toolbar">
+   <div class="search-box"><span>⌕</span><input type="search" data-table-search placeholder="Tìm kiếm trong danh sách..."></div>
+   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+ </div>
+-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên hội đồng</th><th>Đợt đăng ký</th><th>Ngày báo cáo</th><th>Phòng</th></tr></thead><tbody data-table-body>
+-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tenhoidong}">---</td><td th:text="${roundNames[item.dotdangkyid] ?: '—'}">---</td><td th:text="${item.ngaybaocao}">---</td><td th:text="${item.phong}">---</td></tr>
+-<tr th:if="${#lists.isEmpty(items)}"><td colspan="5"><div class="empty-state"><strong>Chưa có hội đồng</strong><span>Hiện chưa có hội đồng nào được thành lập.</span></div></td></tr>
++<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên hội đồng</th><th>Đợt đăng ký</th><th>Ngày báo cáo</th><th>Phòng</th><th>Số thành viên</th><th th:if="${canManage}">Thao tác</th></tr></thead><tbody data-table-body>
++<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tenhoidong}">---</td><td th:text="${roundNames[item.dotdangkyid] ?: '—'}">---</td><td th:text="${item.ngaybaocao != null ? #temporals.format(item.ngaybaocao, 'dd/MM/yyyy HH:mm') : 'Chưa cập nhật'}">—</td><td th:text="${item.phong ?: '—'}">—</td><td th:text="${roster[item.id] != null ? #lists.size(roster[item.id]) : 0}">0</td><td th:if="${canManage}"><a th:href="@{/hoidong/sua/{id}(id=${item.id})}" class="btn">Sửa / Thành viên</a><form method="post" style="display:inline" th:action="@{/hoidong/xoa/{id}(id=${item.id})}" onsubmit="return confirm('Bạn chắc chắn muốn xóa hội đồng?')"><button type="submit" class="btn">Xóa</button></form></td></tr>
++<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${canManage ? 7 : 6}"><div class="empty-state"><strong>Chưa có hội đồng</strong><span>Hiện chưa có hội đồng nào được thành lập.</span></div></td></tr>
+ </tbody></table></div>
+ <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+  <a th:if="${pageData.hasPrevious()}" th:href="@{/hoidong(page=${pageData.number - 1})}">← Trang trước</a>
+diff --git a/src/main/resources/templates/sinhvien-list.html b/src/main/resources/templates/sinhvien-list.html
+index 6f61d4b..095d176 100644
+--- a/src/main/resources/templates/sinhvien-list.html
++++ b/src/main/resources/templates/sinhvien-list.html
+@@ -16,9 +16,9 @@
+   <form class="search-box" th:action="@{/sinhvien}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+ </div>
+-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã SV</th><th>Lớp</th><th>Họ tên</th><th>Bộ môn</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
+-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.masinhvien}">---</td><td th:text="${item.lop}">---</td><td th:text="${accountNames[item.taikhoanid] ?: '—'}">---</td><td th:text="${departmentNames[item.bomonid] ?: '—'}">---</td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:115px"><a th:href="@{/quanly/danhmuc/sinhvien/{id}/sua(id=${item.id})}">Sửa</a> <form style="display:inline" th:action="@{/quanly/danhmuc/sinhvien/{id}/xoa(id=${item.id})}" method="post" onsubmit="return confirm('Xác nhận xóa?')"><button type="submit">Xóa</button></form></td></tr>
+-<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 6 : 5}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
++<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã SV</th><th>Lớp</th><th>Họ tên</th><th>Bộ môn</th><th>Tên đăng nhập</th><th>Email</th><th>Tình trạng</th><th th:if="${vaitro == 'TRUONGKHOA'}">Thao tác</th></tr></thead><tbody data-table-body>
++<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.masinhvien}">---</td><td th:text="${item.lop}">---</td><td th:text="${accountNames[item.taikhoanid] ?: '—'}">---</td><td th:text="${departmentNames[item.bomonid] ?: '—'}">---</td><td th:text="${accountProfiles[item.taikhoanid]?.tendangnhap ?: '—'}">—</td><td th:text="${accountProfiles[item.taikhoanid]?.email ?: '—'}">—</td><td th:text="${accountProfiles[item.taikhoanid] != null ? (accountProfiles[item.taikhoanid].kichhoat ? 'Đang hoạt động' : 'Tạm khóa') : '—'}">—</td><td th:if="${vaitro == 'TRUONGKHOA'}" style="min-width:115px"><a th:href="@{/quanly/danhmuc/sinhvien/{id}/sua(id=${item.id})}">Sửa</a> <form style="display:inline" th:action="@{/quanly/danhmuc/sinhvien/{id}/xoa(id=${item.id})}" method="post" onsubmit="return confirm('Xác nhận xóa?')"><button type="submit">Xóa</button></form></td></tr>
++<tr th:if="${#lists.isEmpty(items)}"><td th:colspan="${vaitro == 'TRUONGKHOA' ? 9 : 8}"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+ </tbody></table></div>
+ <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+  <a th:if="${pageData.hasPrevious()}" th:href="@{/sinhvien(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+diff --git a/src/main/resources/templates/taikhoan-list.html b/src/main/resources/templates/taikhoan-list.html
+index 7384a3b..c38531b 100644
+--- a/src/main/resources/templates/taikhoan-list.html
++++ b/src/main/resources/templates/taikhoan-list.html
+@@ -16,9 +16,9 @@
+   <form class="search-box" th:action="@{/taikhoan}" method="get"><span>⌕</span><input type="search" name="q" th:value="${q}" placeholder="Tìm kiếm toàn bộ dữ liệu..."><button type="submit" class="btn">Tìm</button></form>
+   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
+ </div>
+-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đăng nhập</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody data-table-body>
+-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendangnhap}">---</td><td th:text="${item.hoten}">---</td><td th:text="${item.email}">---</td><td><span class="badge" th:text="${item.vaitro}">---</span></td><td><span class="badge" th:classappend="${item.kichhoat} ? ' badge-success' : ' badge-muted'" th:text="${item.kichhoat} ? 'Đang hoạt động' : 'Ngừng'">---</span></td></tr>
+-<tr th:if="${#lists.isEmpty(items)}"><td colspan="6"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
++<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Tên đăng nhập</th><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Thông tin liên kết</th><th>Bộ môn</th><th>Trạng thái</th></tr></thead><tbody data-table-body>
++<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.tendangnhap}">---</td><td th:text="${item.hoten}">---</td><td th:text="${item.email}">---</td><td><span class="badge" th:switch="${item.vaitro.name()}"><span th:case="'TRUONGKHOA'">Trưởng khoa</span><span th:case="'TRUONGBOMON'">Trưởng bộ môn</span><span th:case="'GIANGVIEN'">Giảng viên</span><span th:case="'SINHVIEN'">Sinh viên</span></span></td><td><span th:if="${teacherByAccount.containsKey(item.id)}" th:text="${teacherByAccount[item.id].magiangvien}">Mã GV</span><span th:if="${studentByAccount.containsKey(item.id)}" th:text="${studentByAccount[item.id].masinhvien + (studentByAccount[item.id].lop != null ? ' • ' + studentByAccount[item.id].lop : '')}">Mã SV</span><span th:unless="${teacherByAccount.containsKey(item.id) or studentByAccount.containsKey(item.id)}">—</span></td><td th:text="${teacherByAccount.containsKey(item.id) ? (departmentNames[teacherByAccount[item.id].bomonid] ?: '—') : (studentByAccount.containsKey(item.id) ? (departmentNames[studentByAccount[item.id].bomonid] ?: '—') : '—')}">—</td><td><span class="badge" th:classappend="${item.kichhoat} ? ' badge-success' : ' badge-muted'" th:text="${item.kichhoat} ? 'Đang hoạt động' : 'Ngừng'">---</span></td></tr>
++<tr th:if="${#lists.isEmpty(items)}"><td colspan="8"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Danh sách hiện chưa có bản ghi.</span></div></td></tr>
+ </tbody></table></div>
+ <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
+  <a th:if="${pageData.hasPrevious()}" th:href="@{/taikhoan(page=${pageData.number - 1},q=${q})}">← Trang trước</a>
+diff --git a/src/test/java/com/example/quanlydetaisinhvien/service/HoidongServiceTest.java b/src/test/java/com/example/quanlydetaisinhvien/service/HoidongServiceTest.java
+index aaa011a..c572303 100644
+--- a/src/test/java/com/example/quanlydetaisinhvien/service/HoidongServiceTest.java
++++ b/src/test/java/com/example/quanlydetaisinhvien/service/HoidongServiceTest.java
+@@ -47,6 +47,9 @@ class HoidongServiceTest {
+     @Mock
+     private KetquaRepository results;
+ 
++    @Mock
++    private DiemRepository scores;
++
+     @InjectMocks
+     private HoidongServiceImpl hoidongService;
+ 
+@@ -186,6 +189,8 @@ class HoidongServiceTest {
+         tvList.add(new ThanhvienHoidongItemDto(3L, VaitroHoidong.THANHVIEN));
+         form.setThanhviens(tvList);
+ 
++        when(dotdangkyRepository.existsById(1L)).thenReturn(true);
++        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
+         when(hoidongRepository.save(any(Hoidong.class))).thenAnswer(inv -> {
+             Hoidong hd = inv.getArgument(0);
+             hd.setId(100L);
