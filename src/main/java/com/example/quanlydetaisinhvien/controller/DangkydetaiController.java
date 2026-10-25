@@ -72,6 +72,14 @@ public class DangkydetaiController {
             model.addAttribute("laNhomTruong", true);
             model.addAttribute("nhomCuaToi", null);
             model.addAttribute("dangKyCuaNhom", null);
+        } else if ("TRUONGBOMON".equals(cleanRole) || "GIANGVIEN".equals(cleanRole)) {
+            model.addAttribute("items", service.layDanhSachDangKyChoUser(username));
+            model.addAttribute("dsNhom", new ArrayList<Nhomsinhvien>());
+            model.addAttribute("dsDetaiCongBo", new ArrayList<Detai>());
+            model.addAttribute("daCoNhom", false);
+            model.addAttribute("laNhomTruong", false);
+            model.addAttribute("nhomCuaToi", null);
+            model.addAttribute("dangKyCuaNhom", null);
         } else {
             NhomSinhVienDto nhomCuaToi = nhomsinhvienService.layNhomCuaSinhVien(username);
             model.addAttribute("nhomCuaToi", nhomCuaToi);

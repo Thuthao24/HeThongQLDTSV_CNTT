@@ -27,6 +27,7 @@
                 <div class="role-actions">
                     <a th:if="${vaitro == 'TRUONGKHOA'}" th:href="@{/dotdangky}" class="role-action"><span class="role-action-icon">▦</span><strong>Quản lý đợt</strong><small>Thời gian & trạng thái</small></a>
                     <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/detai}" class="role-action"><span class="role-action-icon">▤</span><strong>Đề tài</strong><small>Danh sách & quy trình</small></a>
+                    <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/dangkydetai}" class="role-action"><span class="role-action-icon">✓</span><strong>Duyệt sinh viên</strong><small>Xét duyệt đăng ký</small></a>
                     <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" th:href="@{/giangvien}" class="role-action"><span class="role-action-icon">♙</span><strong>Giảng viên</strong><small>Tra cứu danh mục</small></a>
                     <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" th:href="@{/sinhvien}" class="role-action"><span class="role-action-icon">♧</span><strong>Sinh viên</strong><small>Hồ sơ sinh viên</small></a>
                     <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" th:href="@{/hoidong}" class="role-action"><span class="role-action-icon">◎</span><strong>Hội đồng</strong><small>Danh sách hội đồng</small></a>

@@ -24,6 +24,12 @@ public class GlobalExceptionHandler {
         return "403";
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public String handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("errorMessage", "Quy định chỉ được tối đa 20MB");
+        return "redirect:/nopbaocao";
+    }
+
     @ExceptionHandler(NghiepvuException.class)
     public String handleNghiepvu(NghiepvuException ex, Model model) {
         model.addAttribute("message", ex.getMessage());

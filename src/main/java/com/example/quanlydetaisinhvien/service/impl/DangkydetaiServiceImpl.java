@@ -29,6 +29,14 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     private final NopbaocaoRepository nopbaocaoRepository;
     private final KetquaRepository ketquaRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private GiangvienRepository giangvienRepository;
+
+    public void setGiangvienRepository(GiangvienRepository giangvienRepository) {
+        this.giangvienRepository = giangvienRepository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
     public DangkydetaiServiceImpl(
             DangkydetaiRepository repository,
             NhomsinhvienRepository nhomsinhvienRepository,
@@ -37,7 +45,9 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             DotdangkyRepository dotdangkyRepository,
             SinhvienRepository sinhvienRepository,
             TaikhoanRepository taikhoanRepository,
-            NopbaocaoRepository nopbaocaoRepository, KetquaRepository ketquaRepository) {
+            NopbaocaoRepository nopbaocaoRepository,
+            KetquaRepository ketquaRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) GiangvienRepository giangvienRepository) {
         this.repository = repository;
         this.nhomsinhvienRepository = nhomsinhvienRepository;
         this.thanhviennhomRepository = thanhviennhomRepository;
@@ -47,6 +57,34 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         this.taikhoanRepository = taikhoanRepository;
         this.nopbaocaoRepository = nopbaocaoRepository;
         this.ketquaRepository = ketquaRepository;
+        this.giangvienRepository = giangvienRepository;
+    }
+
+    public DangkydetaiServiceImpl(
+            DangkydetaiRepository repository,
+            NhomsinhvienRepository nhomsinhvienRepository,
+            ThanhviennhomRepository thanhviennhomRepository,
+            DetaiRepository detaiRepository,
+            DotdangkyRepository dotdangkyRepository,
+            SinhvienRepository sinhvienRepository,
+            TaikhoanRepository taikhoanRepository,
+            NopbaocaoRepository nopbaocaoRepository,
+            KetquaRepository ketquaRepository) {
+        this(repository, nhomsinhvienRepository, thanhviennhomRepository, detaiRepository,
+                dotdangkyRepository, sinhvienRepository, taikhoanRepository, nopbaocaoRepository, ketquaRepository, null);
+    }
+
+    public DangkydetaiServiceImpl(
+            DangkydetaiRepository repository,
+            NhomsinhvienRepository nhomsinhvienRepository,
+            ThanhviennhomRepository thanhviennhomRepository,
+            DetaiRepository detaiRepository,
+            DotdangkyRepository dotdangkyRepository,
+            SinhvienRepository sinhvienRepository,
+            TaikhoanRepository taikhoanRepository,
+            NopbaocaoRepository nopbaocaoRepository) {
+        this(repository, nhomsinhvienRepository, thanhviennhomRepository, detaiRepository,
+                dotdangkyRepository, sinhvienRepository, taikhoanRepository, nopbaocaoRepository, null, null);
     }
 
     @Override
@@ -79,6 +117,13 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     @Transactional(readOnly = true)
     public List<DangKyDeTaiDto> layDanhSachDangKyDto(int page) {
         List<Dangkydetai> list = repository.findAll(org.springframework.data.domain.PageRequest.of(Math.max(0, page), 50, org.springframework.data.domain.Sort.by("id").descending())).getContent();
+        return chuyenDanhSachDangKySangDto(list);
+    }
+
+    private List<DangKyDeTaiDto> chuyenDanhSachDangKySangDto(List<Dangkydetai> list) {
+        if (list == null || list.isEmpty()) {
+            return new ArrayList<>();
+        }
         // Bulk queries: avoid one query per registration while constructing the page.
         java.util.Map<Long, Nhomsinhvien> nhomMap = new java.util.HashMap<>();
         nhomsinhvienRepository.findAllById(list.stream().map(Dangkydetai::getNhomid).distinct().toList())
@@ -131,8 +176,36 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             return new ArrayList<>();
         }
         Optional<Taikhoan> tkOpt = taikhoanRepository.findByTendangnhap(currentUsername);
-        if (tkOpt.isPresent() && tkOpt.get().getVaitro() == Vaitro.TRUONGKHOA) {
+        if (tkOpt.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Taikhoan tk = tkOpt.get();
+        if (tk.getVaitro() == Vaitro.TRUONGKHOA) {
             return layDanhSachDangKyDto();
+        }
+        if (tk.getVaitro() == Vaitro.TRUONGBOMON && giangvienRepository != null) {
+            Optional<Giangvien> gvOpt = giangvienRepository.findByTaikhoanid(tk.getId());
+            if (gvOpt.isPresent() && gvOpt.get().getBomonid() != null) {
+                List<Detai> bmDetais = detaiRepository.findByBomonid(gvOpt.get().getBomonid());
+                List<Long> bmDetaiIds = bmDetais.stream().map(Detai::getId).toList();
+                if (!bmDetaiIds.isEmpty()) {
+                    return chuyenDanhSachDangKySangDto(repository.findByDetaiidIn(bmDetaiIds));
+                }
+                return new ArrayList<>();
+            }
+            return layDanhSachDangKyDto();
+        }
+        if (tk.getVaitro() == Vaitro.GIANGVIEN && giangvienRepository != null) {
+            Optional<Giangvien> gvOpt = giangvienRepository.findByTaikhoanid(tk.getId());
+            if (gvOpt.isPresent()) {
+                List<Detai> myDetais = detaiRepository.findByGiangviendexuatid(gvOpt.get().getId());
+                List<Long> myDetaiIds = myDetais.stream().map(Detai::getId).toList();
+                if (!myDetaiIds.isEmpty()) {
+                    return chuyenDanhSachDangKySangDto(repository.findByDetaiidIn(myDetaiIds));
+                }
+                return new ArrayList<>();
+            }
+            return new ArrayList<>();
         }
         DangKyDeTaiDto dkCuaSv = layDangKyCuaSinhVien(currentUsername);
         if (dkCuaSv != null) {
@@ -327,10 +400,9 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
                 : taikhoanRepository.findByTendangnhap(currentUsername)
                         .orElse(null);
 
-        if (approvingAccount == null
-                || approvingAccount.getVaitro() != Vaitro.TRUONGKHOA) {
+        if (approvingAccount == null) {
             throw new org.springframework.security.access.AccessDeniedException(
-                    "Chỉ Trưởng khoa được duyệt hoặc từ chối đăng ký đề tài");
+                    "Vui lòng đăng nhập để thực hiện duyệt đăng ký đề tài");
         }
 
         // Lấy ID đề tài trước khi khóa giao dịch.
@@ -339,9 +411,28 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
                         "Không tìm thấy đăng ký đề tài"));
 
         // Khóa đề tài để các yêu cầu duyệt cùng đề tài được xử lý lần lượt.
-        detaiRepository.findByIdForUpdate(detaiId)
+        Detai detai = detaiRepository.findByIdForUpdate(detaiId)
                 .orElseThrow(() -> new NghiepvuException(
                         "Không tìm thấy đề tài"));
+
+        boolean coQuyen = false;
+        if (approvingAccount.getVaitro() == Vaitro.TRUONGKHOA) {
+            coQuyen = true;
+        } else if (giangvienRepository != null && (approvingAccount.getVaitro() == Vaitro.TRUONGBOMON || approvingAccount.getVaitro() == Vaitro.GIANGVIEN)) {
+            Giangvien gv = giangvienRepository.findByTaikhoanid(approvingAccount.getId()).orElse(null);
+            if (gv != null) {
+                if (approvingAccount.getVaitro() == Vaitro.TRUONGBOMON && gv.getBomonid() != null && gv.getBomonid().equals(detai.getBomonid())) {
+                    coQuyen = true;
+                } else if (gv.getId().equals(detai.getGiangviendexuatid())) {
+                    coQuyen = true;
+                }
+            }
+        }
+
+        if (!coQuyen) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Bạn không có quyền duyệt đăng ký cho đề tài này");
+        }
 
         Dangkydetai dk = repository.findByIdForUpdate(dangkydetaiid)
                 .orElseThrow(() -> new NghiepvuException(

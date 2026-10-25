@@ -37,6 +37,8 @@ public interface DangkydetaiRepository
 
     List<Dangkydetai> findByDetaiid(Long detaiid);
 
+    List<Dangkydetai> findByDetaiidIn(java.util.Collection<Long> detaiids);
+
     void deleteByNhomid(Long nhomid);
 
     // Danh sách đăng ký có thể chấm điểm

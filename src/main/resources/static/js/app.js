@@ -400,5 +400,47 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  function initConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+    const msgEl = document.getElementById('confirmModalMessage');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const acceptBtn = document.getElementById('confirmModalAccept');
+    let pendingForm = null;
+
+    document.querySelectorAll('form[data-confirm]').forEach(form => {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        pendingForm = form;
+        const msg = form.getAttribute('data-confirm') || 'Bạn có chắc chắn muốn thực hiện thao tác này?';
+        const title = form.getAttribute('data-modal-title') || 'Thông báo';
+        if (msgEl) msgEl.textContent = msg;
+        if (titleEl) titleEl.textContent = title;
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+      });
+    });
+
+    modal.querySelectorAll('[data-modal-cancel]').forEach(btn => {
+      btn.addEventListener('click', function () {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        pendingForm = null;
+      });
+    });
+
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', function () {
+        if (pendingForm) {
+          const formToSubmit = pendingForm;
+          pendingForm = null;
+          formToSubmit.removeAttribute('data-confirm');
+          formToSubmit.submit();
+        }
+      });
+    }
+  }
+
+  initConfirmModal();
   initHeaderNotices();
 });
