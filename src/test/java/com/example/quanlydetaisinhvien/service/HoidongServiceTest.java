@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,11 @@ class HoidongServiceTest {
 
     @InjectMocks
     private HoidongServiceImpl hoidongService;
+    @org.junit.jupiter.api.BeforeEach
+        void setUp() {
+        when(giangvienRepository.existsById(anyLong()))
+                .thenReturn(true);
+        }
 
     // --- TEST PASS: Hội đồng 3 GV hợp lệ ---
     @Test
@@ -186,6 +192,9 @@ class HoidongServiceTest {
         tvList.add(new ThanhvienHoidongItemDto(3L, VaitroHoidong.THANHVIEN));
         form.setThanhviens(tvList);
 
+        when(dotdangkyRepository.existsById(1L))
+        .thenReturn(true);
+        
         when(hoidongRepository.save(any(Hoidong.class))).thenAnswer(inv -> {
             Hoidong hd = inv.getArgument(0);
             hd.setId(100L);
