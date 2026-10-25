@@ -189,24 +189,47 @@ private void validTimes(DotForm f) {
         if(now.isBefore(d.getBatdaugiangvien())||now.isAfter(d.getKetthucgiangvien()))
             throw new NghiepvuException("Ngoài thời gian GV đăng ký đề tài");
     }
-    private List<Long> validGuides(DeTaiForm f){
-        if(f.getGvhd1()==null)throw new NghiepvuException("Cần ít nhất một giảng viên hướng dẫn");
-        List<Long> g=new ArrayList<>();g.add(f.getGvhd1());
-        if(f.getGvhd2()!=null){if(f.getGvhd2().equals(f.getGvhd1()))throw new NghiepvuException("Hai GVHD phải khác nhau"); g.add(f.getGvhd2());}
-        for(Long id:g)if(!gv.existsById(id))throw new NghiepvuException("GVHD không tồn tại: " + id);for (Long id : g) {
+    private List<Long> validGuides(DeTaiForm f) {
+        if (f == null || f.getBomonid() == null) {
+            throw new NghiepvuException("Thông tin đề tài không hợp lệ");
+        }
+        if (f.getGvhd1() == null) {
+            throw new NghiepvuException("Cần ít nhất một giảng viên hướng dẫn");
+        }
+
+        List<Long> guides = new ArrayList<>();
+        guides.add(f.getGvhd1());
+
+        if (f.getGvhd2() != null) {
+            if (f.getGvhd1().equals(f.getGvhd2())) {
+                throw new NghiepvuException("Hai giảng viên hướng dẫn phải khác nhau");
+            }
+            guides.add(f.getGvhd2());
+        }
+
+        for (Long id : guides) {
             Giangvien teacher = gv.findById(id)
                 .orElseThrow(() -> new NghiepvuException(
-                    "Giảng viên hướng dẫn không tồn tại"));
-            if (!teacher.getBomonid().equals(f.getBomonid())) {
-                    throw new NghiepvuException(
-                         "GVHD phải thuộc đúng bộ môn của đề tài");
+                    "Giảng viên hướng dẫn không tồn tại: " + id));
+            if (!Objects.equals(teacher.getBomonid(), f.getBomonid())) {
+                throw new NghiepvuException(
+                    "GVHD phải thuộc đúng bộ môn của đề tài");
+            }
         }
+        return guides;
     }
-        return g;
-    }
-    public Detai saveDetai(Long id,DeTaiForm f,String username){
-        if(f.getDotdangkyid()==null||f.getTendetai()==null||f.getTendetai().isBlank()||f.getTendetai().length()>255)
-            throw new NghiepvuException("Cần chọn đợt và nhập tên đề tài (tối đa 255 ký tự)");
+    public Detai saveDetai(Long id, DeTaiForm f, String username) {
+        if (f == null) {
+            throw new NghiepvuException("Dữ liệu đề tài không được để trống");
+        }
+        if (f.getDotdangkyid() == null) {
+            throw new NghiepvuException("Vui lòng chọn đợt đăng ký");
+        }
+        if (f.getTendetai() == null || f.getTendetai().isBlank()
+                || f.getTendetai().trim().length() > 255) {
+            throw new NghiepvuException(
+                "Tên đề tài không hợp lệ (tối đa 255 ký tự)");
+        }
         activeProposal(lockDot(f.getDotdangkyid()));
         Detai e;
         if(id==null){ e=new Detai();e.setGiangviendexuatid(currentTeacher(username).getId()); }
