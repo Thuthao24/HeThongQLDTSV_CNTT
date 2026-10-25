@@ -136,8 +136,26 @@
            th:href="@{/morong/thongke}"
            class="nav-item"
            th:classappend="${active == 'thongke'} ? ' active' : ''"><span class="nav-icon">📊</span>Thống kê & Báo cáo</a>
-        <div class="nav-section">TÀI KHOẢN</div>
-        <a th:if="${vaitro == 'TRUONGKHOA'}" href="/taikhoan" class="nav-item" th:classappend="${active == 'taikhoan'} ? ' active' : ''"><span class="nav-icon">⚙</span>Tài khoản</a>
+        
+<div class="nav-section">TÀI KHOẢN</div>
+
+<!-- Tất cả người dùng được xem hồ sơ của mình -->
+<a th:href="@{/taikhoan}"
+   class="nav-item"
+   th:classappend="${active == 'canhan'} ? ' active' : ''">
+    <span class="nav-icon">👤</span>
+    Tài khoản của tôi
+</a>
+
+<!-- Chỉ Trưởng khoa quản lý danh sách tài khoản -->
+<a th:if="${vaitro == 'TRUONGKHOA'}"
+   th:href="@{/taikhoan/quanly}"
+   class="nav-item"
+   th:classappend="${active == 'taikhoan'} ? ' active' : ''">
+    <span class="nav-icon">⚙</span>
+    Quản lý tài khoản
+</a>
+
         <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
             <button class="nav-item sidebar-logout" type="submit"><span class="nav-icon">↪</span>Đăng xuất</button>
         </form>
