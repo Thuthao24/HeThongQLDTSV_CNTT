@@ -56,6 +56,7 @@ public class NhomsinhvienController {
             model.addAttribute("dotdangkyList", dotdangkyService.layDotMoiNhat(100));
             model.addAttribute("daCoNhom", false);
             model.addAttribute("nhomCuaToi", null);
+            model.addAttribute("danhSachLoiMoi", java.util.List.of());
         } else {
             List<NhomSinhVienDto> userGroups = service.layDanhSachNhomChoUser(username);
             model.addAttribute("items", userGroups);
@@ -63,6 +64,7 @@ public class NhomsinhvienController {
             model.addAttribute("nhomCuaToi", nhomCuaToi);
             model.addAttribute("daCoNhom", nhomCuaToi != null);
             model.addAttribute("dotdangkyList", dotdangkyService.layDotDangKyNhom());
+            model.addAttribute("danhSachLoiMoi", service.layDanhSachLoiMoiCuaSinhVien(username));
         }
 
         return "nhom-list";
@@ -187,8 +189,13 @@ public class NhomsinhvienController {
 
         try {
             String username = authentication != null ? authentication.getName() : null;
+            String role = authentication != null ? authentication.getAuthorities().stream().findFirst().map(Object::toString).orElse("") : "";
             service.themThanhVien(id, request.getMasinhvien(), username);
-            redirectAttributes.addFlashAttribute("successMessage", "Thêm sinh viên " + request.getMasinhvien() + " vào nhóm thành công!");
+            if (role.contains("TRUONGKHOA")) {
+                redirectAttributes.addFlashAttribute("successMessage", "Thêm sinh viên " + request.getMasinhvien() + " vào nhóm thành công!");
+            } else {
+                redirectAttributes.addFlashAttribute("successMessage", "Đã gửi lời mời tham gia nhóm đến sinh viên " + request.getMasinhvien() + ". Sinh viên cần xác nhận đồng ý để chính thức tham gia nhóm.");
+            }
         } catch (NghiepvuException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
@@ -223,5 +230,48 @@ public class NhomsinhvienController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/nhom/" + id;
+    }
+
+    @PostMapping("/loi-moi/{id}/dong-y")
+    public String dongYLoiMoi(@PathVariable("id") Long id,
+                              Authentication authentication,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            String username = authentication != null ? authentication.getName() : null;
+            service.dongYLoiMoi(id, username);
+            redirectAttributes.addFlashAttribute("successMessage", "Bạn đã đồng ý tham gia nhóm thành công!");
+        } catch (NghiepvuException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/nhom";
+    }
+
+    @PostMapping("/loi-moi/{id}/tu-choi")
+    public String tuChoiLoiMoi(@PathVariable("id") Long id,
+                               Authentication authentication,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            String username = authentication != null ? authentication.getName() : null;
+            service.tuChoiLoiMoi(id, username);
+            redirectAttributes.addFlashAttribute("successMessage", "Bạn đã từ chối lời mời tham gia nhóm.");
+        } catch (NghiepvuException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/nhom";
+    }
+
+    @PostMapping("/{nhomid}/huy-loi-moi")
+    public String huyLoiMoi(@PathVariable("nhomid") Long nhomid,
+                            @RequestParam("loiMoiId") Long loiMoiId,
+                            Authentication authentication,
+                            RedirectAttributes redirectAttributes) {
+        try {
+            String username = authentication != null ? authentication.getName() : null;
+            service.huyLoiMoi(nhomid, loiMoiId, username);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã hủy lời mời tham gia nhóm!");
+        } catch (NghiepvuException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/nhom/" + nhomid;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.quanlydetaisinhvien.controller;
 
 import com.example.quanlydetaisinhvien.service.DashboardService;
+import com.example.quanlydetaisinhvien.service.NhomsinhvienService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -9,9 +10,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
     private final DashboardService dashboardService;
+    private final NhomsinhvienService nhomsinhvienService;
 
-    public HomeController(DashboardService dashboardService) {
+    public HomeController(DashboardService dashboardService, NhomsinhvienService nhomsinhvienService) {
         this.dashboardService = dashboardService;
+        this.nhomsinhvienService = nhomsinhvienService;
     }
 
     @GetMapping("/")
@@ -24,6 +27,9 @@ public class HomeController {
                     .map(a -> a.getAuthority().substring(5))
                     .findFirst().orElse("");
             model.addAttribute("vaitro", role);
+            if ("SINHVIEN".equals(role)) {
+                model.addAttribute("soLoiMoiDangCho", nhomsinhvienService.demSoLoiMoiDangCho(authentication.getName()));
+            }
         }
         return "index";
     }

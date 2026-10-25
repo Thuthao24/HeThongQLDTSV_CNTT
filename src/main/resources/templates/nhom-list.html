@@ -28,6 +28,62 @@
         <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
       </div>
 
+      <!-- Khu vực Lời mời tham gia nhóm / đề tài (Dành cho Sinh viên) -->
+      <section class="panel-card" th:if="${vaitro == 'SINHVIEN' && danhSachLoiMoi != null && !#lists.isEmpty(danhSachLoiMoi)}"
+               style="margin-bottom: 24px; border-left: 4px solid #f59e0b; background: #fff;">
+        <div class="panel-heading" style="border-bottom: 1px solid #fed7aa; background: #fffbeb; padding: 14px 16px;">
+          <h3 style="color: #b45309; margin: 0 0 4px 0;">📬 LỜI MỜI THAM GIA ĐỀ TÀI / NHÓM SINH VIÊN</h3>
+          <p style="color: #92400e; margin: 0; font-size: 13px;">Bạn nhận được lời mời tham gia nhóm sinh viên để thực hiện đề tài. Hãy kiểm tra thông tin và nhấn Đồng ý để chính thức tham gia nhóm.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tên nhóm</th>
+                <th>Đợt đăng ký</th>
+                <th>Đề tài của nhóm</th>
+                <th>Nhóm trưởng mời</th>
+                <th>Thời gian gửi</th>
+                <th style="min-width: 180px;">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="lm : ${danhSachLoiMoi}">
+                <td><strong th:text="${lm.tennhom}">Nhóm AI</strong></td>
+                <td th:text="${lm.tendot != null ? lm.tendot : ('Đợt #' + lm.dotdangkyid)}">Đợt KLTN</td>
+                <td>
+                  <span th:if="${lm.tendetai != null}" style="color: #05659a; font-weight: 500;" th:text="${lm.tendetai}">Đề tài A</span>
+                  <span th:if="${lm.tendetai == null}" class="badge">Chưa đăng ký đề tài</span>
+                </td>
+                <td>
+                  <span th:text="${lm.tenNhomtruong != null ? lm.tenNhomtruong : lm.masinhvienNhomtruong}">Nhóm trưởng</span>
+                  <div style="font-size: 11px; color: #64748b;" th:if="${lm.masinhvienNhomtruong != null}" th:text="'MSSV: ' + ${lm.masinhvienNhomtruong}"></div>
+                </td>
+                <td th:text="${#temporals.format(lm.ngaytao, 'dd/MM/yyyy HH:mm')}">25/10/2026</td>
+                <td>
+                  <div style="display: flex; gap: 8px;">
+                    <form th:action="@{'/nhom/loi-moi/' + ${lm.id} + '/dong-y'}" method="post"
+                          data-confirm="Bạn có đồng ý tham gia nhóm và đề tài này không?"
+                          data-modal-title="Xác nhận tham gia nhóm"
+                          style="margin: 0;">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                      <button type="submit" class="btn btn-success btn-sm">✓ Đồng ý</button>
+                    </form>
+                    <form th:action="@{'/nhom/loi-moi/' + ${lm.id} + '/tu-choi'}" method="post"
+                          data-confirm="Bạn có chắc chắn muốn từ chối lời mời này không?"
+                          data-modal-title="Xác nhận từ chối"
+                          style="margin: 0;">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                      <button type="submit" class="btn btn-secondary btn-sm">✕ Từ chối</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- Khu vực Nhóm của bạn (Dành cho Sinh viên đã có nhóm) -->
       <section class="panel-card" th:if="${vaitro == 'SINHVIEN' && daCoNhom}" style="margin-bottom: 20px; border-left: 4px solid #05659a;">
         <div class="panel-heading">

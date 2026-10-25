@@ -19,7 +19,17 @@
                     <h1 th:text="${vaitro == 'TRUONGKHOA' ? 'Tổng quan quản lý khoa' : (vaitro == 'TRUONGBOMON' ? 'Điều hành bộ môn' : (vaitro == 'GIANGVIEN' ? 'Công việc giảng viên' : 'Học tập và đề tài của tôi'))}">Tổng quan</h1>
                     <p th:text="${vaitro == 'TRUONGKHOA' ? 'Theo dõi đợt đăng ký, đề tài, hội đồng và kết quả.' : (vaitro == 'TRUONGBOMON' ? 'Theo dõi đề tài, giảng viên, sinh viên và công tác đánh giá.' : (vaitro == 'GIANGVIEN' ? 'Đề xuất đề tài, xem hội đồng và chấm điểm khi được phân công.' : 'Quản lý nhóm, đăng ký đề tài, nộp báo cáo và tra cứu kết quả.'))}">Các chức năng phù hợp quyền truy cập.</p>
                 </div>
-                <div class="role-hero-mark" aria-hidden="true">HCMUTE</div>
+                <div class="role-hero-mark" aria-hidden="true">HCMUTE</div>
+            </div>
+
+            <!-- Thông báo Lời mời tham gia nhóm cho Sinh viên -->
+            <div th:if="${vaitro == 'SINHVIEN' && soLoiMoiDangCho != null && soLoiMoiDangCho > 0}"
+                 class="alert-box alert-warning" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #f59e0b; background-color: #fffbeb; padding: 16px;">
+                <div>
+                    <strong style="color: #b45309; font-size: 15px;">📬 Bạn có <span th:text="${soLoiMoiDangCho}">1</span> lời mời tham gia nhóm / đề tài!</strong>
+                    <div style="color: #92400e; font-size: 13px; margin-top: 4px;">Nhóm trưởng đã gửi lời mời bạn tham gia nhóm để cùng làm đề tài. Bạn cần xác nhận đồng ý để chính thức được thêm vào.</div>
+                </div>
+                <a th:href="@{/nhom}" class="btn btn-warning" style="text-decoration: none; white-space: nowrap; margin-left: 16px;">Xem và phản hồi ngay</a>
             </div>
 
             <section class="workspace-section" aria-label="Truy cập công việc">
