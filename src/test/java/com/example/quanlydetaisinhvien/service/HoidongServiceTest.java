@@ -52,14 +52,15 @@ class HoidongServiceTest {
     private HoidongServiceImpl hoidongService;
     @org.junit.jupiter.api.BeforeEach
         void setUp() {
-        when(giangvienRepository.existsById(anyLong()))
-                .thenReturn(true);
+        //when(giangvienRepository.existsById(anyLong()))
+                //.thenReturn(true);
         }
 
     // --- TEST PASS: Hội đồng 3 GV hợp lệ ---
     @Test
     @DisplayName("PASS: Hội đồng 3 GV hợp lệ (1 Chủ tịch, 1 Thư ký, 1 Thành viên)")
     void testKiemtraHoidongHopLe_ThanhCong_3GV() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.CHUTICH),
                 createMember(2L, VaitroHoidong.THUKY),
@@ -73,6 +74,7 @@ class HoidongServiceTest {
     @Test
     @DisplayName("PASS: Hội đồng 5 GV hợp lệ (1 Chủ tịch, 1 Thư ký, 3 Thành viên)")
     void testKiemtraHoidongHopLe_ThanhCong_5GV() {
+        when(giangvienRepository.existsById(anyLong())).thenReturn(true);
         List<Thanhvienhoidong> members = List.of(
                 createMember(1L, VaitroHoidong.CHUTICH),
                 createMember(2L, VaitroHoidong.THUKY),
@@ -173,7 +175,7 @@ class HoidongServiceTest {
 
         NghiepvuException ex = assertThrows(NghiepvuException.class,
                 () -> hoidongService.kiemtraHoidongHopLe(members));
-        assertEquals("Các giảng viên trong cùng một hội đồng không được trùng nhau", ex.getMessage());
+        assertEquals("Các giảng viên trong hội đồng không được trùng nhau", ex.getMessage());
     }
 
     // --- TEST CRUD: Lưu hội đồng hợp lệ thành công ---
@@ -216,6 +218,7 @@ class HoidongServiceTest {
     void testXoaHoidong_ThanhCong() {
         Long hoidongId = 100L;
 
+        when(hoidongRepository.existsById(hoidongId)).thenReturn(true);
         assertDoesNotThrow(() -> hoidongService.xoaHoidong(hoidongId));
 
         verify(thanhvienhoidongRepository).deleteByHoidongid(hoidongId);
