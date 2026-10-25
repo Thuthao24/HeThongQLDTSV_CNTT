@@ -70,7 +70,22 @@ public class NopbaocaoController {
             items = service.layDanhSachBaoCaoChoUser(username);
             dsDangKy = dangkydetaiService.layDanhSachDangKyChoUser(username);
             if (!dsDangKy.isEmpty()) {
-                dangKyCuaNhom = dsDangKy.get(0);
+                // Ưu tiên chọn theo ngữ cảnh người dùng:
+                // 1. Nhóm mà sinh viên là NHÓM TRƯỞNG và đề tài ĐÃ DUYỆT
+                // 2. Nhóm mà sinh viên là NHÓM TRƯỞNG và đề tài CHỜ DUYỆT
+                // 3. Đăng ký ĐÃ DUYỆT gần nhất
+                // 4. Bản ghi mới nhất
+                dangKyCuaNhom = dsDangKy.stream()
+                        .filter(dk -> username != null && username.equals(dk.getMasinhvienNhomtruong()) && dk.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                        .findFirst()
+                        .orElseGet(() -> dsDangKy.stream()
+                                .filter(dk -> username != null && username.equals(dk.getMasinhvienNhomtruong()) && dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET)
+                                .findFirst()
+                                .orElseGet(() -> dsDangKy.stream()
+                                        .filter(dk -> dk.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                                        .reduce((first, second) -> second)
+                                        .orElse(dsDangKy.get(dsDangKy.size() - 1))));
+
                 if (username != null && username.equals(dangKyCuaNhom.getMasinhvienNhomtruong())) {
                     laNhomTruong = true;
                 }
@@ -88,8 +103,14 @@ public class NopbaocaoController {
             }
         }
 
+        boolean daKhoaNopBaoCao = false;
+        String loaidotHienThi = null;
         if (dangKyCuaNhom != null) {
             Long dkId = dangKyCuaNhom.getId();
+            daKhoaNopBaoCao = service.kiemTraDaKhoaNopBaoCao(dkId);
+            if (dangKyCuaNhom.getTendot() != null) {
+                loaidotHienThi = dangKyCuaNhom.getTendot().toUpperCase();
+            }
             for (NopBaoCaoDto bc : items) {
                 if (dkId.equals(bc.getDangkydetaiid())) {
                     baoCaoDaNop = bc;
@@ -105,6 +126,8 @@ public class NopbaocaoController {
         model.addAttribute("deTaiDaDuyet", deTaiDaDuyet);
         model.addAttribute("dangKyCuaNhom", dangKyCuaNhom);
         model.addAttribute("baoCaoDaNop", baoCaoDaNop);
+        model.addAttribute("daKhoaNopBaoCao", daKhoaNopBaoCao);
+        model.addAttribute("loaidotHienThi", loaidotHienThi);
         return "nopbaocao-list";
     }
 

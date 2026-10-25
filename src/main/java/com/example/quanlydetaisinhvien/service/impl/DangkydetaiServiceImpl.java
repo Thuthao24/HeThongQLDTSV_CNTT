@@ -207,11 +207,16 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             }
             return new ArrayList<>();
         }
-        DangKyDeTaiDto dkCuaSv = layDangKyCuaSinhVien(currentUsername);
-        if (dkCuaSv != null) {
-            List<DangKyDeTaiDto> list = new ArrayList<>();
-            list.add(dkCuaSv);
-            return list;
+        if (tk.getVaitro() == Vaitro.SINHVIEN) {
+            Optional<Sinhvien> svOpt = sinhvienRepository.findByMasinhvien(currentUsername);
+            if (svOpt.isPresent()) {
+                List<Thanhviennhom> tvList = thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
+                List<DangKyDeTaiDto> result = new ArrayList<>();
+                for (Thanhviennhom tv : tvList) {
+                    repository.findByNhomid(tv.getNhomid()).ifPresent(dk -> result.add(chuyenSangDto(dk)));
+                }
+                return result;
+            }
         }
         return new ArrayList<>();
     }
@@ -222,18 +227,16 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         if (currentUsername == null || currentUsername.trim().isEmpty()) {
             return null;
         }
-        Optional<Sinhvien> svOpt = sinhvienRepository.findByMasinhvien(currentUsername);
-        if (svOpt.isEmpty()) {
-            return null;
-        }
-        List<Thanhviennhom> tvList = thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
-        for (Thanhviennhom tv : tvList) {
-            Optional<Dangkydetai> dkOpt = repository.findByNhomid(tv.getNhomid());
-            if (dkOpt.isPresent()) {
-                return chuyenSangDto(dkOpt.get());
-            }
-        }
-        return null;
+        List<DangKyDeTaiDto> ds = layDanhSachDangKyChoUser(currentUsername);
+        if (ds.isEmpty()) return null;
+        // Ưu tiên đăng ký thuộc nhóm mà sinh viên làm nhóm trưởng
+        return ds.stream()
+                .filter(d -> currentUsername.equals(d.getMasinhvienNhomtruong()) && d.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                .findFirst()
+                .orElseGet(() -> ds.stream()
+                        .filter(d -> currentUsername.equals(d.getMasinhvienNhomtruong()))
+                        .findFirst()
+                        .orElse(ds.get(ds.size() - 1)));
     }
 
     private DangKyDeTaiDto chuyenSangDto(Dangkydetai dk) {
@@ -453,6 +456,11 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         }
 
         if (chapNhan) {
+            long soThanhvien = thanhviennhomRepository.countByNhomid(dk.getNhomid());
+            if (soThanhvien < 3 || soThanhvien > 5) {
+                throw new NghiepvuException("Nhóm phải có từ 3 đến 5 thành viên mới đủ điều kiện duyệt đề tài (Hiện có: " + soThanhvien + " thành viên)");
+            }
+
             boolean daCoNhomKhac = repository.findApprovedForUpdate(
                     detaiId, TrangthaiDangkydetai.DADUYET)
                     .stream()

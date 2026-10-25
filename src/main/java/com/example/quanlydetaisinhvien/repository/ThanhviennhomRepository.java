@@ -23,6 +23,10 @@ public interface ThanhviennhomRepository extends JpaRepository<Thanhviennhom, Th
            "WHERE tv.nhomid = n.id AND tv.sinhvienid = :sinhvienid AND n.dotdangkyid = :dotdangkyid")
     boolean existsSinhvienInDot(@Param("sinhvienid") Long sinhvienid, @Param("dotdangkyid") Long dotdangkyid);
 
+    @Query("SELECT (COUNT(tv) > 0) FROM Thanhviennhom tv, Nhomsinhvien n, Dotdangky d " +
+           "WHERE tv.nhomid = n.id AND n.dotdangkyid = d.id AND tv.sinhvienid = :sinhvienid AND d.trangthai <> com.example.quanlydetaisinhvien.entity.TrangthaiDotdangky.DONG")
+    boolean existsSinhvienInActiveDot(@Param("sinhvienid") Long sinhvienid);
+
     @Query("SELECT n FROM Nhomsinhvien n, Thanhviennhom tv " +
            "WHERE tv.nhomid = n.id AND tv.sinhvienid = :sinhvienid AND n.dotdangkyid = :dotdangkyid")
     Optional<com.example.quanlydetaisinhvien.entity.Nhomsinhvien> findNhomBySinhvienAndDot(

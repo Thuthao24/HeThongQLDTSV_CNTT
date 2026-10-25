@@ -16,7 +16,7 @@
       <div class="page-heading">
         <div>
           <div class="breadcrumb">Cổng thông tin đào tạo / Nộp báo cáo</div>
-          <h1>NỘP BÁO CÁO KHÓA LUẬN</h1>
+          <h1 th:text="${loaidotHienThi != null ? ('NỘP BÁO CÁO ' + loaidotHienThi) : 'NỘP BÁO CÁO ĐỀ TÀI / KHÓA LUẬN'}">NỘP BÁO CÁO ĐỀ TÀI / KHÓA LUẬN</h1>
         </div>
       </div>
 
@@ -38,16 +38,11 @@
             <p class="report-card-sub" th:if="${dangKyCuaNhom == null}">Tải tệp báo cáo hoặc đính kèm liên kết tài liệu nghiệm thu của nhóm</p>
           </div>
 
-          <!-- Thời hạn nộp (Deadline) -->
-          <div class="report-deadline-box" th:if="${dangKyCuaNhom != null && dangKyCuaNhom.hanNop != null}"
-               th:with="isOverdue=${dangKyCuaNhom.hanNop.isBefore(#temporals.createNow())}">
-            <span class="deadline-label">Hạn chót nộp báo cáo:</span>
-            <span class="deadline-value" th:classappend="${isOverdue ? 'deadline-overdue' : ''}"
+          <!-- Thời hạn báo cáo / hội đồng -->
+          <div class="report-deadline-box" th:if="${dangKyCuaNhom != null && dangKyCuaNhom.hanNop != null}">
+            <span class="deadline-label">Hạn báo cáo / đánh giá:</span>
+            <span class="deadline-value"
                   th:text="${#temporals.format(dangKyCuaNhom.hanNop, 'dd/MM/yyyy HH:mm')}">30/12/2026 23:59</span>
-          </div>
-          <div class="report-deadline-box" th:if="${dangKyCuaNhom == null && !#lists.isEmpty(dsDangKy) && dsDangKy[0].hanNop != null}">
-            <span class="deadline-label">Hạn chót đợt hiện tại:</span>
-            <span class="deadline-value" th:text="${#temporals.format(dsDangKy[0].hanNop, 'dd/MM/yyyy HH:mm')}">30/12/2026 23:59</span>
           </div>
         </div>
 
@@ -61,6 +56,11 @@
           <!-- Ràng buộc khi đề tài chưa được duyệt -->
           <div th:if="${vaitro == 'SINHVIEN' && dangKyCuaNhom != null && !deTaiDaDuyet}" class="alert-box alert-error" style="background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e; margin-bottom: 16px;">
             <span>Đề tài <strong><span th:text="${dangKyCuaNhom.tendetai}">Tên đề tài</span></strong> hiện đang ở trạng thái <strong><span th:text="${dangKyCuaNhom.trangthai}">CHODUYET</span></strong>. Báo cáo chỉ có thể được nộp sau khi đề tài của nhóm đã được phê duyệt chính thức (ĐÃ DUYỆT).</span>
+          </div>
+
+          <!-- Ràng buộc khi đề tài đã được chấm điểm hoặc công bố kết quả (Khóa nộp bài) -->
+          <div th:if="${daKhoaNopBaoCao}" class="alert-box alert-error" style="background: #f0fdf4; border-left: 4px solid #16a34a; color: #166534; margin-bottom: 16px;">
+            <span>🔒 Đề tài của nhóm đã có điểm đánh giá hoặc đã công bố kết quả. Chức năng nộp báo cáo, cập nhật hoặc xóa đã được khóa để bảo toàn kết quả.</span>
           </div>
 
           <!-- Ràng buộc quyền nộp: nếu tài khoản hiện tại không phải là nhóm trưởng -->
@@ -92,15 +92,19 @@
                   <a th:href="@{'/nopbaocao/' + ${baoCaoDaNop.id} + '/download'}" target="_blank" class="btn btn-secondary btn-sm file-action-btn">
                     Tải xuống
                   </a>
-                  <button type="button" class="btn btn-primary btn-sm file-action-btn" id="btnToggleResubmit">
+                  <button type="button" class="btn btn-primary btn-sm file-action-btn" id="btnToggleResubmit"
+                          th:if="${!daKhoaNopBaoCao}">
                     Nộp lại / Cập nhật file
                   </button>
+                  <span th:if="${daKhoaNopBaoCao}" class="status-submitted-badge" style="background: #e2e8f0; color: #475569;">
+                    🔒 ĐÃ KHÓA CẬP NHẬT
+                  </span>
                 </div>
               </div>
             </div>
 
             <!-- TRẠNG THÁI 1: KHI CHƯA NỘP BÁO CÁO (hoặc khi bấm Nộp lại / Cập nhật file) -->
-            <div id="uploadFormContainer" th:classappend="${baoCaoDaNop != null ? 'is-collapsed' : ''}">
+            <div id="uploadFormContainer" th:if="${!daKhoaNopBaoCao}" th:classappend="${baoCaoDaNop != null ? 'is-collapsed' : ''}">
 
               <!-- Form tải tệp báo cáo trực tiếp (Upload Area) -->
               <form th:action="@{/nopbaocao/upload}" method="post" enctype="multipart/form-data" class="report-upload-form">
@@ -124,7 +128,7 @@
                     <span id="selectedFileName" class="upload-selected-name">Chưa có tệp nào được chọn</span>
                   </div>
                   <label for="file" class="btn btn-secondary btn-sm upload-choose-btn">Chọn tệp</label>
-                  <small class="upload-hint">Định dạng hợp lệ: .pdf, .docx, .zip, .rar — Dung lượng tối đa 20MB</small>
+                  <small class="upload-hint">Định dạng hợp lệ: .pdf, .doc, .docx, .zip, .rar — Dung lượng tối đa 20MB</small>
                 </div>
 
                 <div class="upload-submit-row">
@@ -214,7 +218,7 @@
                        style="text-decoration: none; display: inline-flex; align-items: center;">
                       Tải xuống
                     </a>
-                    <form th:if="${(laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA'}"
+                    <form th:if="${!daKhoaNopBaoCao && ((laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA')}"
                           th:action="@{'/nopbaocao/' + ${item.id} + '/xoa'}" method="post"
                           data-confirm="Bạn có chắc chắn muốn xóa bản ghi nộp báo cáo này không?"
                           data-modal-title="Thông báo"

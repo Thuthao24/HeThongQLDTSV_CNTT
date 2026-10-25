@@ -23,4 +23,6 @@ public interface NopbaocaoService extends CrudService<Nopbaocao, Long> {
     Nopbaocao nopBaocaoVoiUpload(Long dangkydetaiid, MultipartFile file, String currentUsername);
 
     void xoaBaocao(Long id, String currentUsername);
+
+    boolean kiemTraDaKhoaNopBaoCao(Long dangkydetaiid);
 }

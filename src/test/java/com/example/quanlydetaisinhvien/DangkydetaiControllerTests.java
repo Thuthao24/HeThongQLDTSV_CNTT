@@ -117,6 +117,25 @@ class DangkydetaiControllerTests {
         nhom.setNhomtruongid(999L);
         em.persist(nhom);
 
+        for (int i = 1; i <= 3; i++) {
+            Taikhoan tkSv = new Taikhoan();
+            tkSv.setTendangnhap("sv_setup_" + i);
+            tkSv.setMatkhau("123");
+            tkSv.setHoten("Sinh Vien Setup " + i);
+            tkSv.setEmail("sv_setup_" + i + "@student.edu.vn");
+            tkSv.setVaitro(Vaitro.SINHVIEN);
+            tkSv.setKichhoat(true);
+            em.persist(tkSv);
+
+            Sinhvien sv = new Sinhvien();
+            sv.setMasinhvien("SV_SETUP_" + i);
+            sv.setBomonid(bm.getId());
+            sv.setTaikhoanid(tkSv.getId());
+            em.persist(sv);
+            if (i == 1) nhom.setNhomtruongid(sv.getId());
+            em.persist(new Thanhviennhom(nhom.getId(), sv.getId()));
+        }
+
         dk1 = new Dangkydetai();
         dk1.setNhomid(nhom.getId());
         dk1.setDetaiid(dt1.getId());

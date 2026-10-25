@@ -218,8 +218,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         }
 
         // Quy tắc: Một sinh viên không được xuất hiện trong hai nhóm khác nhau thuộc cùng một đợt đăng ký
-        if (thanhviennhomRepository.existsSinhvienInDot(nhomtruong.getId(), dot.getId())) {
-            throw new NghiepvuException("Sinh viên " + nhomtruong.getMasinhvien() + " đã tham gia một nhóm khác trong cùng đợt đăng ký này");
+        if (thanhviennhomRepository.existsSinhvienInActiveDot(nhomtruong.getId())) {
+            throw new NghiepvuException("Sinh viên " + nhomtruong.getMasinhvien() + " hiện đang tham gia một nhóm trong đợt đăng ký chưa kết thúc");
         }
 
         Nhomsinhvien nhom = new Nhomsinhvien();
@@ -333,8 +333,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         }
 
         // 6. Một sinh viên không được xuất hiện trong hai nhóm khác nhau thuộc cùng một đợt đăng ký
-        if (thanhviennhomRepository.existsSinhvienInDot(sv.getId(), nhom.getDotdangkyid())) {
-            throw new NghiepvuException("Sinh viên " + sv.getMasinhvien() + " đã tham gia nhóm khác trong cùng đợt đăng ký này");
+        if (thanhviennhomRepository.existsSinhvienInActiveDot(sv.getId())) {
+            throw new NghiepvuException("Sinh viên " + sv.getMasinhvien() + " hiện đang tham gia nhóm khác trong đợt đăng ký chưa kết thúc");
         }
 
         // 7. Chặn nếu sinh viên đã tham gia nhóm khác đang có đề tài được đăng ký hoặc duyệt chính thức
@@ -394,6 +394,12 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             Dangkydetai dk = dkOpt.get();
             if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
                 throw new NghiepvuException("Không thể xóa thành viên khi đề tài của nhóm đã được duyệt chính thức");
+            }
+            if (dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET) {
+                long soLuongHienTai = thanhviennhomRepository.countByNhomid(nhomid);
+                if (soLuongHienTai <= 3) {
+                    throw new NghiepvuException("Không thể xóa thành viên vì nhóm đang chờ duyệt đề tài (yêu cầu tối thiểu 3 thành viên). Vui lòng hủy đăng ký đề tài nếu muốn thay đổi sĩ số.");
+                }
             }
             if (nopbaocaoRepository.existsByDangkydetaiid(dk.getId())) {
                 throw new NghiepvuException("Không thể xóa thành viên khi nhóm đã nộp báo cáo đề tài");
@@ -455,6 +461,12 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             Dangkydetai dk = dkOpt.get();
             if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
                 throw new NghiepvuException("Không thể rời nhóm khi đề tài đã được duyệt chính thức");
+            }
+            if (dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET) {
+                long soLuongHienTai = thanhviennhomRepository.countByNhomid(nhomid);
+                if (soLuongHienTai <= 3) {
+                    throw new NghiepvuException("Không thể rời nhóm vì nhóm đang chờ duyệt đề tài (yêu cầu tối thiểu 3 thành viên). Vui lòng hủy đăng ký đề tài nếu muốn thay đổi sĩ số.");
+                }
             }
             if (nopbaocaoRepository.existsByDangkydetaiid(dk.getId())) {
                 throw new NghiepvuException("Không thể rời nhóm khi nhóm đã nộp báo cáo đề tài");
@@ -693,8 +705,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         }
 
         // Kiểm tra sinh viên đã thuộc nhóm khác trong cùng đợt chưa
-        if (thanhviennhomRepository.existsSinhvienInDot(sv.getId(), nhom.getDotdangkyid())) {
-            throw new NghiepvuException("Bạn đã tham gia một nhóm khác trong cùng đợt đăng ký này");
+        if (thanhviennhomRepository.existsSinhvienInActiveDot(sv.getId())) {
+            throw new NghiepvuException("Bạn hiện đang tham gia một nhóm trong đợt đăng ký chưa kết thúc");
         }
 
         // Thêm vào nhóm chính thức
