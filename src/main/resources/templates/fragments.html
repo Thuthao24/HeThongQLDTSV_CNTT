@@ -123,15 +123,7 @@
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/phanbien" class="nav-item" th:classappend="${active == 'phanbien'} ? ' active' : ''"><span class="nav-icon">⚖</span>Phản biện</a>
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/diem" class="nav-item" th:classappend="${active == 'diem'} ? ' active' : ''"><span class="nav-icon">★</span>Chấm điểm</a>
         <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'SINHVIEN'}" href="/ketqua" class="nav-item" th:classappend="${active == 'ketqua'} ? ' active' : ''"><span class="nav-icon">◎</span>Kết quả</a>
-        <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN' or vaitro == 'SINHVIEN'}">TRA CỨU & TIỆN ÍCH</div>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}"
-           th:href="@{/morong/timkiem/detai}"
-           class="nav-item"
-           th:classappend="${active == 'timkiem'} ? ' active' : ''"><span class="nav-icon">⌕</span>Tìm kiếm nâng cao</a>
-        <a th:if="${vaitro == 'SINHVIEN'}"
-           th:href="@{/morong/timkiem/ketqua}"
-           class="nav-item"
-           th:classappend="${active == 'timkiem'} ? ' active' : ''"><span class="nav-icon">⌕</span>Tìm kiếm nâng cao</a>
+        <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA'}">TIỆN ÍCH</div>
         <a th:if="${vaitro == 'TRUONGKHOA'}"
            th:href="@{/morong/thongke}"
            class="nav-item"
