@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return toastContainer;
   }
 
-  function showToast(type, title, message, duration = 4000) {
+  function showToast(type, title, message, duration = 4000, loginUrl = null) {
     const container = getToastContainer();
     const toast = document.createElement("div");
     toast.className = "morong-export-toast toast-" + type;
@@ -35,12 +35,20 @@ document.addEventListener("DOMContentLoaded", function () {
     toast.innerHTML = `
       <div class="morong-export-toast-icon">${iconSvg}</div>
       <div class="morong-export-toast-body">
-        <div class="morong-export-toast-title">${title}</div>
-        <div class="morong-export-toast-desc">${message}</div>
+        <div class="morong-export-toast-title"></div>
+        <div class="morong-export-toast-desc"></div>
       </div>
       <button type="button" class="morong-export-toast-close" aria-label="Đóng">&times;</button>
     `;
 
+    toast.querySelector(".morong-export-toast-title").textContent = title;
+    const description = toast.querySelector(".morong-export-toast-desc");
+    description.textContent = message;
+    if (loginUrl) {
+      const login = document.createElement("a");
+      login.href = loginUrl; login.textContent = "Đăng nhập lại";
+      description.appendChild(document.createTextNode(" ")); description.appendChild(login);
+    }
     const closeBtn = toast.querySelector(".morong-export-toast-close");
     let timer = null;
 
@@ -149,6 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!url || url === "#") return;
 
         e.preventDefault();
+        if (btn.disabled) return;
         closeDropdown(false);
 
         const formatLabel = item.getAttribute("data-export-label") || "file";
@@ -170,118 +179,78 @@ document.addEventListener("DOMContentLoaded", function () {
           const response = await fetch(url, {
             method: "GET",
             headers: {
-              "Accept": formatExt === "xlsx" 
-                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream" 
+              "Accept": formatExt === "xlsx"
+                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream"
                 : "application/pdf, application/octet-stream"
             },
             credentials: "same-origin"
           });
 
-          // Trường hợp Thành công 200
-          if (response.ok) {
-            const contentType = response.headers.get("content-type") || "";
-            // Đảm bảo không phải JSON lỗi
-            if (contentType.includes("application/json")) {
-              const errJson = await response.json().catch(() => ({}));
-              progressToast.dismiss();
-              showToast(
-                "error",
-                "Lỗi định dạng phản hồi",
-                errJson.message || "Máy chủ trả về dữ liệu không đúng định dạng file.",
-                6000
-              );
-              return;
-            }
-
-            // Lấy tên file từ header Content-Disposition
-            let filename = `xuat_dulieu.${formatExt}`;
-            const disposition = response.headers.get("content-disposition");
-            if (disposition && disposition.includes("filename=")) {
-              const matches = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-              if (matches && matches[1]) {
-                filename = matches[1].replace(/['"]/g, "").trim();
-              }
-            }
-
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = downloadUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-
-            setTimeout(function () {
-              window.URL.revokeObjectURL(downloadUrl);
-              if (a.parentNode) a.parentNode.removeChild(a);
-            }, 500);
-
+          const expected = new URL(url, window.location.href);
+          const finalUrl = new URL(response.url, window.location.href);
+          const prefix = expected.pathname.slice(0, expected.pathname.indexOf("/morong/xuat/"));
+          const loginUrl = new URL(prefix + "/login", window.location.href);
+          const expired = response.status === 401 || (finalUrl.origin === loginUrl.origin && finalUrl.pathname === loginUrl.pathname);
+          if (expired) {
             progressToast.dismiss();
-            showToast("success", "Tải file thành công", `File ${filename} đã được tải về máy của bạn.`, 4000);
-          } else {
-            // Xử lý các mã lỗi HTTP cụ thể theo hợp đồng backend
-            progressToast.dismiss();
-            let errorMsg = "";
-
-            try {
-              const errData = await response.json();
-              if (errData && errData.message) {
-                errorMsg = errData.message;
-              }
-            } catch (e) {
-              // Phản hồi không phải JSON
-            }
-
-            if (response.status === 422) {
-              // HTTP 422: Vượt quá giới hạn xuất dữ liệu (ExportLimitException)
-              showToast(
-                "warning",
-                "Vượt quá giới hạn xuất dữ liệu (422)",
-                errorMsg || "Dữ liệu xuất vượt quá giới hạn tối đa của hệ thống (Excel tối đa 10.000 dòng, PDF tối đa 2.000 dòng). Vui lòng thu hẹp bộ lọc tìm kiếm và thử lại.",
-                8000
-              );
-            } else if (response.status === 400) {
-              // HTTP 400: Bộ lọc không hợp lệ
-              showToast(
-                "error",
-                "Bộ lọc xuất không hợp lệ (400)",
-                errorMsg || "Tham số hoặc điều kiện lọc không hợp lệ. Vui lòng kiểm tra lại bộ lọc.",
-                6000
-              );
-            } else if (response.status === 403) {
-              // HTTP 403: Không có quyền
-              showToast(
-                "error",
-                "Không có quyền xuất dữ liệu (403)",
-                errorMsg || "Bạn không được phép thực hiện chức năng xuất dữ liệu này.",
-                6000
-              );
-            } else if (response.status === 404) {
-              // HTTP 404: Không tìm thấy dữ liệu/đợt
-              showToast(
-                "error",
-                "Dữ liệu không tồn tại (404)",
-                errorMsg || "Đợt yêu cầu hoặc đường dẫn xuất không tìm thấy trên hệ thống.",
-                6000
-              );
-            } else if (response.status === 503) {
-              // HTTP 503: Lỗi dịch vụ backend hoặc tạo file
-              showToast(
-                "error",
-                "Lỗi hệ thống tạm thời (503)",
-                errorMsg || "Máy chủ không thể tạo file lúc này. Vui lòng thử lại sau.",
-                6000
-              );
-            } else {
-              showToast(
-                "error",
-                `Lỗi tải file (${response.status})`,
-                errorMsg || "Không thể tải file báo cáo từ máy chủ.",
-                6000
-              );
-            }
+            showToast("warning", "Phiên đăng nhập đã hết hạn", "Vui lòng đăng nhập lại rồi thực hiện xuất file.", 0, loginUrl.href);
+            return;
           }
+          if (response.redirected || !response.url || expected.origin !== window.location.origin
+              || finalUrl.origin !== expected.origin || finalUrl.pathname !== expected.pathname) {
+            progressToast.dismiss();
+            showToast("error", "Không thể tải file", "Máy chủ chuyển đến một trang khác. Vui lòng tải lại trang và thử lại.", 6000);
+            return;
+          }
+          if (response.status !== 200) {
+            progressToast.dismiss();
+            // Do not echo provider/proxy JSON or HTML: it may contain SQL, stack traces or user input.
+            const errors = {
+              400: ["Bộ lọc xuất không hợp lệ", "Vui lòng kiểm tra lại điều kiện lọc."],
+              403: ["Không có quyền xuất dữ liệu", "Bạn không được phép xuất dữ liệu này."],
+              404: ["Không tìm thấy dữ liệu", "Đợt hoặc đường dẫn xuất không tồn tại."],
+              422: ["Vượt quá giới hạn xuất dữ liệu", "Excel tối đa 10.000 dòng, PDF tối đa 2.000 dòng. Vui lòng thu hẹp bộ lọc."],
+              503: ["Dịch vụ tạm thời gián đoạn", "Chưa thể tạo file. Vui lòng thử lại sau."]
+            };
+            const error = errors[response.status] || ["Không thể tải file", "Máy chủ chưa trả về file hoàn chỉnh. Vui lòng thử lại sau."];
+            showToast(response.status === 422 ? "warning" : "error", error[0], error[1], 6000);
+            return;
+          }
+          const mime = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+          const requiredMime = formatExt === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : formatExt === "pdf" ? "application/pdf" : null;
+          const disposition = response.headers.get("content-disposition") || "";
+          const encodedName = disposition.match(/(?:^|;)\s*filename\*=UTF-8''([^;]+)/i);
+          const plainName = disposition.match(/(?:^|;)\s*filename=(?:"([^"\r\n]*)"|([^;\r\n]+))/i);
+          let filename = encodedName ? decodeURIComponent(encodedName[1].trim()) : plainName ? (plainName[1] ?? plainName[2].trim()) : "";
+          if (!requiredMime || mime !== requiredMime || !/^attachment(?:\s*;|\s*$)/i.test(disposition)
+              || !/^[^\x00-\x1f\x7f\\/]{1,200}$/.test(filename) || !filename.toLowerCase().endsWith("." + formatExt)) {
+            progressToast.dismiss();
+            showToast("error", "Phản hồi không phải file hợp lệ", "Máy chủ chưa trả về file Excel/PDF đúng định dạng. Vui lòng tải lại trang.", 6000);
+            return;
+          }
+          // Verify the body before creating a Blob; reject HTML/empty/truncated files even with misleading headers.
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          const signature = formatExt === "pdf" ? [37, 80, 68, 70, 45] : [80, 75, 3, 4];
+          const length = response.headers.get("content-length");
+          const encoding = response.headers.get("content-encoding");
+          if (bytes.length <= signature.length || !signature.every((value, index) => bytes[index] === value)
+              || (length && (!encoding || encoding === "identity") && Number(length) !== bytes.length)) {
+            progressToast.dismiss();
+            showToast("error", "File tải về không hợp lệ", "File rỗng, thiếu dữ liệu hoặc sai định dạng. Vui lòng thử lại sau.", 6000);
+            return;
+          }
+          const blob = new Blob([bytes], { type: requiredMime });
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none"; a.href = downloadUrl; a.download = filename;
+          document.body.appendChild(a); a.click();
+          setTimeout(function () {
+            window.URL.revokeObjectURL(downloadUrl);
+            if (a.parentNode) a.parentNode.removeChild(a);
+          }, 500);
+          progressToast.dismiss();
+          showToast("success", "Đã chuẩn bị file tải xuống", `File ${filename} đã được chuyển cho trình duyệt để tải xuống.`, 4000);
         } catch (netErr) {
           progressToast.dismiss();
           showToast(

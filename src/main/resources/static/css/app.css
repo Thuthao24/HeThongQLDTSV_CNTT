@@ -966,42 +966,6 @@ body.modal-open {
 }
 
 /* ===== Module 17: Namespace morong - Advanced Search & Filters ===== */
-.morong-tabs {
-  display: flex;
-  gap: 0;
-  margin: -2px 0 18px;
-  border-bottom: 2px solid #cfd8e3;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-}
-.morong-tab-item {
-  border: 0;
-  background: transparent;
-  color: #5d6d84;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 11px 18px;
-  text-decoration: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  white-space: nowrap;
-  transition: color .15s ease, border-color .15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.morong-tab-item:hover {
-  color: #06649a;
-  background: rgba(6, 100, 154, 0.04);
-}
-.morong-tab-item.active {
-  color: #06649a;
-  border-bottom-color: #06649a;
-  background: #fff;
-  border-top-left-radius: 3px;
-  border-top-right-radius: 3px;
-}
 
 .morong-filter-card {
   background: #fff;
@@ -1066,55 +1030,6 @@ body.modal-open {
   border-color: #b91c1c !important;
   background-color: #fff8f8;
 }
-.morong-date-picker-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-.morong-date-picker-wrap .morong-filter-control {
-  padding-right: 36px;
-}
-.morong-date-picker-btn {
-  position: absolute;
-  right: 1px;
-  top: 1px;
-  bottom: 1px;
-  width: 32px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #64748b;
-  border-radius: 0 2px 2px 0;
-  transition: background .15s ease, color .15s ease;
-}
-.morong-date-picker-btn:hover {
-  background: #f1f5f9;
-  color: #06649a;
-}
-.morong-date-native-picker {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
-}
-.morong-date-error {
-  color: #b91c1c;
-  font-size: 11px;
-  line-height: 1.35;
-  margin-top: 3px;
-  font-weight: 500;
-}
 .morong-filter-actions {
   display: flex;
   align-items: center;
@@ -1131,62 +1046,6 @@ body.modal-open {
 }
 
 /* Pagination component */
-.morong-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #fafbfc;
-  border-top: 1px solid #e2e8f0;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.morong-pagination-info {
-  font-size: 11px;
-  color: #64748b;
-}
-.morong-pagination-info b {
-  color: #1e293b;
-}
-.morong-pagination-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.morong-page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 7px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 2px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all .15s ease;
-}
-.morong-page-btn:hover {
-  background: #f1f5f9;
-  color: #06649a;
-  border-color: #94a3b8;
-}
-.morong-page-btn.active {
-  background: #06649a;
-  color: #fff;
-  border-color: #06649a;
-  font-weight: 700;
-}
-.morong-page-btn.disabled {
-  opacity: .4;
-  cursor: not-allowed;
-  pointer-events: none;
-  background: #f8fafc;
-}
 
 /* Badge variants */
 .badge-danger {
@@ -1234,10 +1093,6 @@ body.modal-open {
   .morong-btn-group .btn {
     flex: 1;
     justify-content: center;
-  }
-  .morong-pagination {
-    flex-direction: column;
-    align-items: center;
   }
 }
 @media (max-width: 520px) {
