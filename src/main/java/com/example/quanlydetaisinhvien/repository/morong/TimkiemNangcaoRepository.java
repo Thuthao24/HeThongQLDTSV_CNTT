@@ -10,7 +10,6 @@ import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.*;
 import java.util.*;
 
 /** Read-only Criteria queries; authorization is enforced here as well as in the service. */
@@ -24,12 +23,8 @@ public class TimkiemNangcaoRepository {
     }
 
     public Result<DetaiRow> detai(DetaiFilterDTO filter) { return search(Dataset.DETAI, filter, DetaiRow.class); }
-    public Result<DotdangkyRow> dotdangky(DotdangkyFilterDTO filter) { return search(Dataset.DOTDANGKY, filter, DotdangkyRow.class); }
-    public Result<KetquaRow> ketqua(KetquaFilterDTO filter) { return search(Dataset.KETQUA, filter, KetquaRow.class); }
 
     public List<DetaiRow> exportDetai(DetaiFilterDTO filter, int limit) { return export(Dataset.DETAI, filter, DetaiRow.class, limit); }
-    public List<DotdangkyRow> exportDotdangky(DotdangkyFilterDTO filter, int limit) { return export(Dataset.DOTDANGKY, filter, DotdangkyRow.class, limit); }
-    public List<KetquaRow> exportKetqua(KetquaFilterDTO filter, int limit) { return export(Dataset.KETQUA, filter, KetquaRow.class, limit); }
 
     private <T> List<T> export(Dataset dataset, SearchFilterDTO filter, Class<T> type, int limit) {
         MorongPermissions.require(dataset);
@@ -87,51 +82,21 @@ public class TimkiemNangcaoRepository {
     }
 
     private Context context(AbstractQuery<?> query, Dataset dataset) {
-        var scope = MorongPermissions.require(dataset);
+        MorongPermissions.require(dataset);
         var cb = em.getCriteriaBuilder();
         var c = new Context();
-        if (dataset == Dataset.DOTDANGKY) {
-            c.root(query, Dotdangky.class, "round", "id", "tendot", "loaidot", "trangthai",
-                    "batdaugiangvien", "ketthucgiangvien", "batdausinhvien", "ketthucsinhvien", "hanchamphanbien", "ngaybaocaohoidong");
-            c.columns.put("dotdangkyid", c.columns.get("id"));
-        } else {
-            var round = c.root(query, Dotdangky.class, "round", "tendot", "loaidot");
-            c.columns.put("dotdangkyid", round.get("id"));
-            var topic = c.root(query, Detai.class, "topic", "tendetai");
-            c.predicates.add(cb.equal(topic.get("dotdangkyid"), round.get("id")));
-            if (dataset == Dataset.DETAI) {
-                for (String name : List.of("id", "mota", "bomonid", "giangviendexuatid", "trangthai")) c.columns.put(name, topic.get(name));
-                var department = c.root(query, Bomon.class, "department", "tenbomon");
-                var teacher = c.root(query, Giangvien.class, "teacher");
-                var account = c.root(query, Taikhoan.class, "account");
-                c.columns.put("giangviendexuatHoten", account.get("hoten"));
-                c.predicates.add(cb.equal(topic.get("bomonid"), department.get("id")));
-                c.predicates.add(cb.equal(topic.get("giangviendexuatid"), teacher.get("id")));
-                c.predicates.add(cb.equal(teacher.get("taikhoanid"), account.get("id")));
-            } else {
-                c.columns.put("detaiid", topic.get("id"));
-                var registration = c.root(query, Dangkydetai.class, "registration", "trangthai", "nhomid");
-                c.columns.put("dangkydetaiid", registration.get("id"));
-                var group = c.root(query, Nhomsinhvien.class, "group", "tennhom");
-                var result = c.root(query, Ketqua.class, "result", "id", "diemcuoi", "dacongbo", "ngaycongbo");
-                c.predicates.add(cb.equal(registration.get("detaiid"), topic.get("id")));
-                c.predicates.add(cb.equal(registration.get("nhomid"), group.get("id")));
-                c.predicates.add(cb.equal(result.get("dangkydetaiid"), registration.get("id")));
-                if (scope.student()) {
-                    c.predicates.add(cb.isTrue(result.get("dacongbo")));
-                    var membership = query.subquery(Long.class);
-                    var member = membership.from(Thanhviennhom.class);
-                    var student = membership.from(Sinhvien.class);
-                    var account = membership.from(Taikhoan.class);
-                    membership.select(member.get("nhomid")).where(
-                            cb.equal(member.get("nhomid"), group.get("id")),
-                            cb.equal(member.get("sinhvienid"), student.get("id")),
-                            cb.equal(student.get("taikhoanid"), account.get("id")),
-                            cb.equal(account.get("tendangnhap"), scope.username()));
-                    c.predicates.add(cb.exists(membership));
-                }
-            }
-        }
+        var round = c.root(query, Dotdangky.class, "round", "tendot", "loaidot");
+        c.columns.put("dotdangkyid", round.get("id"));
+        var topic = c.root(query, Detai.class, "topic", "tendetai");
+        c.predicates.add(cb.equal(topic.get("dotdangkyid"), round.get("id")));
+        for (String name : List.of("id", "mota", "bomonid", "giangviendexuatid", "trangthai")) c.columns.put(name, topic.get(name));
+        var department = c.root(query, Bomon.class, "department", "tenbomon");
+        var teacher = c.root(query, Giangvien.class, "teacher");
+        var account = c.root(query, Taikhoan.class, "account");
+        c.columns.put("giangviendexuatHoten", account.get("hoten"));
+        c.predicates.add(cb.equal(topic.get("bomonid"), department.get("id")));
+        c.predicates.add(cb.equal(topic.get("giangviendexuatid"), teacher.get("id")));
+        c.predicates.add(cb.equal(teacher.get("taikhoanid"), account.get("id")));
         return c;
     }
 
@@ -139,10 +104,6 @@ public class TimkiemNangcaoRepository {
         List<String> names = switch (dataset) {
             case DETAI -> List.of("id", "tendetai", "mota", "dotdangkyid", "tendot", "loaidot", "bomonid",
                     "tenbomon", "giangviendexuatid", "giangviendexuatHoten", "trangthai");
-            case DOTDANGKY -> List.of("id", "tendot", "loaidot", "trangthai", "batdaugiangvien", "ketthucgiangvien",
-                    "batdausinhvien", "ketthucsinhvien", "hanchamphanbien", "ngaybaocaohoidong");
-            case KETQUA -> List.of("id", "dangkydetaiid", "detaiid", "tendetai", "nhomid", "tennhom",
-                    "dotdangkyid", "tendot", "loaidot", "trangthai", "diemcuoi", "dacongbo", "ngaycongbo");
         };
         return names.stream().map(c.columns::get).toArray(Selection<?>[]::new);
     }
@@ -150,13 +111,17 @@ public class TimkiemNangcaoRepository {
     private void apply(Context c, AbstractQuery<?> query, Dataset dataset, SearchFilterDTO f) {
         var cb = em.getCriteriaBuilder();
         equal(c, "dotdangkyid", f.getDotdangkyid()); equal(c, "loaidot", f.getLoaidot());
-        if (!f.getKeyword().isBlank()) {
+        if (f instanceof DetaiFilterDTO legacy && !legacy.getQ().isEmpty()) {
+            // Match the original /detai JPQL, including null coalescing and LIKE wildcard behavior.
+            String pattern = "%" + legacy.getQ().toLowerCase(Locale.ROOT) + "%";
+            c.predicates.add(cb.or(
+                    cb.like(cb.lower(cb.coalesce(c.columns.get("tendetai").as(String.class), "")), pattern),
+                    cb.like(cb.lower(cb.coalesce(c.columns.get("mota").as(String.class), "")), pattern)));
+        } else if (!f.getKeyword().isBlank()) {
             String pattern = "%" + f.getKeyword().strip().toLowerCase(Locale.ROOT)
                     .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
             List<String> textFields = switch (dataset) {
                 case DETAI -> List.of("tendetai", "mota");
-                case DOTDANGKY -> List.of("tendot");
-                case KETQUA -> List.of("tendetai", "tennhom");
             };
             c.predicates.add(cb.or(textFields.stream().map(name -> cb.like(cb.lower(c.columns.get(name).as(String.class)), pattern, '!'))
                     .toArray(Predicate[]::new)));
@@ -171,26 +136,11 @@ public class TimkiemNangcaoRepository {
                         cb.equal(guide.get("giangvienid"), d.getGiangvienhuongdanid()));
                 c.predicates.add(cb.exists(exists));
             }
-        } else if (f instanceof DotdangkyFilterDTO d) {
-            equal(c, "trangthai", d.getTrangthai());
-            dates(c, d.getMocThoiGian().name().toLowerCase(Locale.ROOT), d.getThoiGianTu(), d.getThoiGianDen());
-        } else if (f instanceof KetquaFilterDTO k) {
-            equal(c, "trangthai", k.getTrangthai()); equal(c, "dacongbo", k.getDacongbo());
-            if (k.getDiemTu() != null) c.predicates.add(cb.ge(c.columns.get("diemcuoi").as(java.math.BigDecimal.class), k.getDiemTu()));
-            if (k.getDiemDen() != null) c.predicates.add(cb.le(c.columns.get("diemcuoi").as(java.math.BigDecimal.class), k.getDiemDen()));
-            dates(c, "ngaycongbo", k.getNgayCongboTu(), k.getNgayCongboDen());
         }
     }
 
     private void equal(Context c, String column, Object value) {
         if (value != null) c.predicates.add(em.getCriteriaBuilder().equal(c.columns.get(column), value));
-    }
-
-    private void dates(Context c, String column, LocalDate from, LocalDate to) {
-        var cb = em.getCriteriaBuilder();
-        var date = c.columns.get(column).as(LocalDateTime.class);
-        if (from != null) c.predicates.add(cb.greaterThanOrEqualTo(date, from.atStartOfDay()));
-        if (to != null) c.predicates.add(cb.lessThan(date, to.plusDays(1).atStartOfDay()));
     }
 
     /** Unfiltered choices are derived only from the authorized dataset, never a global lookup. */
@@ -201,11 +151,10 @@ public class TimkiemNangcaoRepository {
         var ctx = context(query, dataset);
         List<String> fields = new ArrayList<>(List.of("dotdangkyid", "tendot", "loaidot", "trangthai"));
         if (dataset == Dataset.DETAI) fields.addAll(List.of("bomonid", "tenbomon", "giangviendexuatid", "giangviendexuatHoten"));
-        if (dataset == Dataset.KETQUA) fields.add("dacongbo");
         query.select(cb.tuple(fields.stream().map(ctx.columns::get).toArray(Selection<?>[]::new))).distinct(true)
                 .where(ctx.predicates.toArray(Predicate[]::new));
         Map<String, SortedMap<String, String>> choices = new HashMap<>();
-        for (String key : List.of("dotdangky", "loaidot", "trangthai", "bomon", "giangviendexuat", "dacongbo", "giangvienhuongdan")) choices.put(key, new TreeMap<>());
+        for (String key : List.of("dotdangky", "loaidot", "trangthai", "bomon", "giangviendexuat", "giangvienhuongdan")) choices.put(key, new TreeMap<>());
         for (var row : em.createQuery(query).getResultList()) {
             Map<String, Object> values = new HashMap<>();
             for (int i = 0; i < fields.size(); i++) values.put(fields.get(i), row.get(i));
@@ -214,14 +163,11 @@ public class TimkiemNangcaoRepository {
             choice(choices, "trangthai", values.get("trangthai"), values.get("trangthai"));
             choice(choices, "bomon", values.get("bomonid"), values.get("tenbomon"));
             choice(choices, "giangviendexuat", values.get("giangviendexuatid"), values.get("giangviendexuatHoten"));
-            choice(choices, "dacongbo", values.get("dacongbo"), Boolean.TRUE.equals(values.get("dacongbo")) ? "Đã công bố" : "Chưa công bố");
         }
         if (dataset == Dataset.DETAI) guideOptions(choices);
-        var timeOptions = dataset == Dataset.DOTDANGKY ? Arrays.stream(DotdangkyFilterDTO.MocThoiGian.values())
-                .map(value -> new Option(value.name(), value.name())).toList() : List.<Option>of();
         return new FilterOptions(options(choices, "dotdangky"), options(choices, "bomon"), options(choices, "loaidot"),
                 options(choices, "trangthai"), options(choices, "giangviendexuat"), options(choices, "giangvienhuongdan"),
-                options(choices, "dacongbo"), timeOptions, validation.sortOptions(dataset));
+                validation.sortOptions(dataset));
     }
 
     private void guideOptions(Map<String, SortedMap<String, String>> choices) {

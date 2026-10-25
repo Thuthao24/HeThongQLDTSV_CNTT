@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Quản lý đề tài</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/morong-export.css}">
 </head>
 
 <body>
@@ -17,7 +18,7 @@
 
         <div th:replace="~{fragments :: sidebar('detai')}"></div>
 
-        <main class="main-panel">
+        <main class="main-panel" th:object="${filter}">
 
             <!-- TIÊU ĐỀ -->
             <div class="page-heading">
@@ -41,6 +42,204 @@
                 </a>
             </div>
 
+            <section class="morong-filter-card detai-filter-card"
+                     th:with="advancedCount=${(filter.dotdangkyid != null ? 1 : 0) + (filter.bomonid != null ? 1 : 0) + (filter.loaidot != null ? 1 : 0) + (filter.trangthai != null ? 1 : 0) + (filter.giangviendexuatid != null ? 1 : 0) + (filter.giangvienhuongdanid != null ? 1 : 0) + (filter.sort != 'id,desc' ? 1 : 0) + (filter.size != 25 ? 1 : 0)}, appliedCount=${advancedCount + ((!#strings.isEmpty(filter.q) or !#strings.isEmpty(filter.keyword)) ? 1 : 0)}">
+                <link rel="stylesheet" th:href="@{/css/detai-filter.css}">
+                <form th:action="@{/detai}" method="get" id="filterForm" th:object="${filter}">
+                    <input type="hidden" name="page" id="pageNumberInput" th:value="${pageInfo != null ? pageInfo.number : 0}">
+                    <!-- Lỗi validation từ BindingResult -->
+                    <div th:if="${#fields != null and #fields.hasAnyErrors()}" class="publication-message error" role="alert" style="margin-bottom: 14px;">
+                        <strong>Bộ lọc không hợp lệ:</strong>
+                        <ul style="margin: 6px 0 0 18px; padding: 0;">
+                            <li th:each="err : ${#fields.allErrors()}" th:text="${err}">Lỗi</li>
+                        </ul>
+                    </div>
+
+                    <div class="detai-filter-toolbar">
+                        <div class="morong-filter-field">
+                            <label for="keyword">Từ khóa tìm kiếm</label>
+                            <input type="text"
+                                   id="keyword"
+                                   th:name="${#strings.isEmpty(filter.q) ? 'keyword' : 'q'}"
+                                   class="morong-filter-control"
+                                   placeholder="Tên đề tài, mô tả..."
+                                   th:value="${#strings.isEmpty(filter.q) ? filter.keyword : filter.q}"
+                                   autocomplete="off">
+                        </div>
+
+                        <div class="detai-filter-buttons">
+                            <button type="submit" class="btn btn-primary" onclick="resetPage()">⌕ Tìm kiếm</button>
+                            <a th:href="@{/detai}" class="btn btn-secondary">↺ Đặt lại</a>
+                        </div>
+                        <!-- Component Xuất Excel/PDF duy nhất -->
+                        <div class="morong-export-wrap" th:if="${exportOptions != null and exportOptions.enabled}">
+                            <button type="button"
+                                    class="morong-export-btn"
+                                    aria-haspopup="true"
+                                    aria-expanded="false"
+                                    title="Xuất danh sách đề tài ra file Excel hoặc PDF">
+                                <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Xuất</span>
+                                <span class="morong-export-arrow" aria-hidden="true">▾</span>
+                            </button>
+                            <div class="morong-export-dropdown" role="menu">
+                                <a th:href="${exportOptions.excelUrl}"
+                                   class="morong-export-item morong-export-excel"
+                                   role="menuitem"
+                                   data-export-format="xlsx"
+                                   data-export-label="Excel">
+                                    <span class="morong-export-icon excel-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM15.5 17.5h-1.8l-1.7-2.9-1.7 2.9H8.5l2.6-4-2.4-3.8h1.8l1.5 2.6 1.5-2.6h1.8l-2.4 3.8 2.6 4zM13 9V3.5L18.5 9H13z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="morong-export-text">Xuất Excel (.xlsx)</span>
+                                </a>
+                                <a th:href="${exportOptions.pdfUrl}"
+                                   class="morong-export-item morong-export-pdf"
+                                   role="menuitem"
+                                   data-export-format="pdf"
+                                   data-export-label="PDF">
+                                    <span class="morong-export-icon pdf-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-3.5 15.5H9v-5h1.5a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5zm0-3.5H10v2h.5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM13 9V3.5L18.5 9H13zm3.5 8.5H15v-5h1.5a1.5 1.5 0 0 1 0 3H16v2zm0-3.5H16v-1h.5a.5.5 0 0 1 0 1z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="morong-export-text">Xuất PDF (.pdf)</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="morong-export-wrap" th:if="${exportOptions == null or !exportOptions.enabled}">
+                            <button type="button" class="morong-export-btn disabled" disabled="disabled" title="Chức năng xuất chưa khả dụng cho bộ lọc này">
+                                <svg class="morong-export-btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Xuất</span>
+                                <span class="morong-export-arrow" aria-hidden="true">▾</span>
+                            </button>
+                        </div>
+                    </div>
+                    <details id="detaiAdvancedFilters" class="detai-filter-disclosure"
+                             th:attr="open=${advancedCount > 0 or #fields.hasAnyErrors() ? 'open' : null}">
+                        <summary id="detaiAdvancedSummary" class="detai-filter-summary" aria-controls="detaiAdvancedPanel"
+                                 th:attr="aria-expanded=${advancedCount > 0 or #fields.hasAnyErrors()}">
+                            <span>Bộ lọc nâng cao</span>
+                            <span id="detaiAppliedCount" class="detai-filter-count"
+                                  th:if="${appliedCount > 0 and !#fields.hasAnyErrors()}"
+                                  th:text="|${appliedCount} điều kiện đang áp dụng|">1 điều kiện đang áp dụng</span>
+                            <svg class="detai-filter-chevron" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
+                        </summary>
+                        <div id="detaiAdvancedPanel" class="morong-filter-grid detai-filter-grid">
+                        <!-- Đợt đăng ký -->
+                        <div class="morong-filter-field">
+                            <label for="dotdangkyid">Đợt đăng ký</label>
+                            <select id="dotdangkyid" name="dotdangkyid" class="morong-filter-control">
+                                <option value="">— Tất cả đợt đăng ký —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.dotdangky : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.dotdangkyid != null && filter.dotdangkyid.toString() == opt.value}">
+                                </option>
+                                <option th:if="${filter.dotdangkyid != null and !#lists.contains(filterOptions.dotdangky.![value], filter.dotdangkyid.toString())}" th:value="${filter.dotdangkyid.toString()}" selected th:text="|Giá trị đang lọc: ${filter.dotdangkyid.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Bộ môn -->
+                        <div class="morong-filter-field">
+                            <label for="bomonid">Bộ môn</label>
+                            <select id="bomonid" name="bomonid" class="morong-filter-control">
+                                <option value="">— Tất cả bộ môn —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.bomon : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.bomonid != null && filter.bomonid.toString() == opt.value}">
+                                </option>
+                                <option th:if="${filter.bomonid != null and !#lists.contains(filterOptions.bomon.![value], filter.bomonid.toString())}" th:value="${filter.bomonid.toString()}" selected th:text="|Giá trị đang lọc: ${filter.bomonid.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Loại đợt -->
+                        <div class="morong-filter-field">
+                            <label for="loaidot">Loại đợt</label>
+                            <select id="loaidot" name="loaidot" class="morong-filter-control">
+                                <option value="">— Tất cả loại đợt —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.loaidot : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'KLTN' ? 'Khóa luận tốt nghiệp' : (opt.value == 'TLCN' ? 'Tiểu luận chuyên ngành' : (opt.value == 'NCKH' ? 'Nghiên cứu khoa học' : (opt.value == 'MONHOC' ? 'Môn học' : opt.label)))}"
+                                        th:selected="${filter != null && filter.loaidot != null && filter.loaidot.name() == opt.value}">
+                                </option>
+                                <option th:if="${filter.loaidot != null and !#lists.contains(filterOptions.loaidot.![value], filter.loaidot.toString())}" th:value="${filter.loaidot.toString()}" selected th:text="|Giá trị đang lọc: ${filter.loaidot.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Trạng thái -->
+                        <div class="morong-filter-field">
+                            <label for="trangthai">Trạng thái đề tài</label>
+                            <select id="trangthai" name="trangthai" class="morong-filter-control">
+                                <option value="">— Tất cả trạng thái —</option>
+                                <option th:each="opt : ${filterOptions != null ? filterOptions.trangthai : null}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'CHODUYET' ? 'Chờ duyệt' : (opt.value == 'DADUYET' ? 'Đã duyệt' : (opt.value == 'CONGBO' ? 'Đã công bố' : (opt.value == 'TUCHOI' ? 'Từ chối' : opt.label)))}"
+                                        th:selected="${filter != null && filter.trangthai != null && filter.trangthai.name() == opt.value}">
+                                </option>
+                                <option th:if="${filter.trangthai != null and !#lists.contains(filterOptions.trangthai.![value], filter.trangthai.toString())}" th:value="${filter.trangthai.toString()}" selected th:text="|Giá trị đang lọc: ${filter.trangthai.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Giảng viên đề xuất (nếu có tùy chọn) -->
+                        <div class="morong-filter-field">
+                            <label for="giangviendexuatid">GV đề xuất</label>
+                            <select id="giangviendexuatid" name="giangviendexuatid" class="morong-filter-control">
+                                <option value="">— Tất cả GV đề xuất —</option>
+                                <option th:each="opt : ${filterOptions.giangviendexuat}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.giangviendexuatid != null && filter.giangviendexuatid.toString() == opt.value}">
+                                </option>
+                                <option th:if="${filter.giangviendexuatid != null and !#lists.contains(filterOptions.giangviendexuat.![value], filter.giangviendexuatid.toString())}" th:value="${filter.giangviendexuatid.toString()}" selected th:text="|Giá trị đang lọc: ${filter.giangviendexuatid.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Giảng viên hướng dẫn (nếu có tùy chọn) -->
+                        <div class="morong-filter-field">
+                            <label for="giangvienhuongdanid">GV hướng dẫn</label>
+                            <select id="giangvienhuongdanid" name="giangvienhuongdanid" class="morong-filter-control">
+                                <option value="">— Tất cả GV hướng dẫn —</option>
+                                <option th:each="opt : ${filterOptions.giangvienhuongdan}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.label}"
+                                        th:selected="${filter != null && filter.giangvienhuongdanid != null && filter.giangvienhuongdanid.toString() == opt.value}">
+                                </option>
+                                <option th:if="${filter.giangvienhuongdanid != null and !#lists.contains(filterOptions.giangvienhuongdan.![value], filter.giangvienhuongdanid.toString())}" th:value="${filter.giangvienhuongdanid.toString()}" selected th:text="|Giá trị đang lọc: ${filter.giangvienhuongdanid.toString()}|"></option>
+                            </select>
+                        </div>
+
+                        <!-- Sắp xếp -->
+                        <div class="morong-filter-field">
+                            <label for="sort">Sắp xếp theo</label>
+                            <select id="sort" name="sort" class="morong-filter-control">
+                                <option th:each="opt : ${filterOptions.sort}"
+                                        th:value="${opt.value}"
+                                        th:text="${opt.value == 'id,asc' ? 'Mã đề tài (Tăng dần)' :
+                                                 (opt.value == 'id,desc' ? 'Mã đề tài (Giảm dần)' :
+                                                 (opt.value == 'tendetai,asc' ? 'Tên đề tài (A đến Z)' :
+                                                 (opt.value == 'tendetai,desc' ? 'Tên đề tài (Z đến A)' :
+                                                 (opt.value == 'tendot,asc' ? 'Tên đợt đăng ký (A đến Z)' :
+                                                 (opt.value == 'tendot,desc' ? 'Tên đợt đăng ký (Z đến A)' :
+                                                 (opt.value == 'trangthai,asc' ? 'Trạng thái (Tăng dần)' :
+                                                 (opt.value == 'trangthai,desc' ? 'Trạng thái (Giảm dần)' : opt.label)))))))}"
+                                        th:selected="${filter != null && filter.sort != null && filter.sort == opt.value}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="morong-filter-field">
+                            <label for="size">Số bản ghi mỗi trang</label>
+                            <input id="size" name="size" type="number" min="1" max="100" required
+                                   class="morong-filter-control" th:value="${filter.size}">
+                        </div>
+                        </div>
+                    </details>
+                </form>
+            </section>
+
             <section class="panel-card">
 
                 <!-- THÔNG BÁO -->
@@ -56,22 +255,6 @@
 
                 <!-- TÌM KIẾM -->
                 <div class="table-toolbar">
-
-                    <form class="search-box"
-                          th:action="@{/detai}"
-                          method="get">
-
-                        <span>⌕</span>
-
-                        <input type="search"
-                               name="q"
-                               th:value="${q}"
-                               placeholder="Tìm kiếm đề tài...">
-
-                        <button type="submit" class="btn">
-                            Tìm kiếm
-                        </button>
-                    </form>
 
                     <div class="record-count">
                         <b th:text="${pageData.totalElements}">0</b>
@@ -272,7 +455,7 @@
                      ">
 
                     <a th:if="${pageData.hasPrevious()}"
-                       th:href="@{/detai(page=${pageData.number - 1},q=${q})}">
+                       th:href="${previousUrl}">
                         ← Trang trước
                     </a>
 
@@ -281,7 +464,7 @@
                     </span>
 
                     <a th:if="${pageData.hasNext()}"
-                       th:href="@{/detai(page=${pageData.number + 1},q=${q})}">
+                       th:href="${nextUrl}">
                         Trang sau →
                     </a>
 
@@ -294,5 +477,7 @@
 </div>
 
 <script th:src="@{/js/app.js}"></script>
+<script th:src="@{/js/morong-search.js}" defer></script>
+<script th:src="@{/js/morong-export.js}" defer></script>
 </body>
 </html>
