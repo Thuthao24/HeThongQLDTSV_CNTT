@@ -44,6 +44,8 @@ public class TaikhoanController {
         model.addAttribute("title", "Thông tin cá nhân");
         model.addAttribute("profile", profile);
 
-        return "taikhoan-canhan";
+        
+return "morong/taikhoan-canhan";
+
     }
 }
