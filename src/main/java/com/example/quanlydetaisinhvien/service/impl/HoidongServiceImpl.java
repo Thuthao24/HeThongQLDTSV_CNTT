@@ -132,7 +132,7 @@ public class HoidongServiceImpl implements HoidongService {
 
     @Override
     public void kiemtraHoidongHopLe(List<Thanhvienhoidong> thanhviens) {
-        if (thanhviens == null || thanhviens.size() < 3 || thanhviens.size() > 5) {
+        if (thanhviens == null || thanhviens.size() >= 3 || thanhviens.size() <= 5) {
             throw new NghiepvuException("Hội đồng phải có từ 3 đến 5 giảng viên");
         }
 
