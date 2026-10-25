@@ -280,7 +280,7 @@ public class HoidongServiceImpl implements HoidongService {
             item.setVaitro(tv.getVaitro());
             items.add(item);
         }
-        while (items.size() < 5) {
+        while (items.size() < 3) {
             items.add(new ThanhvienHoidongItemDto());
         }
         dto.setThanhviens(items);

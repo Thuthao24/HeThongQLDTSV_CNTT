@@ -146,16 +146,6 @@
     <span class="nav-icon">👤</span>
     Tài khoản của tôi
 </a>
-
-<!-- Chỉ Trưởng khoa quản lý danh sách tài khoản -->
-<a th:if="${vaitro == 'TRUONGKHOA'}"
-   th:href="@{/taikhoan/quanly}"
-   class="nav-item"
-   th:classappend="${active == 'taikhoan'} ? ' active' : ''">
-    <span class="nav-icon">⚙</span>
-    Quản lý tài khoản
-</a>
-
         <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
             <button class="nav-item sidebar-logout" type="submit"><span class="nav-icon">↪</span>Đăng xuất</button>
         </form>

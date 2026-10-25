@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1">
-    <title>Tài khoản của tôi</title>
+    <title>Thông tin cá nhân</title>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <style>
         .profile-card {
@@ -15,24 +15,23 @@
             display: grid;
             grid-template-columns:
                 repeat(auto-fit, minmax(240px, 1fr));
-            gap: 18px;
+            gap: 16px;
         }
         .profile-item {
-            padding: 15px;
+            background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
-            background: #f8fafc;
+            padding: 16px;
         }
         .profile-item strong {
             display: block;
-            font-size: 12px;
             color: #64748b;
+            font-size: 12px;
             margin-bottom: 8px;
         }
         .profile-item span {
-            font-size: 14px;
-            color: #1e293b;
             font-weight: 600;
+            color: #1e293b;
             overflow-wrap: anywhere;
         }
     </style>
@@ -54,10 +53,11 @@
                     <div class="breadcrumb">
                         Cổng thông tin đào tạo / Tài khoản
                     </div>
-                    <h1>TÀI KHOẢN CỦA TÔI</h1>
+
+                    <h1>THÔNG TIN CÁ NHÂN</h1>
+
                     <p>
-                        Thông tin cá nhân của tài khoản
-                        đang đăng nhập.
+                        Thông tin của tài khoản đang đăng nhập.
                     </p>
                 </div>
             </div>
@@ -67,15 +67,13 @@
                 <div class="profile-grid">
 
                     <div class="profile-item">
-                        <strong>ID tài khoản</strong>
+                        <strong>Mã tài khoản</strong>
                         <span th:text="${profile.id}">—</span>
                     </div>
 
                     <div class="profile-item">
                         <strong>Họ và tên</strong>
-                        <span th:text="${profile.hoten ?: 'Chưa cập nhật'}">
-                            —
-                        </span>
+                        <span th:text="${profile.hoten}">—</span>
                     </div>
 
                     <div class="profile-item">
@@ -92,78 +90,32 @@
 
                     <div class="profile-item">
                         <strong>Vai trò</strong>
-                        <span th:switch="${profile.vaitro?.name()}">
-                            <span th:case="'TRUONGKHOA'">Trưởng khoa</span>
-                            <span th:case="'TRUONGBOMON'">Trưởng bộ môn</span>
-                            <span th:case="'GIANGVIEN'">Giảng viên</span>
-                            <span th:case="'SINHVIEN'">Sinh viên</span>
+
+                        <span th:switch="${profile.vaitro}">
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).TRUONGKHOA}">
+                                Trưởng khoa
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).TRUONGBOMON}">
+                                Trưởng bộ môn
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).GIANGVIEN}">
+                                Giảng viên
+                            </span>
+                            <span th:case="${T(com.example.quanlydetaisinhvien.entity.Vaitro).SINHVIEN}">
+                                Sinh viên
+                            </span>
                             <span th:case="*">Chưa xác định</span>
                         </span>
                     </div>
 
                     <div class="profile-item">
-                        <strong>Trạng thái tài khoản</strong>
+                        <strong>Trạng thái</strong>
                         <span th:text="${profile.kichhoat == true
                             ? 'Đang hoạt động'
                             : 'Tạm khóa'}">
                             —
                         </span>
                     </div>
-
-                    <!-- Thông tin hồ sơ giảng viên -->
-                    <th:block th:if="${teacher != null}">
-
-                        <div class="profile-item">
-                            <strong>Mã giảng viên</strong>
-                            <span th:text="${teacher.magiangvien}">
-                                —
-                            </span>
-                        </div>
-
-                        <div class="profile-item">
-                            <strong>Bộ môn</strong>
-                            <span th:text="${departmentName}">
-                                —
-                            </span>
-                        </div>
-
-                    </th:block>
-
-                    <!-- Thông tin hồ sơ sinh viên -->
-                    <th:block th:if="${student != null}">
-
-                        <div class="profile-item">
-                            <strong>Mã sinh viên</strong>
-                            <span th:text="${student.masinhvien}">
-                                —
-                            </span>
-                        </div>
-
-                        <div class="profile-item">
-                            <strong>Lớp</strong>
-                            <span th:text="${student.lop ?: 'Chưa cập nhật'}">
-                                —
-                            </span>
-                        </div>
-
-                        <div class="profile-item">
-                            <strong>Bộ môn</strong>
-                            <span th:text="${departmentName}">
-                                —
-                            </span>
-                        </div>
-
-                    </th:block>
-
-                </div>
-
-                <div th:if="${vaitro == 'TRUONGKHOA'}"
-                     style="margin-top:24px">
-
-                    <a class="btn btn-primary"
-                       th:href="@{/taikhoan/quanly}">
-                        Quản lý tài khoản
-                    </a>
 
                 </div>
 
