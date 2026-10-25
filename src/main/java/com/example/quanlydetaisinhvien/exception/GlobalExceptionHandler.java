@@ -11,6 +11,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String notFound(Model model) {
+        model.addAttribute("message", "Không tìm thấy trang được yêu cầu.");
+        return "error";
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public String methodNotAllowed(Model model) {
@@ -24,6 +31,11 @@ public class GlobalExceptionHandler {
         return "403";
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public String handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("errorMessage", "Quy định chỉ được tối đa 20MB");
+        return "redirect:/nopbaocao";
+    }
 
     @ExceptionHandler(NghiepvuException.class)
     public String handleNghiepvu(
@@ -42,7 +54,6 @@ public class GlobalExceptionHandler {
 
         return "error";
     }
-
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
