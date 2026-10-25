@@ -269,9 +269,16 @@
 
                     <!-- Nút thao tác -->
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" style="height: 34px; padding: 0 20px; font-weight: 700;">
-                            Lưu hội đồng
-                        </button>
+                        
+<button type="submit"
+        id="saveCouncilButton"
+        class="btn btn-primary"
+        disabled
+        hidden
+        style="display:none;height:34px;padding:0 20px;font-weight:700">
+    Lưu hội đồng
+</button>
+
                         <a th:href="@{/hoidong}" class="btn-cancel">Hủy bỏ</a>
                     </div>
                 </form>
@@ -280,79 +287,310 @@
     </div>
 </div>
 
+
 <script th:inline="javascript">
-    /*<![CDATA[*/
-    const giangVienOptions = /*[[${giangviens}]]*/ [];
+/*<![CDATA[*/
 
-    function updateRowIndices() {
-        const rows = document.querySelectorAll('#membersTableBody tr');
-        rows.forEach((row, idx) => {
-            row.querySelector('.row-index').textContent = idx + 1;
-            const gvSelect = row.querySelector('.gv-select');
-            const roleSelect = row.querySelector('.role-select');
-            gvSelect.name = `thanhviens[${idx}].giangvienid`;
-            roleSelect.name = `thanhviens[${idx}].vaitro`;
-        });
+const giangVienOptions = /*[[${giangviens}]]*/ [];
 
-        const btnAdd = document.getElementById('btnAddMember');
-        if (rows.length >= 5) {
-            btnAdd.style.display = 'none';
-        } else {
-            btnAdd.style.display = 'inline-flex';
-        }
+const MIN_MEMBERS = 3;
+const MAX_MEMBERS = 4;
+
+// Lấy các dòng thành viên
+function getMemberRows() {
+    return Array.from(
+        document.querySelectorAll('#membersTableBody tr')
+    );
+}
+
+// Cập nhật số thứ tự và tên input
+function updateRowIndices() {
+    const rows = getMemberRows();
+
+    rows.forEach((row, index) => {
+        const indexCell = row.querySelector('.row-index');
+        const gvSelect = row.querySelector('.gv-select');
+        const roleSelect = row.querySelector('.role-select');
+
+        indexCell.textContent = index + 1;
+
+        gvSelect.name =
+            `thanhviens[${index}].giangvienid`;
+
+        roleSelect.name =
+            `thanhviens[${index}].vaitro`;
+    });
+
+    // Ẩn nút thêm khi đủ 4 giảng viên
+    const addButton = document.getElementById(
+        'btnAddMember'
+    );
+
+    addButton.style.display =
+        rows.length >= MAX_MEMBERS
+            ? 'none'
+            : 'inline-flex';
+
+    updateSaveButton();
+}
+
+// Kiểm tra toàn bộ danh sách thành viên
+function validateMembers() {
+    const rows = getMemberRows();
+
+    if (rows.length < MIN_MEMBERS) {
+        return {
+            valid: false,
+            message: 'Hội đồng phải có ít nhất 3 giảng viên.'
+        };
     }
 
-    function addMemberRow() {
-        const tbody = document.getElementById('membersTableBody');
-        const rows = tbody.querySelectorAll('tr');
-        if (rows.length >= 5) {
-            alert('Hội đồng tối đa chỉ được 5 giảng viên!');
-            return;
-        }
-
-        const newIdx = rows.length;
-        const tr = document.createElement('tr');
-
-        let optionsHtml = '<option value="">-- Chọn giảng viên --</option>';
-        giangVienOptions.forEach(gv => {
-            optionsHtml += `<option value="${gv.id}">${gv.hienthi}</option>`;
-        });
-
-        tr.innerHTML = `
-            <td class="row-index">${newIdx + 1}</td>
-            <td>
-                <select name="thanhviens[${newIdx}].giangvienid" class="form-control gv-select" required>
-                    ${optionsHtml}
-                </select>
-            </td>
-            <td>
-                <select name="thanhviens[${newIdx}].vaitro" class="form-control role-select" required>
-                    <option value="THANHVIEN">Thành viên</option>
-                    <option value="CHUTICH">Chủ tịch</option>
-                    <option value="THUKY">Thư ký</option>
-                </select>
-            </td>
-            <td style="text-align: center;">
-                <button type="button" class="btn-remove-row" onclick="removeMemberRow(this)">✕</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        updateRowIndices();
+    if (rows.length > MAX_MEMBERS) {
+        return {
+            valid: false,
+            message: 'Hội đồng tối đa chỉ có 4 giảng viên.'
+        };
     }
 
-    function removeMemberRow(btn) {
-        const tbody = document.getElementById('membersTableBody');
-        const rows = tbody.querySelectorAll('tr');
-        if (rows.length <= 3) {
-            alert('Hội đồng phải có tối thiểu 3 giảng viên!');
-            return;
+    const teacherIds = [];
+    const roles = [];
+
+    for (const row of rows) {
+        const teacherId = row.querySelector(
+            '.gv-select'
+        ).value;
+
+        const role = row.querySelector(
+            '.role-select'
+        ).value;
+
+        if (!teacherId) {
+            return {
+                valid: false,
+                message: 'Vui lòng chọn đầy đủ giảng viên.'
+            };
         }
-        btn.closest('tr').remove();
-        updateRowIndices();
+
+        if (!role) {
+            return {
+                valid: false,
+                message: 'Vui lòng chọn vai trò cho từng giảng viên.'
+            };
+        }
+
+        teacherIds.push(teacherId);
+        roles.push(role);
     }
 
-    document.addEventListener('DOMContentLoaded', updateRowIndices);
-    /*]]>*/
+    // Kiểm tra giảng viên trùng
+    const uniqueTeachers = new Set(teacherIds);
+
+    if (uniqueTeachers.size !== teacherIds.length) {
+        return {
+            valid: false,
+            message: 'Không được chọn trùng giảng viên trong hội đồng.'
+        };
+    }
+
+    // Kiểm tra Chủ tịch
+    const chairmanCount = roles.filter(
+        role => role === 'CHUTICH'
+    ).length;
+
+    if (chairmanCount !== 1) {
+        return {
+            valid: false,
+            message: 'Hội đồng phải có đúng 1 Chủ tịch.'
+        };
+    }
+
+    // Kiểm tra Thư ký
+    const secretaryCount = roles.filter(
+        role => role === 'THUKY'
+    ).length;
+
+    if (secretaryCount !== 1) {
+        return {
+            valid: false,
+            message: 'Hội đồng phải có đúng 1 Thư ký.'
+        };
+    }
+
+    return {
+        valid: true,
+        message: 'Danh sách hợp lệ. Có thể lưu hội đồng.'
+    };
+}
+
+// Hiện hoặc ẩn nút Lưu
+function updateSaveButton() {
+    const result = validateMembers();
+
+    const saveButton = document.getElementById(
+        'saveCouncilButton'
+    );
+
+    const message = document.getElementById(
+        'membersValidity'
+    );
+
+    saveButton.disabled = !result.valid;
+    saveButton.hidden = !result.valid;
+
+    saveButton.style.display = result.valid
+        ? 'inline-flex'
+        : 'none';
+
+    message.textContent = result.message;
+
+    message.style.color = result.valid
+        ? '#15803d'
+        : '#b42318';
+}
+
+// Tạo thêm một dòng giảng viên
+function addMemberRow() {
+    const tbody = document.getElementById(
+        'membersTableBody'
+    );
+
+    const rows = getMemberRows();
+
+    if (rows.length >= MAX_MEMBERS) {
+        alert('Hội đồng tối đa chỉ được 4 giảng viên!');
+        return;
+    }
+
+    const index = rows.length;
+
+    const tr = document.createElement('tr');
+
+    // Cột số thứ tự
+    const numberCell = document.createElement('td');
+    numberCell.className = 'row-index';
+    numberCell.textContent = index + 1;
+
+    // Cột giảng viên
+    const teacherCell = document.createElement('td');
+
+    const teacherSelect = document.createElement('select');
+    teacherSelect.className = 'form-control gv-select';
+    teacherSelect.required = true;
+    teacherSelect.name = `thanhviens[${index}].giangvienid`;
+
+    teacherSelect.add(
+        new Option('-- Chọn giảng viên --', '')
+    );
+
+    giangVienOptions.forEach(gv => {
+        teacherSelect.add(
+            new Option(gv.hienthi, String(gv.id))
+        );
+    });
+
+    teacherCell.appendChild(teacherSelect);
+
+    // Cột vai trò
+    const roleCell = document.createElement('td');
+
+    const roleSelect = document.createElement('select');
+    roleSelect.className = 'form-control role-select';
+    roleSelect.required = true;
+    roleSelect.name = `thanhviens[${index}].vaitro`;
+
+    roleSelect.add(
+        new Option('Thành viên', 'THANHVIEN')
+    );
+
+    roleSelect.add(
+        new Option('Chủ tịch', 'CHUTICH')
+    );
+
+    roleSelect.add(
+        new Option('Thư ký', 'THUKY')
+    );
+
+    roleCell.appendChild(roleSelect);
+
+    // Nút xóa dòng
+    const removeCell = document.createElement('td');
+    removeCell.style.textAlign = 'center';
+
+    const removeButton = document.createElement('button');
+
+    removeButton.type = 'button';
+    removeButton.className = 'btn-remove-row';
+    removeButton.textContent = '✕';
+
+    removeButton.addEventListener('click', () => {
+        removeMemberRow(removeButton);
+    });
+
+    removeCell.appendChild(removeButton);
+
+    // Thêm các cột
+    tr.appendChild(numberCell);
+    tr.appendChild(teacherCell);
+    tr.appendChild(roleCell);
+    tr.appendChild(removeCell);
+
+    tbody.appendChild(tr);
+
+    updateRowIndices();
+}
+
+// Xóa thành viên
+function removeMemberRow(button) {
+    const rows = getMemberRows();
+
+    if (rows.length <= MIN_MEMBERS) {
+        alert('Hội đồng phải có tối thiểu 3 giảng viên!');
+        return;
+    }
+
+    button.closest('tr').remove();
+
+    updateRowIndices();
+}
+
+// Khởi tạo giao diện
+document.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.getElementById(
+        'membersTableBody'
+    );
+
+    const form = tbody.closest('form');
+
+    // Cập nhật trạng thái khi đổi giảng viên/vai trò
+    tbody.addEventListener('change', event => {
+        if (
+            event.target.matches('.gv-select') ||
+            event.target.matches('.role-select')
+        ) {
+            updateSaveButton();
+        }
+    });
+
+    // Chặn lưu nếu danh sách không hợp lệ
+    form.addEventListener('submit', event => {
+        const result = validateMembers();
+
+        if (!result.valid) {
+            event.preventDefault();
+            updateSaveButton();
+            alert(result.message);
+        }
+    });
+
+    // Nếu dữ liệu ban đầu ít hơn 3 dòng thì thêm dòng
+    while (getMemberRows().length < MIN_MEMBERS) {
+        addMemberRow();
+    }
+
+    updateRowIndices();
+});
+
+/*]]>*/
 </script>
 <script th:src="@{/js/app.js}"></script>
 </body>
