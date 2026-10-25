@@ -133,9 +133,23 @@ document.addEventListener("DOMContentLoaded", function () {
   <div class="search-box"><span>⌕</span><input type="search" data-table-search placeholder="Tìm kiếm trong danh sách..."></div>
   <div class="record-count"><b th:text="${pageData.totalElements}">0</b> bản ghi</div>
 </div>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã đăng ký</th><th>Mã giảng viên</th><th>Điểm</th><th>Nhận xét</th></tr></thead><tbody data-table-body>
-<tr th:each="item : ${items}"><td th:text="${item.id}">---</td><td th:text="${item.dangkydetaiid}">---</td><td th:text="${item.giangvienid}">---</td><td th:text="${item.diemso}">---</td><td th:text="${item.nhanxet}">---</td></tr>
-<tr th:if="${#lists.isEmpty(items)}"><td colspan="5"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Chưa có điểm đánh giá.</span></div></td></tr>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Mã đăng ký</th><th>Mã giảng viên</th><th>Điểm</th><th>Nhận xét</th><th>Thao tác</th></tr></thead><tbody data-table-body>
+<tr th:each="item : ${items}">
+  <td th:text="${item.id}">---</td>
+  <td th:text="${item.dangkydetaiid}">---</td>
+  <td th:text="${item.giangvienid}">---</td>
+  <td><b th:text="${item.diemso}">---</b></td>
+  <td th:text="${item.nhanxet}">---</td>
+  <td style="white-space:nowrap;">
+    <form th:action="@{/diem/tong-hop/{id}(id=${item.dangkydetaiid})}" method="post" style="display:inline; margin-right:4px;">
+      <button type="submit" class="btn btn-sm" title="Tổng hợp điểm trung bình cho đề tài này">⚡ Tổng hợp</button>
+    </form>
+    <form th:action="@{/diem/xoa/{id}(id=${item.id})}" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa điểm này?');">
+      <button type="submit" class="btn btn-sm" style="color:red;" title="Xóa điểm">Xóa</button>
+    </form>
+  </td>
+</tr>
+<tr th:if="${#lists.isEmpty(items)}"><td colspan="6"><div class="empty-state"><strong>Chưa có dữ liệu</strong><span>Chưa có điểm đánh giá.</span></div></td></tr>
 </tbody></table></div>
 <nav th:if="${pageData.totalPages > 1}" class="pagination" aria-label="Phân trang" style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px;flex-wrap:wrap">
  <a th:if="${pageData.hasPrevious()}" th:href="@{/diem(page=${pageData.number - 1})}">← Trang trước</a>

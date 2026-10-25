@@ -10,8 +10,7 @@ CREATE TABLE phanconghoidong (
     KEY Ix_pchd_hoidong (Hoidongid),
     CONSTRAINT Fk_pchd_dangky FOREIGN KEY (Dangkydetaiid) REFERENCES dangkydetai(Id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT Fk_pchd_hoidong FOREIGN KEY (Hoidongid) REFERENCES hoidong(Id)
-        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT Fk_pchd_hoidong FOREIGN KEY (Hoidongid) REFERENCES hoidong(Id),
     CONSTRAINT Chk_pchd_hinhthuc CHECK (
         (Hinhthuc = 'COHOIDONG' AND Hoidongid IS NOT NULL)
         OR (Hinhthuc = 'KHONGHOIDONG' AND Hoidongid IS NULL)

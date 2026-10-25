@@ -4,6 +4,7 @@ import com.example.quanlydetaisinhvien.entity.Diem;
 import com.example.quanlydetaisinhvien.repository.DiemRepository;
 import com.example.quanlydetaisinhvien.service.DiemService;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.quanlydetaisinhvien.repository.*;
 import com.example.quanlydetaisinhvien.exception.NghiepvuException;
@@ -86,7 +87,16 @@ public class DiemServiceImpl implements DiemService {
         if (!teacher.getId().equals(entity.getGiangvienid()))
             throw new AccessDeniedException("Giảng viên chỉ được nhập điểm cho chính mình.");
         var result = results.findByDangkydetaiid(entity.getDangkydetaiid())
-                .orElseThrow(() -> new NghiepvuException("Chưa lập kết quả cho đăng ký đề tài."));
+                .orElseGet(() -> {
+                    if (registration.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
+                        throw new NghiepvuException("Đăng ký đề tài chưa được duyệt chính thức.");
+                    }
+                    Ketqua emptyKq = new Ketqua();
+                    emptyKq.setDangkydetaiid(entity.getDangkydetaiid());
+                    emptyKq.setDiemcuoi(null);
+                    emptyKq.setDacongbo(false);
+                    return results.save(emptyKq);
+                });
         var assignment = assignments.findById(entity.getDangkydetaiid())
                 .orElseThrow(() -> new NghiepvuException("Chưa phân công hình thức đánh giá."));
         Set<Long> permitted = validator.assignedGraders(validator.context(result), assignment);
@@ -111,13 +121,49 @@ public class DiemServiceImpl implements DiemService {
             throw new NghiepvuException("Giảng viên này đã nhập điểm cho đăng ký.");
         if (results.existsByDangkydetaiidAndDacongboTrue(entity.getDangkydetaiid()))
             throw new NghiepvuException("Kết quả đã công bố, không được sửa điểm.");
-        return repository.save(entity);
+        Diem saved;
+        try {
+            saved = repository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException ex) {
+            throw new NghiepvuException("Giảng viên này đã nhập điểm cho đăng ký.");
+        }
+        var allScores = repository.findByDangkydetaiid(entity.getDangkydetaiid());
+        if (!allScores.isEmpty()) {
+            BigDecimal total = allScores.stream().map(Diem::getDiemso).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal avg = total.divide(BigDecimal.valueOf(allScores.size()), 2, java.math.RoundingMode.HALF_UP);
+            result.setDiemcuoi(avg);
+            results.save(result);
+        }
+        return saved;
     }
 
     @Override
     @Transactional
     public void deleteById(Long id) {
-        throw new NghiepvuException("Không hỗ trợ xóa điểm trực tiếp; cần quy trình điều chỉnh có kiểm soát.");
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) throw new AccessDeniedException("Chưa đăng nhập.");
+        boolean isTruongKhoa = auth.getAuthorities().stream().anyMatch(a -> "ROLE_TRUONGKHOA".equals(a.getAuthority()));
+        var score = repository.findById(id)
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy điểm cần xóa."));
+        if (!isTruongKhoa && !currentLecturer().getId().equals(score.getGiangvienid())) {
+            throw new AccessDeniedException("Bạn không có quyền xóa điểm này.");
+        }
+        if (results.existsByDangkydetaiidAndDacongboTrue(score.getDangkydetaiid())) {
+            throw new NghiepvuException("Kết quả đã công bố, không được xóa điểm.");
+        }
+        Long dkId = score.getDangkydetaiid();
+        repository.deleteById(id);
+
+        results.findByDangkydetaiid(dkId).ifPresent(kq -> {
+            var remaining = repository.findByDangkydetaiid(dkId);
+            if (remaining.isEmpty()) {
+                kq.setDiemcuoi(null);
+            } else {
+                BigDecimal total = remaining.stream().map(Diem::getDiemso).reduce(BigDecimal.ZERO, BigDecimal::add);
+                kq.setDiemcuoi(total.divide(BigDecimal.valueOf(remaining.size()), 2, java.math.RoundingMode.HALF_UP));
+            }
+            results.save(kq);
+        });
     }
 
 

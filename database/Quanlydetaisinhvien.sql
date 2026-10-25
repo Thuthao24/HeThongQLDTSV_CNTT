@@ -152,8 +152,10 @@ CREATE TABLE Diem (
     Giangvienid BIGINT NOT NULL,
     Diemso DECIMAL(4,2) NOT NULL,
     Nhanxet VARCHAR(500),
-    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id),
-    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id)
+    CONSTRAINT Uk_diem_giangvien UNIQUE (Dangkydetaiid, Giangvienid),
+    CONSTRAINT Chk_diemso CHECK (Diemso >= 0 AND Diemso <= 10),
+    FOREIGN KEY (Dangkydetaiid) REFERENCES Dangkydetai(Id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (Giangvienid) REFERENCES Giangvien(Id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE Ketqua (
@@ -679,6 +681,43 @@ INSERT INTO Thongbao(Id,Tieude,Noidung,Nguoidangid) VALUES
 (8,'Cong bo ket qua','Ket qua de tai da duoc cong bo.',1),
 (9,'Cap nhat danh sach hoi dong','Danh sach hoi dong da duoc cap nhat.',1),
 (10,'Nhac nop bao cao','Nhom truong nop bao cao dung han.',1);
+
+INSERT INTO Phanconghoidong(Dangkydetaiid, Hinhthuc, Hoidongid) VALUES
+(1, 'KHONGHOIDONG', NULL),
+(2, 'KHONGHOIDONG', NULL),
+(3, 'KHONGHOIDONG', NULL),
+(4, 'COHOIDONG', 1),
+(5, 'KHONGHOIDONG', NULL),
+(6, 'KHONGHOIDONG', NULL),
+(7, 'KHONGHOIDONG', NULL),
+(8, 'COHOIDONG', 2),
+(9, 'KHONGHOIDONG', NULL),
+(10, 'KHONGHOIDONG', NULL),
+(11, 'KHONGHOIDONG', NULL),
+(12, 'COHOIDONG', 3),
+(13, 'KHONGHOIDONG', NULL),
+(14, 'KHONGHOIDONG', NULL),
+(15, 'KHONGHOIDONG', NULL),
+(16, 'COHOIDONG', 4),
+(17, 'KHONGHOIDONG', NULL),
+(18, 'KHONGHOIDONG', NULL),
+(19, 'KHONGHOIDONG', NULL),
+(20, 'COHOIDONG', 5),
+(21, 'KHONGHOIDONG', NULL),
+(22, 'KHONGHOIDONG', NULL),
+(23, 'KHONGHOIDONG', NULL),
+(24, 'COHOIDONG', 6),
+(25, 'KHONGHOIDONG', NULL),
+(26, 'KHONGHOIDONG', NULL),
+(27, 'KHONGHOIDONG', NULL),
+(28, 'COHOIDONG', 1),
+(29, 'KHONGHOIDONG', NULL),
+(30, 'KHONGHOIDONG', NULL),
+(31, 'KHONGHOIDONG', NULL),
+(32, 'COHOIDONG', 2),
+(33, 'KHONGHOIDONG', NULL),
+(34, 'KHONGHOIDONG', NULL);
+
 
 SET FOREIGN_KEY_CHECKS = 1;
 

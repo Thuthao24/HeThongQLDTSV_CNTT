@@ -27,6 +27,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
     private final SinhvienRepository sinhvienRepository;
     private final TaikhoanRepository taikhoanRepository;
     private final NopbaocaoRepository nopbaocaoRepository;
+    private final KetquaRepository ketquaRepository;
 
     public DangkydetaiServiceImpl(
             DangkydetaiRepository repository,
@@ -36,7 +37,8 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
             DotdangkyRepository dotdangkyRepository,
             SinhvienRepository sinhvienRepository,
             TaikhoanRepository taikhoanRepository,
-            NopbaocaoRepository nopbaocaoRepository) {
+            NopbaocaoRepository nopbaocaoRepository,
+            KetquaRepository ketquaRepository) {
         this.repository = repository;
         this.nhomsinhvienRepository = nhomsinhvienRepository;
         this.thanhviennhomRepository = thanhviennhomRepository;
@@ -45,6 +47,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         this.sinhvienRepository = sinhvienRepository;
         this.taikhoanRepository = taikhoanRepository;
         this.nopbaocaoRepository = nopbaocaoRepository;
+        this.ketquaRepository = ketquaRepository;
     }
 
     @Override
@@ -326,6 +329,18 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         }
 
         dk.setTrangthai(chapNhan ? TrangthaiDangkydetai.DADUYET : TrangthaiDangkydetai.TUCHOI);
-        return repository.save(dk);
+        Dangkydetai saved = repository.save(dk);
+
+        // STT 01 (P0): Tạo luồng sinh Ketqua rỗng khi đủ điều kiện (duyệt DADUYET), không sinh điểm giả, không trùng bản ghi
+        if (chapNhan && !ketquaRepository.existsByDangkydetaiid(dangkydetaiid)) {
+            Ketqua kq = new Ketqua();
+            kq.setDangkydetaiid(dangkydetaiid);
+            kq.setDiemcuoi(null);
+            kq.setDacongbo(false);
+            kq.setNgaycongbo(null);
+            ketquaRepository.save(kq);
+        }
+
+        return saved;
     }
 }

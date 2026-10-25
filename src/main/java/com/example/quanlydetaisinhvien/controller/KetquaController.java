@@ -29,11 +29,24 @@ public class KetquaController {
     private final KetquaService service;
     private final KetquaEmailOutbox outbox;
     private final boolean emailEnabled;
+    private final com.example.quanlydetaisinhvien.service.GiangvienphanbienService giangvienphanbienService;
+    private final com.example.quanlydetaisinhvien.service.NghiepvuDetaiService nghiepvuDetaiService;
+    private final com.example.quanlydetaisinhvien.service.GiaiDoan1Service choices;
+    private final com.example.quanlydetaisinhvien.service.DisplayLookupService lookup;
 
     public KetquaController(KetquaService service, KetquaEmailOutbox outbox,
-            @Value("${app.ketqua.email.enabled:false}") boolean emailEnabled) {
+            @Value("${app.ketqua.email.enabled:false}") boolean emailEnabled,
+            com.example.quanlydetaisinhvien.service.GiangvienphanbienService giangvienphanbienService,
+            com.example.quanlydetaisinhvien.service.NghiepvuDetaiService nghiepvuDetaiService,
+            com.example.quanlydetaisinhvien.service.GiaiDoan1Service choices,
+            com.example.quanlydetaisinhvien.service.DisplayLookupService lookup) {
         this.service = service;
-        this.outbox = outbox; this.emailEnabled = emailEnabled;
+        this.outbox = outbox;
+        this.emailEnabled = emailEnabled;
+        this.giangvienphanbienService = giangvienphanbienService;
+        this.nghiepvuDetaiService = nghiepvuDetaiService;
+        this.choices = choices;
+        this.lookup = lookup;
     }
 
     @GetMapping
@@ -64,6 +77,19 @@ public class KetquaController {
                     "SENT", "Đã gửi", "MISSING_EMAIL", "Thiếu hoặc sai email", "FAILED", "Chưa gửi được",
                     "UNCERTAIN", "Cần đối soát trước khi gửi lại"));
             model.addAttribute("emailEnabled", emailEnabled);
+
+            java.util.Map<Long, java.util.List<com.example.quanlydetaisinhvien.entity.Giangvienphanbien>> gvpbMap = new java.util.HashMap<>();
+            for (com.example.quanlydetaisinhvien.entity.Ketqua kq : items) {
+                gvpbMap.put(kq.getId(), giangvienphanbienService.findByDangkydetaiid(kq.getDangkydetaiid()));
+            }
+            model.addAttribute("gvpbMap", gvpbMap);
+
+            var teachers = choices.dsGiangVienChoices();
+            model.addAttribute("teacherOptions", teachers);
+            model.addAttribute("teacherLabels", lookup.accountLabels(
+                    teachers.stream().map(com.example.quanlydetaisinhvien.entity.Giangvien::getTaikhoanid).toList()));
+            model.addAttribute("lecturerNames", lookup.lecturerNames(
+                    teachers.stream().map(com.example.quanlydetaisinhvien.entity.Giangvien::getId).toList()));
         }
         return "ketqua-list";
     }
@@ -79,6 +105,35 @@ public class KetquaController {
             @RequestParam(required = false) Long hoidongid, RedirectAttributes attributes) {
         return perform(attributes, () -> service.phanCongHoiDong(id, hinhthuc, hoidongid),
                 "Đã lưu xác nhận hình thức đánh giá và phân công hội đồng.");
+    }
+
+    @PostMapping("/{id}/phanbien")
+    public String assignReviewer(@PathVariable Long id, @RequestParam Long giangvienid, RedirectAttributes attributes) {
+        return perform(attributes, () -> {
+            com.example.quanlydetaisinhvien.entity.Ketqua kq = service.findById(id)
+                    .orElseThrow(() -> new NghiepvuException("Không tìm thấy kết quả."));
+            giangvienphanbienService.phanCong(kq.getDangkydetaiid(), giangvienid,
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
+        }, "Đã phân công giảng viên phản biện thành công.");
+    }
+
+    @PostMapping("/{id}/phanbien/xoa")
+    public String removeReviewer(@PathVariable Long id, @RequestParam Long giangvienid, RedirectAttributes attributes) {
+        return perform(attributes, () -> {
+            com.example.quanlydetaisinhvien.entity.Ketqua kq = service.findById(id)
+                    .orElseThrow(() -> new NghiepvuException("Không tìm thấy kết quả."));
+            giangvienphanbienService.xoaPhanCong(kq.getDangkydetaiid(), giangvienid,
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
+        }, "Đã xóa phân công giảng viên phản biện.");
+    }
+
+    @PostMapping("/{id}/tonghop")
+    public String tongHopKetqua(@PathVariable Long id, RedirectAttributes attributes) {
+        return perform(attributes, () -> {
+            com.example.quanlydetaisinhvien.entity.Ketqua kq = service.findById(id)
+                    .orElseThrow(() -> new NghiepvuException("Không tìm thấy kết quả."));
+            nghiepvuDetaiService.tinhVaLuuKetqua(kq.getDangkydetaiid());
+        }, "Đã tổng hợp điểm trung bình cộng cho kết quả thành công.");
     }
 
     @PostMapping("/email/{id}/thulai")

@@ -13,6 +13,7 @@ import java.util.Optional;
 import jakarta.persistence.LockModeType;
 
 public interface KetquaRepository extends JpaRepository<Ketqua, Long> {
+    boolean existsByDangkydetaiid(Long dangkydetaiid);
     boolean existsByDangkydetaiidAndDacongboTrue(Long dangkydetaiid);
     Optional<Ketqua> findByDangkydetaiid(Long dangkydetaiid);
 
@@ -48,7 +49,20 @@ public interface KetquaRepository extends JpaRepository<Ketqua, Long> {
             """)
     Page<Ketqua> findPublishedPageForStudent(
             @Param("username") String username,
-            Pageable pageable);
+            Pageable pageable
+    );
+
+    @Query("""
+            select count(k) from Ketqua k
+            where k.dacongbo = true and exists (
+                select d.id from Dangkydetai d, Nhomsinhvien n,
+                    Thanhviennhom tv, Sinhvien sv, Taikhoan tk
+                where d.id = k.dangkydetaiid and n.id = d.nhomid
+                    and tv.nhomid = n.id and tv.sinhvienid = sv.id
+                    and sv.taikhoanid = tk.id and tk.tendangnhap = :username
+            )
+            """)
+    long countPublishedForStudent(@Param("username") String username);
 
     @Query("""
             select k from Ketqua k

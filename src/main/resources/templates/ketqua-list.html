@@ -43,11 +43,40 @@
         </select>
         <button type="submit" class="btn">Lưu phân công hội đồng</button>
       </form>
+
+      <!-- Phân công Giảng viên phản biện (GVPB) -->
+      <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 6px;">
+        <label><b>Giảng viên phản biện (GVPB):</b></label>
+        <div th:if="${gvpbMap != null and gvpbMap[item.id] != null and !#lists.isEmpty(gvpbMap[item.id])}">
+          <div th:each="pb : ${gvpbMap[item.id]}" style="margin: 3px 0; display: flex; align-items: center; justify-content: space-between;">
+            <span th:text="${lecturerNames != null and lecturerNames[pb.giangvienid] != null ? lecturerNames[pb.giangvienid] : 'GV #' + pb.giangvienid}"></span>
+            <form th:if="${item.dacongbo != true}" th:action="@{/ketqua/{id}/phanbien/xoa(id=${item.id})}" method="post" style="display:inline">
+              <input type="hidden" name="giangvienid" th:value="${pb.giangvienid}">
+              <button type="submit" class="btn btn-sm" style="color:red; padding: 1px 6px; font-size: 11px;" title="Xóa phân công GVPB">✕</button>
+            </form>
+          </div>
+        </div>
+        <div th:if="${gvpbMap == null or gvpbMap[item.id] == null or #lists.isEmpty(gvpbMap[item.id])}" style="color: #888; font-size: 12px;">
+          Chưa phân công GVPB
+        </div>
+        <form th:if="${item.dacongbo != true and teacherOptions != null}" th:action="@{/ketqua/{id}/phanbien(id=${item.id})}" method="post" style="margin-top: 5px;">
+          <select name="giangvienid" required style="width: 100%; font-size: 12px; margin-bottom: 3px;">
+            <option value="">— Chọn GVPB —</option>
+            <option th:each="t : ${teacherOptions}" th:value="${t.id}" th:text="${teacherLabels != null ? teacherLabels[t.taikhoanid] : 'GV #' + t.id}"></option>
+          </select>
+          <button type="submit" class="btn btn-sm" style="font-size: 11px; padding: 2px 8px;">+ Thêm GVPB</button>
+        </form>
+      </div>
     </th:block>
   </td>
   <td th:if="${canManage}" class="publication-action" th:with="info=${publicationInfo[item.id]}">
     <span th:if="${item.dacongbo == true}" class="badge badge-success">Đã công bố</span>
     <th:block th:if="${item.dacongbo != true}">
+      <div style="margin-bottom: 6px;">
+        <form th:action="@{/ketqua/{id}/tonghop(id=${item.id})}" method="post" style="display:inline;">
+          <button type="submit" class="btn btn-sm" style="font-size: 12px; padding: 4px 8px;" title="Tính trung bình cộng từ các điểm thành phần">⚡ Tổng hợp ĐTB</button>
+        </form>
+      </div>
       <form th:if="${#strings.isEmpty(info.reason)}" th:action="@{/ketqua/{id}/congbo(id=${item.id})}" method="post">
         <button type="submit" class="btn btn-primary">Công bố kết quả</button>
       </form>

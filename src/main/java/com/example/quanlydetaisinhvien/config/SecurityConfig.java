@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/hoidong/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/diem/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/hoidong/**", "/diem/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
-                .requestMatchers("/ketqua/*/congbo", "/ketqua/*/phancong", "/ketqua/email/**").hasRole("TRUONGKHOA")
+                .requestMatchers("/ketqua/*/congbo", "/ketqua/*/phancong", "/ketqua/*/phanbien/**", "/ketqua/*/tonghop", "/ketqua/email/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/ketqua", "/ketqua/**").hasAnyRole("SINHVIEN", "TRUONGKHOA")
                 .requestMatchers("/ketqua", "/ketqua/**").hasRole("TRUONGKHOA")
                 .requestMatchers("/thongbao/create", "/thongbao/*/edit").hasRole("TRUONGKHOA")

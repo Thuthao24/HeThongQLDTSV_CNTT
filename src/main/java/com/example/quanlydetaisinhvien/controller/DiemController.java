@@ -1,10 +1,12 @@
 package com.example.quanlydetaisinhvien.controller;
 
 import com.example.quanlydetaisinhvien.service.DiemService;
+import com.example.quanlydetaisinhvien.service.NghiepvuDetaiService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -12,15 +14,18 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.quanlydetaisinhvien.entity.Diem;
 import com.example.quanlydetaisinhvien.exception.NghiepvuException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Controller
 @RequestMapping("/diem")
 public class DiemController {
 
     private final DiemService service;
+    private final NghiepvuDetaiService nghiepvuDetaiService;
 
-    public DiemController(DiemService service) {
+    public DiemController(DiemService service, NghiepvuDetaiService nghiepvuDetaiService) {
         this.service = service;
+        this.nghiepvuDetaiService = nghiepvuDetaiService;
     }
 
     @PostMapping("/tao")
@@ -28,7 +33,33 @@ public class DiemController {
     public String create(@ModelAttribute Diem score, RedirectAttributes flash) {
         try {
             service.save(score);
-            flash.addFlashAttribute("successMessage", "Đã nhập điểm thành phần.");
+            flash.addFlashAttribute("successMessage", "Đã nhập điểm thành phần và tự động cập nhật kết quả trung gian.");
+        } catch (NghiepvuException ex) {
+            flash.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (DataIntegrityViolationException ex) {
+            flash.addFlashAttribute("errorMessage", "Giảng viên này đã nhập điểm cho đăng ký.");
+        }
+        return "redirect:/diem";
+    }
+
+    @PostMapping("/tong-hop/{dangkydetaiid}")
+    @PreAuthorize("hasAnyRole('TRUONGKHOA','TRUONGBOMON','GIANGVIEN')")
+    public String tongHopDiem(@PathVariable Long dangkydetaiid, RedirectAttributes flash) {
+        try {
+            nghiepvuDetaiService.tinhVaLuuKetqua(dangkydetaiid);
+            flash.addFlashAttribute("successMessage", "Đã tổng hợp điểm trung bình cộng và cập nhật kết quả thành công.");
+        } catch (NghiepvuException ex) {
+            flash.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/diem";
+    }
+
+    @PostMapping("/xoa/{id}")
+    @PreAuthorize("hasAnyRole('TRUONGKHOA','TRUONGBOMON','GIANGVIEN')")
+    public String delete(@PathVariable Long id, RedirectAttributes flash) {
+        try {
+            service.deleteById(id);
+            flash.addFlashAttribute("successMessage", "Đã xóa điểm thành phần thành công.");
         } catch (NghiepvuException ex) {
             flash.addFlashAttribute("errorMessage", ex.getMessage());
         }
