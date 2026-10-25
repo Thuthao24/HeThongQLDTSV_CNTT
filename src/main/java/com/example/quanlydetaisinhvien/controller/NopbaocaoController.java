@@ -38,6 +38,9 @@ public class NopbaocaoController {
     private final NopbaocaoService service;
     private final DangkydetaiService dangkydetaiService;
 
+    @Value("${app.upload.dir:uploads/baocao}")
+    private String uploadDirectory;
+
     public NopbaocaoController(NopbaocaoService service, DangkydetaiService dangkydetaiService) {
         this.service = service;
         this.dangkydetaiService = dangkydetaiService;
@@ -163,7 +166,7 @@ public class NopbaocaoController {
                 || fileName.contains("/") || fileName.contains("\\")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        Path uploadRoot = Paths.get("uploads", "baocao").toAbsolutePath().normalize();
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
         Path filePath = uploadRoot.resolve(fileName).normalize();
         if (!filePath.startsWith(uploadRoot) || !Files.isRegularFile(filePath)
                 || !Files.isReadable(filePath) || Files.isSymbolicLink(filePath)) {
