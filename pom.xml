@@ -18,7 +18,7 @@
     <description>He thong quan ly de tai sinh vien Khoa CNTT</description>
 
     <properties>
-        <java.version>25</java.version>
+        <java.version>26</java.version>
     </properties>
 
     <dependencies>
