@@ -359,34 +359,63 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         }
     }
 
-    @Override
-    public void huyDangky(Long dangkydetaiid, String currentUsername) {
-        Dangkydetai dk = repository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
-
-        Nhomsinhvien nhom = nhomsinhvienRepository.findById(dk.getNhomid())
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin nhóm"));
-
-        if (currentUsername != null) {
-            Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername).orElse(null);
-            if (tk != null && tk.getVaitro() == Vaitro.SINHVIEN) {
-                Sinhvien sv = sinhvienRepository.findByMasinhvien(currentUsername).orElse(null);
-                if (sv == null || !nhom.getNhomtruongid().equals(sv.getId())) {
-                    throw new NghiepvuException("Chỉ nhóm trưởng mới có quyền hủy đăng ký đề tài");
-                }
-            }
-        }
-
-        if (nopbaocaoRepository.existsByDangkydetaiid(dangkydetaiid)) {
-            throw new NghiepvuException("Không thể hủy đăng ký đề tài vì nhóm đã có báo cáo được nộp");
-        }
-
-        if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
-            throw new NghiepvuException("Không thể hủy đề tài đã được duyệt chính thức. Vui lòng liên hệ Trưởng bộ môn/Khoa.");
-        }
-
-        repository.deleteById(dangkydetaiid);
+    
+@Override
+public void huyDangky(Long dangkydetaiid, String currentUsername) {
+    // 1. Kiểm tra đăng nhập
+    if (currentUsername == null || currentUsername.isBlank()) {
+        throw new org.springframework.security.access.AccessDeniedException(
+                "Vui lòng đăng nhập để hủy đăng ký đề tài");
     }
+
+    // 2. Chỉ sinh viên mới được thực hiện
+    Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername)
+            .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
+                    "Tài khoản không có quyền hủy đăng ký đề tài"));
+
+    if (tk.getVaitro() != Vaitro.SINHVIEN) {
+        throw new org.springframework.security.access.AccessDeniedException(
+                "Chỉ sinh viên là nhóm trưởng mới được hủy đăng ký đề tài");
+    }
+
+    // 3. Xác định sinh viên qua tài khoản
+    Sinhvien sv = sinhvienRepository.findByTaikhoanid(tk.getId())
+            .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
+                    "Không tìm thấy sinh viên được phép hủy đăng ký đề tài"));
+
+    // 4. Tìm đăng ký và nhóm tương ứng
+    Dangkydetai dk = repository.findById(dangkydetaiid)
+            .orElseThrow(() -> new NghiepvuException(
+                    "Không tìm thấy thông tin đăng ký đề tài"));
+
+    Nhomsinhvien nhom = nhomsinhvienRepository.findById(dk.getNhomid())
+            .orElseThrow(() -> new NghiepvuException(
+                    "Không tìm thấy thông tin nhóm"));
+
+    // 5. Chỉ nhóm trưởng của đúng nhóm mới được hủy
+    if (!sv.getId().equals(nhom.getNhomtruongid())
+            || !thanhviennhomRepository.existsByNhomidAndSinhvienid(
+                    nhom.getId(), sv.getId())) {
+        throw new org.springframework.security.access.AccessDeniedException(
+                "Chỉ nhóm trưởng thuộc nhóm mới có quyền hủy đăng ký đề tài");
+    }
+
+    // 6. Không cho hủy nếu đã nộp báo cáo
+    if (nopbaocaoRepository.existsByDangkydetaiid(dangkydetaiid)) {
+        throw new NghiepvuException(
+                "Không thể hủy đăng ký đề tài vì nhóm đã có báo cáo được nộp");
+    }
+
+    // 7. Không cho hủy nếu đề tài đã được duyệt
+    if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
+        throw new NghiepvuException(
+                "Không thể hủy đề tài đã được duyệt chính thức. Vui lòng liên hệ Trưởng bộ môn/Khoa.");
+    }
+
+    // 8. Hủy đăng ký
+    repository.deleteById(dangkydetaiid);
+}
+
 
 
     @Override
