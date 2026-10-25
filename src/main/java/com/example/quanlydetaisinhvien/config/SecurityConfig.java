@@ -21,46 +21,51 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                            CustomUserDetailsService userDetailsService) throws Exception {
+                                             CustomUserDetailsService userDetailsService) throws Exception {
         http
             .userDetailsService(userDetailsService)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/login", "/403").permitAll()
 
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/taikhoan",
+                        "/taikhoan/canhan"
+                ).authenticated()
 
-.requestMatchers(
-        HttpMethod.GET,
-        "/taikhoan",
-        "/taikhoan/canhan"
-).authenticated()
-.requestMatchers(
-        "/bomon/**",
-        "/quanly/danhmuc/**"
-).hasRole("TRUONGKHOA")
+                .requestMatchers(
+                        "/bomon/**",
+                        "/quanly/danhmuc/**"
+                ).hasRole("TRUONGKHOA")
 
-
-.requestMatchers("/taikhoan/**").denyAll()
+                .requestMatchers("/taikhoan/**").denyAll()
 
                 .requestMatchers("/giai-doan-1/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
                 .requestMatchers("/dotdangky/**").hasAnyRole("TRUONGKHOA")
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")
                 .requestMatchers("/detai/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
-                // Duyệt đăng ký đề tài sinh viên: Giảng viên hướng dẫn, Trưởng bộ môn, Trưởng khoa
-                // Chỉ sinh viên được gửi yêu cầu hủy đăng ký.
-// Service sẽ kiểm tra có đúng nhóm trưởng hay không.
-.requestMatchers(HttpMethod.POST, "/dangkydetai/*/huy")
-    .hasRole("SINHVIEN")
+
+                // Duyệt đăng ký đề tài sinh viên
+                .requestMatchers(HttpMethod.POST, "/dangkydetai/*/huy").hasRole("SINHVIEN")
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/dangkydetai", "/dangkydetai/**").hasAnyRole("SINHVIEN", "TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/nhom/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
-                .requestMatchers(HttpMethod.POST, "/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON")
-                .requestMatchers("/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
+
+                // ==================== CẤU HÌNH PHÂN CÔNG GVPB ====================
+                // 1. Giảng viên, Trưởng BM, Trưởng khoa đều được XEM trang phân công
+                .requestMatchers(HttpMethod.GET, "/phanbien", "/phanbien/").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
+                // 2. Các đường dẫn Thêm / Sửa / Xóa / Lưu (/phanbien/** còn lại) CHỈ dành cho Trưởng Khoa & Trưởng Bộ Môn
+                .requestMatchers("/phanbien/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON")
+                // ==================================================================
+
                 .requestMatchers(HttpMethod.POST, "/hoidong/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/diem/**").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/hoidong/**", "/diem/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
+
                 .requestMatchers("/ketqua/*/congbo", "/ketqua/*/phancong", "/ketqua/email/**").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/ketqua", "/ketqua/**").hasAnyRole("SINHVIEN", "TRUONGKHOA")
                 .requestMatchers("/ketqua", "/ketqua/**").hasRole("TRUONGKHOA")
+
                 .requestMatchers("/thongbao/create", "/thongbao/*/edit").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.POST, "/thongbao/*/dadoc")
                     .hasAnyRole("SINHVIEN", "GIANGVIEN", "TRUONGBOMON")
@@ -68,9 +73,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/thongbao", "/thongbao/**")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN", "SINHVIEN")
                 .requestMatchers("/thongbao", "/thongbao/**").denyAll()
+
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/detai")
                     .hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
-                // Unmapped legacy search URLs reach MVC's 404; no retired lookup is exposed.
                 .requestMatchers(HttpMethod.GET, "/morong/timkiem/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/morong/thongke").hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/detai.xlsx", "/morong/xuat/detai.pdf")
@@ -79,6 +84,7 @@ public class SecurityConfig {
                     .hasRole("TRUONGKHOA")
                 .requestMatchers(HttpMethod.GET, "/morong/xuat/**").authenticated()
                 .requestMatchers("/morong", "/morong/**").denyAll()
+
                 .requestMatchers("/").authenticated()
                 .anyRequest().authenticated()
             )

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,9 +66,12 @@
                     <p>Phân công giảng viên phản biện cho các đề tài đăng ký.</p>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <a th:href="@{/phanbien/them}" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center;">
+                    <!-- 1. Chỉ Trưởng Khoa và Trưởng Bộ Môn mới thấy nút Phân công GVPB mới -->
+                    <a sec:authorize="hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')"
+                       th:href="@{/phanbien/them}" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center;">
                         + Phân công GVPB mới
                     </a>
+
                     <a th:href="@{/dangkydetai}" class="btn" style="background:#fff; color:#06649a; border:1px solid #7cbfe6; text-decoration:none; display:inline-flex; align-items:center;">
                         Xem Đăng ký đề tài
                     </a>
@@ -99,7 +102,9 @@
                             <th>Nhóm SV</th>
                             <th>Giảng viên hướng dẫn (GVHD)</th>
                             <th>Giảng viên phản biện (GVPB)</th>
-                            <th style="width: 100px;">Thao tác</th>
+
+                            <!-- 2. Chỉ Trưởng Khoa và Trưởng Bộ Môn mới thấy tiêu đề cột Thao tác -->
+                            <th sec:authorize="hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')" style="width: 100px;">Thao tác</th>
                         </tr>
                         </thead>
                         <tbody data-table-body>
@@ -119,7 +124,9 @@
                                 <span class="gvpb-tag" th:text="${item.tengiangvien != null ? item.tengiangvien + ' (' + item.magiangvien + ')' : item.magiangvien}">GVPB</span>
                                 <div style="font-size: 11px; color: #64748b;" th:if="${item.email}" th:text="${item.email}">email</div>
                             </td>
-                            <td class="action-cell">
+
+                            <!-- 3. Chỉ Trưởng Khoa và Trưởng Bộ Môn mới thấy nội dung ô Thao tác (Form xóa / Badge trạng thái) -->
+                            <td sec:authorize="hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')" class="action-cell">
                                 <th:block th:if="${!item.daCoDiem and !item.daCongBo}">
                                     <form th:action="@{/phanbien/xoa/{id}(id=${item.id})}" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phân công phản biện này không?');" style="display:inline;">
                                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

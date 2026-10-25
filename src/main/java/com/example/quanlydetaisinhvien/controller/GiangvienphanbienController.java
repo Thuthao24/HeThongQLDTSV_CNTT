@@ -19,14 +19,18 @@ public class GiangvienphanbienController {
         this.service = service;
     }
 
+    // 1. Xem danh sách phân công (TRUONGKHOA, TRUONGBOMON, GIANGVIEN đều xem được)
     @GetMapping
+    @PreAuthorize("hasAnyRole('TRUONGKHOA', 'TRUONGBOMON', 'GIANGVIEN')")
     public String list(Model model) {
         model.addAttribute("title", "Giảng viên phản biện");
         model.addAttribute("items", service.findAllViewDto());
         return "phanbien-list";
     }
 
+    // 2. Mở form phân công mới (CHỈ TRƯỞNG KHOA & TRƯỞNG BỘ MÔN MỚI ĐƯỢC VÀO)
     @GetMapping("/them")
+    @PreAuthorize("hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')")
     public String themForm(@RequestParam(value = "dangkydetaiid", required = false) Long dangkydetaiid,
                            Model model) {
         model.addAttribute("title", "Phân công giảng viên phản biện");
@@ -39,8 +43,9 @@ public class GiangvienphanbienController {
         return "phanbien-form";
     }
 
+    // 3. Thực hiện phân công (CHỈ TRƯỞNG KHOA & TRƯỞNG BỘ MÔN)
     @PostMapping("/them")
-    @PreAuthorize("hasAnyRole('TRUONGKHOA','TRUONGBOMON')")
+    @PreAuthorize("hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')")
     public String themSubmit(@ModelAttribute("form") PhanbienFormDto form,
                              Model model,
                              RedirectAttributes redirectAttributes) {
@@ -56,8 +61,9 @@ public class GiangvienphanbienController {
         }
     }
 
+    // 4. Xóa phân công (CHỈ TRƯỞNG KHOA & TRƯỞNG BỘ MÔN)
     @PostMapping("/xoa/{id}")
-    @PreAuthorize("hasAnyRole('TRUONGKHOA','TRUONGBOMON')")
+    @PreAuthorize("hasAnyRole('TRUONGKHOA', 'TRUONGBOMON')")
     public String xoaSubmit(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
             service.deleteById(id);
