@@ -27,18 +27,20 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/login", "/403").permitAll()
 
+
 .requestMatchers(
         HttpMethod.GET,
         "/taikhoan",
         "/taikhoan/canhan"
 ).authenticated()
 
+.requestMatchers("/taikhoan/**").denyAll()
+
 .requestMatchers(
-        "/taikhoan/quanly",
-        "/taikhoan/quanly/**",
         "/bomon/**",
         "/quanly/danhmuc/**"
 ).hasRole("TRUONGKHOA")
+
 
 .requestMatchers("/taikhoan/**").denyAll()
 
