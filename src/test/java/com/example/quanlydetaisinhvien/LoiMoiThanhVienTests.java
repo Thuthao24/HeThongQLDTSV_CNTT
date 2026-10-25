@@ -190,7 +190,8 @@ class LoiMoiThanhVienTests {
             service.dongYLoiMoi(loiMoiId, "sv_candidate");
         });
 
-        // Lời mời phải chuyển sang DA_HUY
+        // Lời mời phải chuyển sang DA_HUY (kiểm tra từ DB bằng cách xóa L1 cache)
+        em.clear();
         Loimoithanhvien lm = loimoithanhvienRepository.findById(loiMoiId).orElseThrow();
         assertEquals(TrangthaiLoimoi.DA_HUY, lm.getTrangthai());
     }

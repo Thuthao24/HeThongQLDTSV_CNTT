@@ -218,7 +218,7 @@
                        style="text-decoration: none; display: inline-flex; align-items: center;">
                       Tải xuống
                     </a>
-                    <form th:if="${!daKhoaNopBaoCao && ((laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA')}"
+                    <form th:if="${!item.daKhoa && ((laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA')}"
                           th:action="@{'/nopbaocao/' + ${item.id} + '/xoa'}" method="post"
                           data-confirm="Bạn có chắc chắn muốn xóa bản ghi nộp báo cáo này không?"
                           data-modal-title="Thông báo"
@@ -226,6 +226,10 @@
                       <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
                     </form>
+                    <span th:if="${item.daKhoa && ((laNhomTruong && dangKyCuaNhom != null && dangKyCuaNhom.id == item.dangkydetaiid) || vaitro == 'TRUONGKHOA')}"
+                          class="badge badge-secondary" style="font-size: 11px; padding: 4px 8px; background: #e2e8f0; color: #475569; border-radius: 4px;">
+                      Đã khóa điểm
+                    </span>
                   </div>
                 </td>
               </tr>

@@ -14,6 +14,7 @@ public class NopBaoCaoDto {
     private String hoten;
     private String duongdanfile;
     private LocalDateTime ngaynop;
+    private boolean daKhoa;
 
     public NopBaoCaoDto() {}
 
@@ -49,6 +50,9 @@ public class NopBaoCaoDto {
 
     public LocalDateTime getNgaynop() { return ngaynop; }
     public void setNgaynop(LocalDateTime ngaynop) { this.ngaynop = ngaynop; }
+
+    public boolean isDaKhoa() { return daKhoa; }
+    public void setDaKhoa(boolean daKhoa) { this.daKhoa = daKhoa; }
 
     private LocalDateTime hanNop;
     public LocalDateTime getHanNop() { return hanNop; }

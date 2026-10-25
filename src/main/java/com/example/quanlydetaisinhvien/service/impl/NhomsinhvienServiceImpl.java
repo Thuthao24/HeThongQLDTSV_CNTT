@@ -47,8 +47,24 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private LoimoithanhvienRepository loimoithanhvienRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    private void huyLoiMoiTrongGiaoDichMoi(Long loiMoiId) {
+        if (loimoithanhvienRepository == null || loiMoiId == null) return;
+        loimoithanhvienRepository.findById(loiMoiId).ifPresent(lm -> {
+            lm.setTrangthai(TrangthaiLoimoi.DA_HUY);
+            lm.setNgayphanhoi(LocalDateTime.now());
+            loimoithanhvienRepository.saveAndFlush(lm);
+        });
+    }
+
     public void setLoimoithanhvienRepository(LoimoithanhvienRepository loimoithanhvienRepository) {
         this.loimoithanhvienRepository = loimoithanhvienRepository;
+    }
+
+    public void setTransactionManager(org.springframework.transaction.PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -61,7 +77,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             DangkydetaiRepository dangkydetaiRepository,
             DetaiRepository detaiRepository,
             NopbaocaoRepository nopbaocaoRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) LoimoithanhvienRepository loimoithanhvienRepository) {
+            @org.springframework.beans.factory.annotation.Autowired(required = false) LoimoithanhvienRepository loimoithanhvienRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) org.springframework.transaction.PlatformTransactionManager transactionManager) {
         this.repository = repository;
         this.thanhviennhomRepository = thanhviennhomRepository;
         this.sinhvienRepository = sinhvienRepository;
@@ -71,6 +88,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         this.detaiRepository = detaiRepository;
         this.nopbaocaoRepository = nopbaocaoRepository;
         this.loimoithanhvienRepository = loimoithanhvienRepository;
+        this.transactionManager = transactionManager;
     }
 
     public NhomsinhvienServiceImpl(
@@ -83,7 +101,21 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             DetaiRepository detaiRepository,
             NopbaocaoRepository nopbaocaoRepository) {
         this(repository, thanhviennhomRepository, sinhvienRepository, taikhoanRepository,
-             dotdangkyRepository, dangkydetaiRepository, detaiRepository, nopbaocaoRepository, null);
+             dotdangkyRepository, dangkydetaiRepository, detaiRepository, nopbaocaoRepository, null, null);
+    }
+
+    public NhomsinhvienServiceImpl(
+            NhomsinhvienRepository repository,
+            ThanhviennhomRepository thanhviennhomRepository,
+            SinhvienRepository sinhvienRepository,
+            TaikhoanRepository taikhoanRepository,
+            DotdangkyRepository dotdangkyRepository,
+            DangkydetaiRepository dangkydetaiRepository,
+            DetaiRepository detaiRepository,
+            NopbaocaoRepository nopbaocaoRepository,
+            LoimoithanhvienRepository loimoithanhvienRepository) {
+        this(repository, thanhviennhomRepository, sinhvienRepository, taikhoanRepository,
+             dotdangkyRepository, dangkydetaiRepository, detaiRepository, nopbaocaoRepository, loimoithanhvienRepository, null);
     }
 
     @Override
@@ -288,7 +320,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
 
     @Override
     public void themThanhVien(Long nhomid, String masinhvien, String currentUsername) {
-        Nhomsinhvien nhom = repository.findById(nhomid)
+        // Khóa bi quan nhóm để đảm bảo đồng bộ tuyệt đối với luồng nhận lời mời
+        Nhomsinhvien nhom = repository.findByIdForUpdate(nhomid)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy nhóm với ID: " + nhomid));
 
         kiemTraQuyenQuanLyNhom(nhom, currentUsername);
@@ -297,9 +330,9 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             throw new NghiepvuException("Mã số sinh viên không được để trống");
         }
 
-        // 1. Nhóm tối đa 5 sinh viên
-        long soLuongHienTai = thanhviennhomRepository.countByNhomid(nhomid);
-        if (soLuongHienTai >= 5) {
+        // 1. Nhóm tối đa 5 sinh viên - Sử dụng Current Read có khóa để ngăn chặn race condition trên MySQL REPEATABLE READ
+        List<Thanhviennhom> currentMembers = thanhviennhomRepository.findByNhomidForUpdate(nhomid);
+        if (currentMembers.size() >= 5) {
             throw new NghiepvuException("Nhóm đã đạt số lượng tối đa 05 sinh viên theo quy định");
         }
 
@@ -651,7 +684,8 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
             return new ArrayList<>();
         }
         Sinhvien sv = svOpt.get();
-        List<Loimoithanhvien> list = loimoithanhvienRepository.findBySinhvienidAndTrangthai(sv.getId(), TrangthaiLoimoi.CHO_XAC_NHAN);
+        List<Loimoithanhvien> list = loimoithanhvienRepository.findBySinhvienidAndTrangthaiOrderByIdDesc(
+                sv.getId(), TrangthaiLoimoi.CHO_XAC_NHAN, org.springframework.data.domain.PageRequest.of(0, 50));
         if (list.isEmpty()) {
             return new ArrayList<>();
         }
@@ -726,6 +760,7 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(noRollbackFor = com.example.quanlydetaisinhvien.exception.NghiepvuException.class)
     public void dongYLoiMoi(Long loiMoiId, String currentUsername) {
         if (loimoithanhvienRepository == null) {
             throw new NghiepvuException("Hệ thống lời mời chưa sẵn sàng");
@@ -754,15 +789,11 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         if (dkOpt.isPresent()) {
             Dangkydetai dk = dkOpt.get();
             if (dk.getTrangthai() == TrangthaiDangkydetai.DADUYET) {
-                lm.setTrangthai(TrangthaiLoimoi.DA_HUY);
-                lm.setNgayphanhoi(LocalDateTime.now());
-                loimoithanhvienRepository.save(lm);
+                huyLoiMoiTrongGiaoDichMoi(lm.getId());
                 throw new NghiepvuException("Không thể tham gia nhóm vì đề tài của nhóm đã được duyệt chính thức (Nhóm đã khóa thành viên)");
             }
             if (nopbaocaoRepository.existsByDangkydetaiid(dk.getId())) {
-                lm.setTrangthai(TrangthaiLoimoi.DA_HUY);
-                lm.setNgayphanhoi(LocalDateTime.now());
-                loimoithanhvienRepository.save(lm);
+                huyLoiMoiTrongGiaoDichMoi(lm.getId());
                 throw new NghiepvuException("Không thể tham gia nhóm vì nhóm đã nộp báo cáo đề tài (Nhóm đã khóa thành viên)");
             }
         }
@@ -770,23 +801,19 @@ public class NhomsinhvienServiceImpl implements NhomsinhvienService {
         // 2. Kiểm tra trạng thái đợt đăng ký
         Dotdangky dot = dotdangkyRepository.findById(nhom.getDotdangkyid()).orElse(null);
         if (dot != null && dot.getTrangthai() == TrangthaiDotdangky.DONG) {
-            lm.setTrangthai(TrangthaiLoimoi.DA_HUY);
-            lm.setNgayphanhoi(LocalDateTime.now());
-            loimoithanhvienRepository.save(lm);
+            huyLoiMoiTrongGiaoDichMoi(lm.getId());
             throw new NghiepvuException("Đợt đăng ký này đã đóng, không thể tham gia nhóm");
         }
 
-        // 3. Kiểm tra số lượng thành viên hiện tại dưới khóa bi quan
-        long count = thanhviennhomRepository.countByNhomid(nhom.getId());
-        if (count >= 5) {
-            lm.setTrangthai(TrangthaiLoimoi.DA_HUY);
-            lm.setNgayphanhoi(LocalDateTime.now());
-            loimoithanhvienRepository.save(lm);
+        // 3. Kiểm tra số lượng thành viên hiện tại với khóa bi quan (Current Read trên MySQL InnoDB)
+        List<Thanhviennhom> currentMembers = thanhviennhomRepository.findByNhomidForUpdate(nhom.getId());
+        if (currentMembers.size() >= 5) {
+            huyLoiMoiTrongGiaoDichMoi(lm.getId());
             throw new NghiepvuException("Nhóm đã đủ 05 thành viên, không thể gia nhập");
         }
 
         // 4. Kiểm tra sinh viên đã có trong nhóm chưa
-        if (thanhviennhomRepository.existsByNhomidAndSinhvienid(nhom.getId(), sv.getId())) {
+        if (currentMembers.stream().anyMatch(tv -> tv.getSinhvienid().equals(sv.getId()))) {
             lm.setTrangthai(TrangthaiLoimoi.DONG_Y);
             lm.setNgayphanhoi(LocalDateTime.now());
             loimoithanhvienRepository.save(lm);

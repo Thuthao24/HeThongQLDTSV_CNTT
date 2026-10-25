@@ -2,7 +2,9 @@ package com.example.quanlydetaisinhvien.repository;
 
 import com.example.quanlydetaisinhvien.entity.Thanhviennhom;
 import com.example.quanlydetaisinhvien.entity.ThanhviennhomId;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -18,6 +20,10 @@ public interface ThanhviennhomRepository extends JpaRepository<Thanhviennhom, Th
     long countByNhomid(Long nhomid);
     void deleteByNhomidAndSinhvienid(Long nhomid, Long sinhvienid);
     void deleteByNhomid(Long nhomid);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT tv FROM Thanhviennhom tv WHERE tv.nhomid = :nhomid")
+    List<Thanhviennhom> findByNhomidForUpdate(@Param("nhomid") Long nhomid);
 
     @Query("SELECT (COUNT(tv) > 0) FROM Thanhviennhom tv, Nhomsinhvien n " +
            "WHERE tv.nhomid = n.id AND tv.sinhvienid = :sinhvienid AND n.dotdangkyid = :dotdangkyid")

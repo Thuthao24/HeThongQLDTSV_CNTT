@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS loimoithanhvien (
     KEY Ix_loimoithanhvien_nhom (Nhomid),
     KEY Ix_loimoithanhvien_sinhvien (Sinhvienid, Trangthai),
     KEY Ix_loimoithanhvien_nguoimoi (Nguoimoiid),
-    CONSTRAINT Fk_loimoithanhvien_nhom FOREIGN KEY (Nhomid) REFERENCES nhomsinhvien(Id) ON DELETE CASCADE,
-    CONSTRAINT Fk_loimoithanhvien_sinhvien FOREIGN KEY (Sinhvienid) REFERENCES sinhvien(Id) ON DELETE CASCADE,
-    CONSTRAINT Fk_loimoithanhvien_nguoimoi FOREIGN KEY (Nguoimoiid) REFERENCES sinhvien(Id) ON DELETE CASCADE
+    CONSTRAINT Fk_loimoithanhvien_nhom FOREIGN KEY (Nhomid) REFERENCES Nhomsinhvien(Id) ON DELETE CASCADE,
+    CONSTRAINT Fk_loimoithanhvien_sinhvien FOREIGN KEY (Sinhvienid) REFERENCES Sinhvien(Id) ON DELETE CASCADE,
+    CONSTRAINT Fk_loimoithanhvien_nguoimoi FOREIGN KEY (Nguoimoiid) REFERENCES Sinhvien(Id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

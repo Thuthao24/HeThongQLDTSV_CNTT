@@ -436,4 +436,140 @@ class ThuyVanFixesTests {
                 nopbaocaoService.xoaBaocao(nb.getId(), svLeader.getMasinhvien())
         );
     }
+    @Test
+    @DisplayName("P1 Fix: Ngăn chặn nhóm A tham chiếu file của nhóm B và ngăn xóa nhầm file vật lý của nhóm B")
+    void testGroupCannotHijackOrDeleteOtherGroupPhysicalFile() throws Exception {
+        // 1. Tạo nhóm B và nộp file thật
+        Sinhvien svB = taoSinhVien("SV_TV_B");
+        Nhomsinhvien nhomB = new Nhomsinhvien();
+        nhomB.setTennhom("Nhóm B Sở Hữu File");
+        nhomB.setDotdangkyid(dot.getId());
+        nhomB.setNhomtruongid(svB.getId());
+        em.persist(nhomB);
+        em.persist(new Thanhviennhom(nhomB.getId(), svB.getId()));
+
+        Dangkydetai dkB = new Dangkydetai();
+        dkB.setNhomid(nhomB.getId());
+        dkB.setDetaiid(dt.getId());
+        dkB.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkB.setNgaydangky(LocalDateTime.now());
+        em.persist(dkB);
+        em.flush();
+
+        byte[] validPdf = "%PDF-1.4 file content of group B".getBytes();
+        MockMultipartFile fileUploadB = new MockMultipartFile("file", "report_group_b.pdf", "application/pdf", validPdf);
+        Nopbaocao nbB = nopbaocaoService.nopBaocaoVoiUpload(dkB.getId(), fileUploadB, svB.getMasinhvien());
+        assertNotNull(nbB);
+        String groupBFilePath = nbB.getDuongdanfile();
+
+        // 2. Tạo nhóm A
+        Sinhvien svA = taoSinhVien("SV_TV_A");
+        Nhomsinhvien nhomA = new Nhomsinhvien();
+        nhomA.setTennhom("Nhóm A Tấn Công");
+        nhomA.setDotdangkyid(dot.getId());
+        nhomA.setNhomtruongid(svA.getId());
+        em.persist(nhomA);
+        em.persist(new Thanhviennhom(nhomA.getId(), svA.getId()));
+
+        Dangkydetai dkA = new Dangkydetai();
+        dkA.setNhomid(nhomA.getId());
+        dkA.setDetaiid(dt.getId());
+        dkA.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkA.setNgaydangky(LocalDateTime.now());
+        em.persist(dkA);
+        em.flush();
+
+        // 3. Nhóm A cố tình gửi request tham chiếu file của nhóm B -> Phải bị từ chối
+        com.example.quanlydetaisinhvien.dto.NopBaoCaoRequest reqA = new com.example.quanlydetaisinhvien.dto.NopBaoCaoRequest();
+        reqA.setDangkydetaiid(dkA.getId());
+        reqA.setDuongdanfile(groupBFilePath);
+
+        NghiepvuException ex = assertThrows(NghiepvuException.class, () ->
+                nopbaocaoService.nopBaocao(reqA, svA.getMasinhvien())
+        );
+        assertTrue(ex.getMessage().contains("thuộc về đề tài khác"));
+
+        // 4. Giả lập trường hợp DB có bản ghi tham chiếu trùng: khi xóa báo cáo A, file của B không được bị xóa vật lý
+        Nopbaocao rogueA = new Nopbaocao();
+        rogueA.setDangkydetaiid(dkA.getId());
+        rogueA.setSinhvienid(svA.getId());
+        rogueA.setDuongdanfile(groupBFilePath);
+        rogueA.setNgaynop(LocalDateTime.now());
+        em.persist(rogueA);
+        em.flush();
+
+        // Nhóm A xóa báo cáo của mình
+        nopbaocaoService.xoaBaocao(rogueA.getId(), svA.getMasinhvien());
+
+        // Kiểm tra báo cáo B vẫn còn trong DB và đường dẫn file vẫn nguyên vẹn
+        Nopbaocao stillExistsB = nopbaocaoRepository.findById(nbB.getId()).orElse(null);
+        assertNotNull(stillExistsB);
+        assertEquals(groupBFilePath, stillExistsB.getDuongdanfile());
+    }
+
+    @Test
+    @DisplayName("P2 Fix: Trạng thái khóa báo cáo độc lập từng dòng (Nhóm A có điểm bị khóa, Nhóm B chưa có điểm không bị khóa)")
+    void testPerItemReportLockStatus() {
+        // Nhóm A có điểm
+        Sinhvien svA = taoSinhVien("SV_TV_ItemA");
+        Nhomsinhvien nhomA = new Nhomsinhvien();
+        nhomA.setTennhom("Nhóm A Khóa");
+        nhomA.setDotdangkyid(dot.getId());
+        nhomA.setNhomtruongid(svA.getId());
+        em.persist(nhomA);
+        em.persist(new Thanhviennhom(nhomA.getId(), svA.getId()));
+
+        Dangkydetai dkA = new Dangkydetai();
+        dkA.setNhomid(nhomA.getId());
+        dkA.setDetaiid(dt.getId());
+        dkA.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkA.setNgaydangky(LocalDateTime.now());
+        em.persist(dkA);
+
+        Diem dA = new Diem();
+        dA.setDangkydetaiid(dkA.getId());
+        dA.setGiangvienid(gv.getId());
+        dA.setDiemso(new BigDecimal("9.0"));
+        em.persist(dA);
+
+        Nopbaocao nbA = new Nopbaocao();
+        nbA.setDangkydetaiid(dkA.getId());
+        nbA.setSinhvienid(svA.getId());
+        nbA.setDuongdanfile("/uploads/baocao/reportA.pdf");
+        nbA.setNgaynop(LocalDateTime.now());
+        em.persist(nbA);
+
+        // Nhóm B chưa có điểm
+        Sinhvien svB = taoSinhVien("SV_TV_ItemB");
+        Nhomsinhvien nhomB = new Nhomsinhvien();
+        nhomB.setTennhom("Nhóm B Mở");
+        nhomB.setDotdangkyid(dot.getId());
+        nhomB.setNhomtruongid(svB.getId());
+        em.persist(nhomB);
+        em.persist(new Thanhviennhom(nhomB.getId(), svB.getId()));
+
+        Dangkydetai dkB = new Dangkydetai();
+        dkB.setNhomid(nhomB.getId());
+        dkB.setDetaiid(dt.getId());
+        dkB.setTrangthai(TrangthaiDangkydetai.DADUYET);
+        dkB.setNgaydangky(LocalDateTime.now());
+        em.persist(dkB);
+
+        Nopbaocao nbB = new Nopbaocao();
+        nbB.setDangkydetaiid(dkB.getId());
+        nbB.setSinhvienid(svB.getId());
+        nbB.setDuongdanfile("/uploads/baocao/reportB.pdf");
+        nbB.setNgaynop(LocalDateTime.now());
+        em.persist(nbB);
+        em.flush();
+
+        // Lấy danh sách DTO
+        var dtos = nopbaocaoService.layDanhSachBaoCaoDto(0);
+        var dtoA = dtos.stream().filter(d -> d.getId().equals(nbA.getId())).findFirst().orElseThrow();
+        var dtoB = dtos.stream().filter(d -> d.getId().equals(nbB.getId())).findFirst().orElseThrow();
+
+        // Độc lập từng dòng: A bị khóa, B không bị khóa
+        assertTrue(dtoA.isDaKhoa(), "Báo cáo nhóm A đã có điểm phải có daKhoa = true");
+        assertFalse(dtoB.isDaKhoa(), "Báo cáo nhóm B chưa có điểm phải có daKhoa = false");
+    }
 }

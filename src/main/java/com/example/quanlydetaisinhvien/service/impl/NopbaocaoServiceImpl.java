@@ -201,6 +201,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             dto.setId(nb.getId()); dto.setDangkydetaiid(nb.getDangkydetaiid());
             dto.setSinhvienid(nb.getSinhvienid()); dto.setDuongdanfile(nb.getDuongdanfile());
             dto.setNgaynop(nb.getNgaynop());
+            dto.setDaKhoa(kiemTraDaKhoaNopBaoCao(nb.getDangkydetaiid()));
             Sinhvien sv = svs.get(nb.getSinhvienid());
             if (sv != null) {
                 dto.setMasinhvien(sv.getMasinhvien());
@@ -231,6 +232,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         dto.setSinhvienid(nb.getSinhvienid());
         dto.setDuongdanfile(nb.getDuongdanfile());
         dto.setNgaynop(nb.getNgaynop());
+        dto.setDaKhoa(kiemTraDaKhoaNopBaoCao(nb.getDangkydetaiid()));
 
         sinhvienRepository.findById(nb.getSinhvienid()).ifPresent(sv -> {
             dto.setMasinhvien(sv.getMasinhvien());
@@ -267,6 +269,12 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
 
         kiemTraKhoaNopBaoCao(request.getDangkydetaiid());
+
+        // Kiểm tra quyền sở hữu tệp: không cho phép nhóm khác tham chiếu hoặc mượn đường dẫn file của nhóm khác
+        String duongdanfile = request.getDuongdanfile().trim();
+        if (repository.existsByDuongdanfileAndDangkydetaiidNot(duongdanfile, request.getDangkydetaiid())) {
+            throw new NghiepvuException("Tệp báo cáo này đã thuộc về đề tài khác, không được phép sử dụng lại.");
+        }
 
         Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
@@ -316,7 +324,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         String safeName = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
-        String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
+        String fileName = "dk_" + dangkydetaiid + "_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
 
         Path targetPath = null;
         try {
@@ -342,18 +350,21 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
             Nopbaocao saved = repository.save(nb);
 
-            // Bảo đảm không xóa file cũ trước khi transaction commit thành công
+            // Bảo đảm không xóa file cũ trước khi transaction commit thành công và không xóa nếu thuộc đăng ký khác
             if (oldFileDuongDan != null && !oldFileDuongDan.equals(duongdanfile)) {
-                final String fileCanXoa = oldFileDuongDan;
-                if (TransactionSynchronizationManager.isActualTransactionActive()) {
-                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            xoaFileVatLy(fileCanXoa);
-                        }
-                    });
-                } else {
-                    xoaFileVatLy(fileCanXoa);
+                boolean isUsedByOther = repository.existsByDuongdanfileAndDangkydetaiidNot(oldFileDuongDan, dangkydetaiid);
+                if (!isUsedByOther) {
+                    final String fileCanXoa = oldFileDuongDan;
+                    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                xoaFileVatLy(fileCanXoa);
+                            }
+                        });
+                    } else {
+                        xoaFileVatLy(fileCanXoa);
+                    }
                 }
             }
 
@@ -404,16 +415,20 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         repository.deleteById(id);
 
         if (oldFileDuongDan != null) {
-            final String fileCanXoa = oldFileDuongDan;
-            if (TransactionSynchronizationManager.isActualTransactionActive()) {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        xoaFileVatLy(fileCanXoa);
-                    }
-                });
-            } else {
-                xoaFileVatLy(fileCanXoa);
+            // Chỉ xóa file vật lý nếu file không bị đăng ký khác tham chiếu
+            boolean isUsedByOther = repository.existsByDuongdanfileAndDangkydetaiidNot(oldFileDuongDan, nb.getDangkydetaiid());
+            if (!isUsedByOther) {
+                final String fileCanXoa = oldFileDuongDan;
+                if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            xoaFileVatLy(fileCanXoa);
+                        }
+                    });
+                } else {
+                    xoaFileVatLy(fileCanXoa);
+                }
             }
         }
     }
@@ -471,6 +486,10 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
     private void xoaFileVatLy(String duongdanfile) {
         if (duongdanfile == null || duongdanfile.trim().isEmpty()) return;
+        // Kiểm tra an toàn: nếu còn bản ghi trong hệ thống đang tham chiếu file này thì không xóa file vật lý
+        if (repository != null && repository.countByDuongdanfile(duongdanfile) > 0) {
+            return;
+        }
         try {
             String prefix = "/uploads/baocao/";
             if (duongdanfile.startsWith(prefix)) {
