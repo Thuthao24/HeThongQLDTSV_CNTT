@@ -46,6 +46,10 @@ public class SecurityConfig {
                 .requestMatchers("/giangvien/**", "/sinhvien/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON")
                 .requestMatchers("/detai/**").hasAnyRole("TRUONGKHOA","TRUONGBOMON","GIANGVIEN")
                 // Duyệt đăng ký đề tài sinh viên: Giảng viên hướng dẫn, Trưởng bộ môn, Trưởng khoa
+                // Chỉ sinh viên được gửi yêu cầu hủy đăng ký.
+// Service sẽ kiểm tra có đúng nhóm trưởng hay không.
+.requestMatchers(HttpMethod.POST, "/dangkydetai/*/huy")
+    .hasRole("SINHVIEN")
                 .requestMatchers(HttpMethod.POST, "/dangkydetai/*/duyet").hasAnyRole("TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/dangkydetai", "/dangkydetai/**").hasAnyRole("SINHVIEN", "TRUONGKHOA", "TRUONGBOMON", "GIANGVIEN")
                 .requestMatchers("/nhom/**", "/nopbaocao/**").hasAnyRole("SINHVIEN","TRUONGKHOA")
