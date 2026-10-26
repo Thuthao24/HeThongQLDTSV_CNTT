@@ -1,9 +1,12 @@
+```java
 package com.example.quanlydetaisinhvien.controller;
 
 import com.example.quanlydetaisinhvien.dto.GiaiDoan1.*;
 import com.example.quanlydetaisinhvien.entity.*;
 import com.example.quanlydetaisinhvien.exception.NghiepvuException;
+import com.example.quanlydetaisinhvien.service.DisplayLookupService;
 import com.example.quanlydetaisinhvien.service.GiaiDoan1Service;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -11,101 +14,647 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.util.List;
 
 @Controller
 @RequestMapping("/giai-doan-1")
 public class GiaiDoan1Controller {
-    private final GiaiDoan1Service svc;
-    private final com.example.quanlydetaisinhvien.service.DisplayLookupService lookup;
 
-public GiaiDoan1Controller(
-        GiaiDoan1Service svc,
-        com.example.quanlydetaisinhvien.service.DisplayLookupService lookup) {
-    this.svc = svc;
-    this.lookup = lookup;
-}
-    private String username(Authentication a){return a.getName();}
-    private boolean khoa(Authentication a){return a.getAuthorities().stream().anyMatch(x->"ROLE_TRUONGKHOA".equals(x.getAuthority()));}
-    private void requireKhoa(Authentication a){if(!khoa(a)) throw new AccessDeniedException("Chỉ trưởng khoa được phép");}
-    private void modelForDot(Model m,DotForm f,Long id){
-        m.addAttribute("title",id==null?"Tạo đợt đăng ký":"Sửa đợt đăng ký");
-        m.addAttribute("form",f);m.addAttribute("id",id);m.addAttribute("loaidots",Loaidot.values());
+    private final GiaiDoan1Service svc;
+    private final DisplayLookupService lookup;
+
+    public GiaiDoan1Controller(
+            GiaiDoan1Service svc,
+            DisplayLookupService lookup
+    ) {
+        this.svc = svc;
+        this.lookup = lookup;
     }
+
+    // =========================================================
+    // HELPER - USER / ROLE
+    // =========================================================
+
+    private String username(Authentication a) {
+        return a.getName();
+    }
+
+    /**
+     * Kiểm tra tài khoản hiện tại có phải Trưởng khoa không.
+     */
+    private boolean khoa(Authentication a) {
+        return a != null
+                && a.getAuthorities()
+                .stream()
+                .anyMatch(x ->
+                        "ROLE_TRUONGKHOA".equals(
+                                x.getAuthority()
+                        )
+                );
+    }
+
+    /**
+     * Kiểm tra tài khoản hiện tại có phải Giảng viên thường không.
+     *
+     * Lưu ý:
+     * ROLE_GIANGVIEN khác ROLE_TRUONGBOMON và ROLE_TRUONGKHOA.
+     */
+    private boolean giangVien(Authentication a) {
+        return a != null
+                && a.getAuthorities()
+                .stream()
+                .anyMatch(x ->
+                        "ROLE_GIANGVIEN".equals(
+                                x.getAuthority()
+                        )
+                );
+    }
+
+    /**
+     * Chỉ Trưởng khoa được thực hiện nghiệp vụ quản trị cấp khoa.
+     */
+    private void requireKhoa(Authentication a) {
+        if (!khoa(a)) {
+            throw new AccessDeniedException(
+                    "Chỉ trưởng khoa được phép"
+            );
+        }
+    }
+
+    /**
+     * Sau thao tác đề tài:
+     *
+     * GIANGVIEN:
+     *      không có quyền xem /detai
+     *      -> quay lại form đề xuất.
+     *
+     * TRUONGBOMON / TRUONGKHOA:
+     *      được xem danh sách
+     *      -> quay lại /detai.
+     */
+    private String topicRedirect(Authentication a) {
+
+        if (giangVien(a)) {
+            return "redirect:/giai-doan-1/detai/tao";
+        }
+
+        return "redirect:/detai";
+    }
+
+    // =========================================================
+    // ĐỢT ĐĂNG KÝ
+    // =========================================================
+
+    private void modelForDot(
+            Model m,
+            DotForm f,
+            Long id
+    ) {
+
+        m.addAttribute(
+                "title",
+                id == null
+                        ? "Tạo đợt đăng ký"
+                        : "Sửa đợt đăng ký"
+        );
+
+        m.addAttribute("form", f);
+        m.addAttribute("id", id);
+        m.addAttribute(
+                "loaidots",
+                Loaidot.values()
+        );
+    }
+
+    /**
+     * Mở form tạo đợt đăng ký.
+     *
+     * Chỉ Trưởng khoa.
+     */
     @GetMapping("/dot/tao")
-    public String taoDot(Model m,Authentication a){requireKhoa(a);modelForDot(m,new DotForm(),null);return "giai-doan-1/dot-form";}
+    public String taoDot(
+            Model m,
+            Authentication a
+    ) {
+
+        requireKhoa(a);
+
+        modelForDot(
+                m,
+                new DotForm(),
+                null
+        );
+
+        return "giai-doan-1/dot-form";
+    }
+
+    /**
+     * Mở form sửa đợt.
+     *
+     * Chỉ sửa được khi trạng thái = NHAP.
+     */
     @GetMapping("/dot/{id}/sua")
-    public String suaDot(@PathVariable Long id,Model m,Authentication a){
-        requireKhoa(a);Dotdangky d=svc.dot(id);
-        if(d.getTrangthai()!=TrangthaiDotdangky.NHAP)throw new NghiepvuException("Chỉ sửa đợt NHÁP");
-        modelForDot(m,DotForm.from(d),id);return "giai-doan-1/dot-form";
+    public String suaDot(
+            @PathVariable Long id,
+            Model m,
+            Authentication a
+    ) {
+
+        requireKhoa(a);
+
+        Dotdangky d = svc.dot(id);
+
+        if (d.getTrangthai()
+                != TrangthaiDotdangky.NHAP) {
+
+            throw new NghiepvuException(
+                    "Chỉ sửa đợt NHÁP"
+            );
+        }
+
+        modelForDot(
+                m,
+                DotForm.from(d),
+                id
+        );
+
+        return "giai-doan-1/dot-form";
     }
+
+    /**
+     * Lưu đợt đăng ký.
+     */
     @PostMapping("/dot/luu")
-    public String luuDot(@ModelAttribute DotForm form,@RequestParam(required=false) Long id,
-                         Authentication a,RedirectAttributes r){
-        try {requireKhoa(a);Dotdangky d=svc.saveDot(id,form,username(a));success(r,"Đã lưu đợt đăng ký #"+d.getId());return "redirect:/dotdangky";}
-        catch(NghiepvuException ex){error(r,ex.getMessage());return "redirect:"+(id==null?"/giai-doan-1/dot/tao":"/giai-doan-1/dot/"+id+"/sua");}
+    public String luuDot(
+            @ModelAttribute DotForm form,
+            @RequestParam(required = false) Long id,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            requireKhoa(a);
+
+            Dotdangky d = svc.saveDot(
+                    id,
+                    form,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    "Đã lưu đợt đăng ký #"
+                            + d.getId()
+            );
+
+            return "redirect:/dotdangky";
+
+        } catch (NghiepvuException ex) {
+
+            error(
+                    r,
+                    ex.getMessage()
+            );
+
+            return "redirect:"
+                    + (
+                        id == null
+                            ? "/giai-doan-1/dot/tao"
+                            : "/giai-doan-1/dot/"
+                                + id
+                                + "/sua"
+                    );
+        }
     }
+
+    /**
+     * Xóa đợt đăng ký.
+     */
     @PostMapping("/dot/{id}/xoa")
-    public String xoaDot(@PathVariable Long id,Authentication a,RedirectAttributes r){
-        try {requireKhoa(a);svc.deleteDot(id,username(a));success(r,"Đã xóa đợt đăng ký");}
-        catch(NghiepvuException|DataIntegrityViolationException ex){error(r,"Không thể xóa đợt. Kiểm tra đề tài, nhóm và dữ liệu liên quan.");}
+    public String xoaDot(
+            @PathVariable Long id,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            requireKhoa(a);
+
+            svc.deleteDot(
+                    id,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    "Đã xóa đợt đăng ký"
+            );
+
+        } catch (
+                NghiepvuException
+                | DataIntegrityViolationException ex
+        ) {
+
+            error(
+                    r,
+                    "Không thể xóa đợt. "
+                    + "Kiểm tra đề tài, nhóm và dữ liệu liên quan."
+            );
+        }
+
         return "redirect:/dotdangky";
     }
+
+    /**
+     * Chuyển trạng thái đợt đăng ký.
+     */
     @PostMapping("/dot/{id}/chuyen")
-    public String chuyen(@PathVariable Long id,@RequestParam TrangthaiDotdangky trangthai,
-                        Authentication a,RedirectAttributes r){
-        try {requireKhoa(a);svc.chuyenGiaiDoan(id,trangthai,username(a));success(r,"Đã chuyển đợt sang "+trangthai);}
-        catch(NghiepvuException ex){error(r,ex.getMessage());}
+    public String chuyen(
+            @PathVariable Long id,
+            @RequestParam TrangthaiDotdangky trangthai,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            requireKhoa(a);
+
+            svc.chuyenGiaiDoan(
+                    id,
+                    trangthai,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    "Đã chuyển đợt sang "
+                            + trangthai
+            );
+
+        } catch (NghiepvuException ex) {
+
+            error(
+                    r,
+                    ex.getMessage()
+            );
+        }
+
         return "redirect:/dotdangky";
     }
-    private void modelForTopic(Model m,DeTaiForm f,Long id,Authentication a){
-        m.addAttribute("title",id==null?"Đề xuất đề tài":"Chỉnh sửa đề tài");m.addAttribute("form",f);
-        m.addAttribute("id",id);m.addAttribute("dots",svc.dsDotGiaiDoan1());
-        m.addAttribute("bomons", svc.dsBoMon());
-var teachers = svc.dsGiangVienChoices();
-m.addAttribute("giangviens", teachers);
-m.addAttribute("teacherLabels", lookup.accountLabels(
-        teachers.stream().map(Giangvien::getTaikhoanid).toList()));
+
+    // =========================================================
+    // ĐỀ TÀI
+    // =========================================================
+
+    /**
+     * Chuẩn bị dữ liệu dùng chung cho form đề tài.
+     */
+    private void modelForTopic(
+            Model m,
+            DeTaiForm f,
+            Long id,
+            Authentication a
+    ) {
+
+        m.addAttribute(
+                "title",
+                id == null
+                        ? "Đề xuất đề tài"
+                        : "Chỉnh sửa đề tài"
+        );
+
+        m.addAttribute(
+                "form",
+                f
+        );
+
+        m.addAttribute(
+                "id",
+                id
+        );
+
+        m.addAttribute(
+                "dots",
+                svc.dsDotGiaiDoan1()
+        );
+
+        m.addAttribute(
+                "bomons",
+                svc.dsBoMon()
+        );
+
+        var teachers =
+                svc.dsGiangVienChoices();
+
+        m.addAttribute(
+                "giangviens",
+                teachers
+        );
+
+        m.addAttribute(
+                "teacherLabels",
+                lookup.accountLabels(
+                        teachers
+                                .stream()
+                                .map(
+                                        Giangvien::getTaikhoanid
+                                )
+                                .toList()
+                )
+        );
     }
+
+    /**
+     * Mở form đề xuất đề tài.
+     *
+     * GIANGVIEN / TRUONGBOMON / TRUONGKHOA
+     * đều có thể đi qua SecurityConfig.
+     *
+     * Service tiếp tục kiểm tra canPropose().
+     */
     @GetMapping("/detai/tao")
-    public String taoDeTai(Model m,Authentication a){
-        if(!svc.canPropose(username(a)))throw new AccessDeniedException("Cần tài khoản giảng viên hợp lệ");
-        modelForTopic(m,new DeTaiForm(),null,a);return "giai-doan-1/detai-form";
+    public String taoDeTai(
+            Model m,
+            Authentication a
+    ) {
+
+        if (!svc.canPropose(username(a))) {
+
+            throw new AccessDeniedException(
+                    "Cần tài khoản giảng viên hợp lệ"
+            );
+        }
+
+        modelForTopic(
+                m,
+                new DeTaiForm(),
+                null,
+                a
+        );
+
+        return "giai-doan-1/detai-form";
     }
+
+    /**
+     * Mở form chỉnh sửa đề tài.
+     *
+     * Service quyết định user hiện tại
+     * có quyền chỉnh đề tài đó hay không.
+     */
     @GetMapping("/detai/{id}/sua")
-    public String suaDeTai(@PathVariable Long id,Model m,Authentication a){
-        Detai e=svc.detai(id);
-        if(!svc.canEditTopic(username(a),e))throw new AccessDeniedException("Không có quyền sửa đề tài");
-        List<Giangvienhuongdan> list=svc.dsGvhd(id);
-        DeTaiForm f=DeTaiForm.from(e,list.isEmpty()?null:list.get(0).getGiangvienid(),
-                          list.size()<2?null:list.get(1).getGiangvienid());
-        modelForTopic(m,f,id,a);return "giai-doan-1/detai-form";
+    public String suaDeTai(
+            @PathVariable Long id,
+            Model m,
+            Authentication a
+    ) {
+
+        Detai e =
+                svc.detai(id);
+
+        if (!svc.canEditTopic(
+                username(a),
+                e
+        )) {
+
+            throw new AccessDeniedException(
+                    "Không có quyền sửa đề tài"
+            );
+        }
+
+        List<Giangvienhuongdan> list =
+                svc.dsGvhd(id);
+
+        DeTaiForm f =
+                DeTaiForm.from(
+                        e,
+
+                        list.isEmpty()
+                                ? null
+                                : list.get(0)
+                                      .getGiangvienid(),
+
+                        list.size() < 2
+                                ? null
+                                : list.get(1)
+                                      .getGiangvienid()
+                );
+
+        modelForTopic(
+                m,
+                f,
+                id,
+                a
+        );
+
+        return "giai-doan-1/detai-form";
     }
+
+    /**
+     * Tạo mới hoặc cập nhật đề tài.
+     *
+     * Điểm sửa quan trọng:
+     *
+     * GIANGVIEN không được redirect sang /detai
+     * vì GIANGVIEN không còn quyền xem danh sách.
+     */
     @PostMapping("/detai/luu")
-    public String luuDetai(@ModelAttribute DeTaiForm form,@RequestParam(required=false) Long id,
-                            Authentication a,RedirectAttributes r){
-        try {Detai e=svc.saveDetai(id,form,username(a));success(r,"Đã lưu đề tài #"+e.getId()+" và GVHD");return "redirect:/detai";}
-        catch(NghiepvuException ex){error(r,ex.getMessage());return "redirect:"+(id==null?"/giai-doan-1/detai/tao":"/giai-doan-1/detai/"+id+"/sua");}
+    public String luuDetai(
+            @ModelAttribute DeTaiForm form,
+            @RequestParam(required = false) Long id,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            Detai e =
+                    svc.saveDetai(
+                            id,
+                            form,
+                            username(a)
+                    );
+
+            success(
+                    r,
+                    "Đã lưu đề tài #"
+                            + e.getId()
+                            + " và GVHD"
+            );
+
+            return topicRedirect(a);
+
+        } catch (NghiepvuException ex) {
+
+            error(
+                    r,
+                    ex.getMessage()
+            );
+
+            return "redirect:"
+                    + (
+                        id == null
+                            ? "/giai-doan-1/detai/tao"
+                            : "/giai-doan-1/detai/"
+                                + id
+                                + "/sua"
+                    );
+        }
     }
+
+    /**
+     * Xóa đề tài.
+     *
+     * Service vẫn chịu trách nhiệm kiểm tra:
+     * - chủ sở hữu;
+     * - trạng thái;
+     * - dữ liệu đang được sử dụng.
+     *
+     * GIANGVIEN xóa xong quay lại form đề xuất.
+     */
     @PostMapping("/detai/{id}/xoa")
-    public String xoaDeTai(@PathVariable Long id,Authentication a,RedirectAttributes r){
-        try {svc.deleteDetai(id,username(a));success(r,"Đã xóa đề tài");}
-        catch(NghiepvuException|DataIntegrityViolationException ex){error(r,"Không thể xóa đề tài đang được sử dụng hoặc đã xét duyệt");}
-        return "redirect:/detai";
+    public String xoaDeTai(
+            @PathVariable Long id,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            svc.deleteDetai(
+                    id,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    "Đã xóa đề tài"
+            );
+
+        } catch (
+                NghiepvuException
+                | DataIntegrityViolationException ex
+        ) {
+
+            error(
+                    r,
+                    "Không thể xóa đề tài "
+                    + "đang được sử dụng hoặc đã xét duyệt"
+            );
+        }
+
+        return topicRedirect(a);
     }
+
+    /**
+     * Duyệt / từ chối đề tài.
+     *
+     * CHỈ TRƯỞNG KHOA.
+     *
+     * SecurityConfig đã chặn.
+     * Controller tiếp tục requireKhoa().
+     * Service cũng tiếp tục kiểm tra quyền.
+     */
     @PostMapping("/detai/{id}/duyet")
-    public String duyet(@PathVariable Long id,@RequestParam boolean chapnhan,Authentication a,RedirectAttributes r){
-        try {svc.duyet(id,chapnhan,username(a));success(r,chapnhan?"Đã duyệt đề tài":"Đã từ chối đề tài");}
-        catch(NghiepvuException ex){error(r,ex.getMessage());}
+    public String duyet(
+            @PathVariable Long id,
+            @RequestParam boolean chapnhan,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            requireKhoa(a);
+
+            svc.duyet(
+                    id,
+                    chapnhan,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    chapnhan
+                            ? "Đã duyệt đề tài"
+                            : "Đã từ chối đề tài"
+            );
+
+        } catch (NghiepvuException ex) {
+
+            error(
+                    r,
+                    ex.getMessage()
+            );
+        }
+
         return "redirect:/detai";
     }
+
+    /**
+     * Công bố đề tài.
+     *
+     * CHỈ TRƯỞNG KHOA.
+     */
     @PostMapping("/detai/{id}/congbo")
-    public String congbo(@PathVariable Long id,Authentication a,RedirectAttributes r){
-        try {svc.congBo(id,username(a));success(r,"Đã công bố đề tài cho đợt đăng ký");}
-        catch(NghiepvuException ex){error(r,ex.getMessage());}
+    public String congbo(
+            @PathVariable Long id,
+            Authentication a,
+            RedirectAttributes r
+    ) {
+
+        try {
+
+            requireKhoa(a);
+
+            svc.congBo(
+                    id,
+                    username(a)
+            );
+
+            success(
+                    r,
+                    "Đã công bố đề tài cho đợt đăng ký"
+            );
+
+        } catch (NghiepvuException ex) {
+
+            error(
+                    r,
+                    ex.getMessage()
+            );
+        }
+
         return "redirect:/detai";
     }
-    private void error(RedirectAttributes r,String s){r.addFlashAttribute("errorMessage",s);}
-    private void success(RedirectAttributes r,String s){r.addFlashAttribute("successMessage",s);}
+
+    // =========================================================
+    // FLASH MESSAGE
+    // =========================================================
+
+    private void error(
+            RedirectAttributes r,
+            String s
+    ) {
+
+        r.addFlashAttribute(
+                "errorMessage",
+                s
+        );
+    }
+
+    private void success(
+            RedirectAttributes r,
+            String s
+    ) {
+
+        r.addFlashAttribute(
+                "successMessage",
+                s
+        );
+    }
 }
+```
