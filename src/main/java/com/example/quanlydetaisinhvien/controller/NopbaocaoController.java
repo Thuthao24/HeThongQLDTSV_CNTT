@@ -38,6 +38,9 @@ public class NopbaocaoController {
     private final NopbaocaoService service;
     private final DangkydetaiService dangkydetaiService;
 
+    @Value("${app.upload.dir:uploads/baocao}")
+    private String uploadDirectory;
+
     public NopbaocaoController(NopbaocaoService service, DangkydetaiService dangkydetaiService) {
         this.service = service;
         this.dangkydetaiService = dangkydetaiService;
@@ -70,7 +73,22 @@ public class NopbaocaoController {
             items = service.layDanhSachBaoCaoChoUser(username);
             dsDangKy = dangkydetaiService.layDanhSachDangKyChoUser(username);
             if (!dsDangKy.isEmpty()) {
-                dangKyCuaNhom = dsDangKy.get(0);
+                // Ưu tiên chọn theo ngữ cảnh người dùng:
+                // 1. Nhóm mà sinh viên là NHÓM TRƯỞNG và đề tài ĐÃ DUYỆT
+                // 2. Nhóm mà sinh viên là NHÓM TRƯỞNG và đề tài CHỜ DUYỆT
+                // 3. Đăng ký ĐÃ DUYỆT gần nhất
+                // 4. Bản ghi mới nhất
+                dangKyCuaNhom = dsDangKy.stream()
+                        .filter(dk -> username != null && username.equals(dk.getMasinhvienNhomtruong()) && dk.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                        .findFirst()
+                        .orElseGet(() -> dsDangKy.stream()
+                                .filter(dk -> username != null && username.equals(dk.getMasinhvienNhomtruong()) && dk.getTrangthai() == TrangthaiDangkydetai.CHODUYET)
+                                .findFirst()
+                                .orElseGet(() -> dsDangKy.stream()
+                                        .filter(dk -> dk.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                                        .reduce((first, second) -> second)
+                                        .orElse(dsDangKy.get(dsDangKy.size() - 1))));
+
                 if (username != null && username.equals(dangKyCuaNhom.getMasinhvienNhomtruong())) {
                     laNhomTruong = true;
                 }
@@ -88,8 +106,14 @@ public class NopbaocaoController {
             }
         }
 
+        boolean daKhoaNopBaoCao = false;
+        String loaidotHienThi = null;
         if (dangKyCuaNhom != null) {
             Long dkId = dangKyCuaNhom.getId();
+            daKhoaNopBaoCao = service.kiemTraDaKhoaNopBaoCao(dkId);
+            if (dangKyCuaNhom.getTendot() != null) {
+                loaidotHienThi = dangKyCuaNhom.getTendot().toUpperCase();
+            }
             for (NopBaoCaoDto bc : items) {
                 if (dkId.equals(bc.getDangkydetaiid())) {
                     baoCaoDaNop = bc;
@@ -105,6 +129,8 @@ public class NopbaocaoController {
         model.addAttribute("deTaiDaDuyet", deTaiDaDuyet);
         model.addAttribute("dangKyCuaNhom", dangKyCuaNhom);
         model.addAttribute("baoCaoDaNop", baoCaoDaNop);
+        model.addAttribute("daKhoaNopBaoCao", daKhoaNopBaoCao);
+        model.addAttribute("loaidotHienThi", loaidotHienThi);
         return "nopbaocao-list";
     }
 
@@ -129,18 +155,29 @@ public class NopbaocaoController {
             return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(pathStr)).build();
         }
 
+        String decoded;
+        try {
+            decoded = java.net.URLDecoder.decode(pathStr, java.nio.charset.StandardCharsets.UTF_8).replace('\\', '/');
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         // Only serve application-managed uploads. Never trust a DB-stored path as an
         // arbitrary filesystem location (including ../ or an absolute path).
         String prefix = "/uploads/baocao/";
-        if (!pathStr.startsWith(prefix)) {
+        if (!decoded.startsWith(prefix) && !decoded.startsWith("uploads/baocao/")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        String fileName = pathStr.substring(prefix.length());
+        String fileName = decoded.startsWith(prefix) ? decoded.substring(prefix.length()) : decoded.substring("uploads/baocao/".length());
+        while (fileName.startsWith("/")) {
+            fileName = fileName.substring(1);
+        }
         if (fileName.isBlank() || fileName.equals(".") || fileName.equals("..")
+                || fileName.contains("../") || fileName.contains("..\\")
                 || fileName.contains("/") || fileName.contains("\\")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        Path uploadRoot = Paths.get("uploads", "baocao").toAbsolutePath().normalize();
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
         Path filePath = uploadRoot.resolve(fileName).normalize();
         if (!filePath.startsWith(uploadRoot) || !Files.isRegularFile(filePath)
                 || !Files.isReadable(filePath) || Files.isSymbolicLink(filePath)) {

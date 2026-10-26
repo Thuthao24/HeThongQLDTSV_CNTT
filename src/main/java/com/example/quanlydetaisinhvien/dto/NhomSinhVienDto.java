@@ -17,6 +17,7 @@ public class NhomSinhVienDto {
     private String tendetai;
     private String trangthaiDangky;
     private List<ThanhVienDto> danhSachThanhVien = new ArrayList<>();
+    private List<LoiMoiThanhVienDto> dsLoiMoiDangCho = new ArrayList<>();
 
     public NhomSinhVienDto() {}
 
@@ -58,4 +59,7 @@ public class NhomSinhVienDto {
 
     public List<ThanhVienDto> getDanhSachThanhVien() { return danhSachThanhVien; }
     public void setDanhSachThanhVien(List<ThanhVienDto> danhSachThanhVien) { this.danhSachThanhVien = danhSachThanhVien; }
+
+    public List<LoiMoiThanhVienDto> getDsLoiMoiDangCho() { return dsLoiMoiDangCho; }
+    public void setDsLoiMoiDangCho(List<LoiMoiThanhVienDto> dsLoiMoiDangCho) { this.dsLoiMoiDangCho = dsLoiMoiDangCho; }
 }

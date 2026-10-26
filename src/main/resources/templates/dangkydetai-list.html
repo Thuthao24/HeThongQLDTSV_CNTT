@@ -48,7 +48,11 @@
             <form th:action="@{'/dangkydetai/' + ${dangKyCuaNhom.id} + '/huy'}" method="post"
                   data-confirm="Bạn có chắc chắn muốn hủy đăng ký đề tài này cho nhóm?"
                   data-modal-title="Thông báo"
+
                   style="margin: 0;">
+
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
               <button type="submit" class="btn btn-danger btn-sm">Hủy đăng ký</button>
             </form>
           </div>
@@ -56,7 +60,11 @@
             <form th:action="@{'/dangkydetai/' + ${dangKyCuaNhom.id} + '/huy'}" method="post"
                   data-confirm="Xác nhận xóa lượt đăng ký bị từ chối để nhóm chọn và đăng ký đề tài khác?"
                   data-modal-title="Thông báo"
+
                   style="margin: 0;">
+
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
               <button type="submit" class="btn btn-warning btn-sm">Hủy để đăng ký đề tài khác</button>
             </form>
           </div>
@@ -115,6 +123,9 @@
           <form th:action="@{/dangkydetai/dangky}" th:object="${dangKyRequest}" method="post"
                 data-confirm="Bạn có chắc chắn muốn gửi yêu cầu đăng ký đề tài đã chọn cho nhóm không?"
                 data-modal-title="Thông báo">
+
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
             <div class="form-grid">
               <!-- Nếu là Trưởng khoa: Cho chọn nhóm từ danh sách -->
               <div class="form-field" th:if="${vaitro == 'TRUONGKHOA'}">
@@ -219,6 +230,7 @@
                           data-modal-title="Thông báo"
                           style="margin: 0;">
                       <input type="hidden" name="chapnhan" value="true">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <button type="submit" class="btn btn-success btn-sm">Duyệt</button>
                     </form>
                     <form th:action="@{'/dangkydetai/' + ${item.id} + '/duyet'}" method="post"
@@ -226,6 +238,7 @@
                           data-modal-title="Thông báo"
                           style="margin: 0;">
                       <input type="hidden" name="chapnhan" value="false">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                       <button type="submit" class="btn btn-danger btn-sm">Từ chối</button>
                     </form>
                   </div>
@@ -250,7 +263,7 @@
 </div>
 
 <!-- Modal xác nhận chung -->
-<div class="portal-modal" id="confirmModal" aria-hidden="true" style="display: none;">
+<div class="portal-modal" id="confirmModal" aria-hidden="true">
   <div class="portal-modal-backdrop" data-modal-cancel></div>
   <div class="portal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
     <div class="portal-modal-header">

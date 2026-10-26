@@ -15,6 +15,9 @@ import jakarta.persistence.LockModeType;
 public interface KetquaRepository extends JpaRepository<Ketqua, Long> {
     boolean existsByDangkydetaiid(Long dangkydetaiid);
     boolean existsByDangkydetaiidAndDacongboTrue(Long dangkydetaiid);
+
+    @Query("SELECT k.dangkydetaiid FROM Ketqua k WHERE k.dangkydetaiid IN :ids AND k.dacongbo = true")
+    java.util.Set<Long> findDangkydetaiidsWithKetquaDaCongBo(@Param("ids") java.util.Collection<Long> ids);
     Optional<Ketqua> findByDangkydetaiid(Long dangkydetaiid);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -9,9 +9,12 @@ import com.example.quanlydetaisinhvien.service.NopbaocaoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,6 +39,12 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
     private final SinhvienRepository sinhvienRepository;
     private final TaikhoanRepository taikhoanRepository;
     private final DetaiRepository detaiRepository;
+
+    @Autowired(required = false)
+    private DiemRepository diemRepository;
+
+    @Autowired(required = false)
+    private KetquaRepository ketquaRepository;
 
     @Autowired(required = false)
     private ThanhviennhomRepository thanhviennhomRepository;
@@ -186,12 +195,18 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         Set<Long> dotIds = nhoms.values().stream().map(Nhomsinhvien::getDotdangkyid).collect(Collectors.toSet());
         Map<Long, Dotdangky> dots = new HashMap<>();
         if (dotdangkyRepository != null) dotdangkyRepository.findAllById(dotIds).forEach(e -> dots.put(e.getId(), e));
+        Set<Long> dkWithDiem = (diemRepository != null && !dkIds.isEmpty())
+                ? diemRepository.findDangkydetaiidsWithDiem(dkIds) : java.util.Collections.emptySet();
+        Set<Long> dkWithCongBo = (ketquaRepository != null && !dkIds.isEmpty())
+                ? ketquaRepository.findDangkydetaiidsWithKetquaDaCongBo(dkIds) : java.util.Collections.emptySet();
+
         List<NopBaoCaoDto> result = new ArrayList<>();
         for (Nopbaocao nb : reports) {
             NopBaoCaoDto dto = new NopBaoCaoDto();
             dto.setId(nb.getId()); dto.setDangkydetaiid(nb.getDangkydetaiid());
             dto.setSinhvienid(nb.getSinhvienid()); dto.setDuongdanfile(nb.getDuongdanfile());
             dto.setNgaynop(nb.getNgaynop());
+            dto.setDaKhoa(dkWithDiem.contains(nb.getDangkydetaiid()) || dkWithCongBo.contains(nb.getDangkydetaiid()));
             Sinhvien sv = svs.get(nb.getSinhvienid());
             if (sv != null) {
                 dto.setMasinhvien(sv.getMasinhvien());
@@ -205,7 +220,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
                 if (nhom != null) {
                     dto.setTennhom(nhom.getTennhom());
                     Dotdangky dot = dots.get(nhom.getDotdangkyid());
-                    if (dot != null) dto.setHanNop(dot.getKetthucsinhvien());
+                    if (dot != null) dto.setHanNop(dot.getNgaybaocaohoidong() != null ? dot.getNgaybaocaohoidong() : dot.getHanchamphanbien());
                 }
                 Detai detai = detais.get(dk.getDetaiid());
                 if (detai != null) dto.setTendetai(detai.getTendetai());
@@ -222,6 +237,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         dto.setSinhvienid(nb.getSinhvienid());
         dto.setDuongdanfile(nb.getDuongdanfile());
         dto.setNgaynop(nb.getNgaynop());
+        dto.setDaKhoa(kiemTraDaKhoaNopBaoCao(nb.getDangkydetaiid()));
 
         sinhvienRepository.findById(nb.getSinhvienid()).ifPresent(sv -> {
             dto.setMasinhvien(sv.getMasinhvien());
@@ -234,7 +250,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             nhomsinhvienRepository.findById(dk.getNhomid()).ifPresent(n -> {
                 dto.setTennhom(n.getTennhom());
                 if (dotdangkyRepository != null) {
-                    dotdangkyRepository.findById(n.getDotdangkyid()).ifPresent(d -> dto.setHanNop(d.getKetthucsinhvien()));
+                    dotdangkyRepository.findById(n.getDotdangkyid()).ifPresent(d -> dto.setHanNop(d.getNgaybaocaohoidong() != null ? d.getNgaybaocaohoidong() : d.getHanchamphanbien()));
                 }
             });
             detaiRepository.findById(dk.getDetaiid()).ifPresent(dt -> dto.setTendetai(dt.getTendetai()));
@@ -253,7 +269,24 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             throw new NghiepvuException("Đường dẫn file báo cáo không được để trống");
         }
 
-        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(request.getDangkydetaiid(), currentUsername);
+        // Khóa bi quan bản ghi đăng ký đề tài để tránh xung đột với tiến trình chấm điểm
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(request.getDangkydetaiid())
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
+        kiemTraKhoaNopBaoCao(request.getDangkydetaiid());
+
+        // Kiểm tra quyền sở hữu tệp theo canonical physical file: không cho phép mượn đường dẫn file của nhóm khác
+        String duongdanfile = request.getDuongdanfile().trim();
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+        Path targetPhysical = layDuongDanVatLyHopLe(duongdanfile, uploadRoot);
+        if (targetPhysical != null) {
+            duongdanfile = "/uploads/baocao/" + uploadRoot.relativize(targetPhysical).toString().replace('\\', '/');
+        }
+        if (isFileReferencedByOtherRegistration(duongdanfile, request.getDangkydetaiid())) {
+            throw new NghiepvuException("Tệp báo cáo này đã thuộc về đề tài khác, không được phép sử dụng lại.");
+        }
+
+        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         // Kiểm tra xem đề tài này đã có bản ghi báo cáo chưa
         // Nếu đã có: Cập nhật bản ghi hiện tại (nộp lại / thay thế), không tạo thêm bản ghi trùng lặp
@@ -262,7 +295,7 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
 
         nb.setDangkydetaiid(request.getDangkydetaiid());
         nb.setSinhvienid(sinhvienNop.getId());
-        nb.setDuongdanfile(request.getDuongdanfile().trim());
+        nb.setDuongdanfile(duongdanfile);
         nb.setNgaynop(LocalDateTime.now());
 
         return repository.save(nb);
@@ -291,17 +324,25 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             throw new NghiepvuException("Định dạng tệp không được hỗ trợ. Chỉ chấp nhận các định dạng: .pdf, .doc, .docx, .zip, .rar");
         }
 
-        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dangkydetaiid, currentUsername);
+        // Khóa bi quan bản ghi đăng ký để đồng bộ hóa với việc chấm điểm đồng thời
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(dangkydetaiid)
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
+        kiemTraKhoaNopBaoCao(dangkydetaiid);
+        kiemTraDinhDangFileVoiMagicBytes(file, ext);
+
+        Sinhvien sinhvienNop = xacThucNhomTruongNopBaoCao(dk, currentUsername);
 
         String safeName = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
-        String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
+        String fileName = "dk_" + dangkydetaiid + "_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
 
+        Path targetPath = null;
         try {
             Path uploadDir = Paths.get(uploadDirectory).toAbsolutePath().normalize();
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
-            Path targetPath = uploadDir.resolve(fileName);
+            targetPath = uploadDir.resolve(fileName);
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
             String duongdanfile = "/uploads/baocao/" + fileName;
@@ -310,15 +351,62 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
             // Nếu đã có: Cập nhật bản ghi hiện tại (nộp lại / thay thế), không tạo thêm bản ghi trùng lặp
             Nopbaocao nb = repository.findFirstByDangkydetaiidOrderByIdDesc(dangkydetaiid)
                     .orElse(new Nopbaocao());
+            String oldFileDuongDan = nb.getId() != null ? nb.getDuongdanfile() : null;
 
             nb.setDangkydetaiid(dangkydetaiid);
             nb.setSinhvienid(sinhvienNop.getId());
             nb.setDuongdanfile(duongdanfile);
             nb.setNgaynop(LocalDateTime.now());
 
-            return repository.save(nb);
-        } catch (IOException e) {
-            throw new NghiepvuException("Không thể lưu file tải lên. Vui lòng thử lại.");
+            Nopbaocao saved = repository.save(nb);
+
+            // Bảo đảm không xóa file cũ trước khi transaction commit thành công và không xóa nếu thuộc đăng ký khác
+            if (oldFileDuongDan != null && !oldFileDuongDan.equals(duongdanfile)) {
+                boolean isUsedByOther = isFileReferencedByOtherRegistration(oldFileDuongDan, dangkydetaiid);
+                if (!isUsedByOther) {
+                    final String fileCanXoa = oldFileDuongDan;
+                    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                xoaFileVatLy(fileCanXoa);
+                            }
+                        });
+                    } else {
+                        xoaFileVatLy(fileCanXoa);
+                    }
+                }
+            }
+
+            // Dọn dẹp tệp mới tải lên nếu transaction bị rollback
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                final Path uploadFile = targetPath;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status == STATUS_ROLLED_BACK) {
+                            try {
+                                Files.deleteIfExists(uploadFile);
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    }
+                });
+            }
+
+            return saved;
+        } catch (Exception e) {
+            // Dọn dẹp tệp mồ côi nếu lưu CSDL hoặc upload thất bại tức thì
+            if (targetPath != null) {
+                try {
+                    Files.deleteIfExists(targetPath);
+                } catch (Exception ignored) {
+                }
+            }
+            if (e instanceof NghiepvuException) {
+                throw (NghiepvuException) e;
+            }
+            throw new NghiepvuException("Không thể lưu file tải lên: " + e.getMessage());
         }
     }
 
@@ -327,8 +415,32 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
         Nopbaocao nb = repository.findById(id)
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy báo cáo"));
 
-        xacThucNhomTruongNopBaoCao(nb.getDangkydetaiid(), currentUsername);
+        Dangkydetai dk = dangkydetaiRepository.findByIdForUpdate(nb.getDangkydetaiid())
+                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
+
+        kiemTraKhoaNopBaoCao(nb.getDangkydetaiid());
+        xacThucNhomTruongNopBaoCao(dk, currentUsername);
+
+        String oldFileDuongDan = nb.getDuongdanfile();
         repository.deleteById(id);
+
+        if (oldFileDuongDan != null) {
+            // Chỉ xóa file vật lý nếu file không bị đăng ký khác tham chiếu
+            boolean isUsedByOther = isFileReferencedByOtherRegistration(oldFileDuongDan, nb.getDangkydetaiid());
+            if (!isUsedByOther) {
+                final String fileCanXoa = oldFileDuongDan;
+                if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            xoaFileVatLy(fileCanXoa);
+                        }
+                    });
+                } else {
+                    xoaFileVatLy(fileCanXoa);
+                }
+            }
+        }
     }
 
     /**
@@ -339,16 +451,162 @@ public class NopbaocaoServiceImpl implements NopbaocaoService {
      * - Kiểm tra đề tài của nhóm đã được duyệt chính thức.
      * - Kiểm tra sinh viên thực sự là nhóm trưởng của nhóm tương ứng.
      */
-    private Sinhvien xacThucNhomTruongNopBaoCao(Long dangkydetaiid, String currentUsername) {
+    
+    @Override
+    @Transactional(readOnly = true)
+    public boolean kiemTraDaKhoaNopBaoCao(Long dangkydetaiid) {
+        if (dangkydetaiid == null) return false;
+        long soLuongDiem = (diemRepository != null) ? diemRepository.demSoLuongDiemTheoDangky(dangkydetaiid) : 0;
+        boolean daCongBo = (ketquaRepository != null) && ketquaRepository.existsByDangkydetaiidAndDacongboTrue(dangkydetaiid);
+        return (soLuongDiem > 0 || daCongBo);
+    }
+
+    private void kiemTraKhoaNopBaoCao(Long dangkydetaiid) {
+        if (dangkydetaiid == null) return;
+        if (kiemTraDaKhoaNopBaoCao(dangkydetaiid)) {
+            throw new NghiepvuException("Đề tài đã có điểm đánh giá hoặc đã công bố kết quả. Chức năng nộp, cập nhật hoặc xóa báo cáo đã bị khóa để bảo toàn dữ liệu!");
+        }
+    }
+
+    private void kiemTraDinhDangFileVoiMagicBytes(MultipartFile file, String ext) {
+        try (InputStream is = file.getInputStream()) {
+            byte[] header = new byte[8];
+            int read = is.read(header);
+            if (read < 4) {
+                throw new NghiepvuException("Tệp tin rỗng hoặc không đúng định dạng tiêu chuẩn");
+            }
+            boolean hopLe = false;
+            if ("pdf".equals(ext)) {
+                hopLe = (header[0] == 0x25 && header[1] == 0x50 && header[2] == 0x44 && header[3] == 0x46); // %PDF
+            } else if ("docx".equals(ext) || "zip".equals(ext)) {
+                hopLe = (header[0] == 0x50 && header[1] == 0x4B && (header[2] == 0x03 || header[2] == 0x05 || header[2] == 0x07) && (header[3] == 0x04 || header[3] == 0x06 || header[3] == 0x08));
+            } else if ("rar".equals(ext)) {
+                hopLe = (header[0] == 0x52 && header[1] == 0x61 && header[2] == 0x72 && header[3] == 0x21); // Rar!
+            } else if ("doc".equals(ext)) {
+                hopLe = (header[0] == (byte) 0xD0 && header[1] == (byte) 0xCF && header[2] == 0x11 && header[3] == (byte) 0xE0)
+                        || (header[0] == 0x50 && header[1] == 0x4B && header[2] == 0x03 && header[3] == 0x04);
+            }
+            if (!hopLe) {
+                throw new NghiepvuException("Nội dung tệp không khớp với phần mở rộng ." + ext + ". Vui lòng kiểm tra lại tệp thực tế.");
+            }
+        } catch (IOException e) {
+            throw new NghiepvuException("Không thể đọc và kiểm tra tệp tin: " + e.getMessage());
+        }
+    }
+
+    public Path layDuongDanVatLyHopLe(String duongdanfile, Path uploadRoot) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return null;
+        String raw = duongdanfile.trim();
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            return null;
+        }
+        try {
+            String decoded = java.net.URLDecoder.decode(raw, java.nio.charset.StandardCharsets.UTF_8).replace('\\', '/');
+            String prefix = "/uploads/baocao/";
+            String subPath = decoded;
+            if (subPath.startsWith(prefix)) {
+                subPath = subPath.substring(prefix.length());
+            } else if (subPath.startsWith("uploads/baocao/")) {
+                subPath = subPath.substring("uploads/baocao/".length());
+            }
+            while (subPath.startsWith("/")) {
+                subPath = subPath.substring(1);
+            }
+            Path resolved = uploadRoot.resolve(subPath).normalize();
+            if (!resolved.startsWith(uploadRoot)) {
+                throw new NghiepvuException("Đường dẫn file không hợp lệ hoặc cố tình thoát khỏi thư mục lưu trữ");
+            }
+            if (Files.exists(resolved) && Files.isSymbolicLink(resolved)) {
+                throw new NghiepvuException("Không hỗ trợ liên kết tượng trưng (symlink)");
+            }
+            return resolved;
+        } catch (IllegalArgumentException e) {
+            throw new NghiepvuException("Đường dẫn file chứa ký tự không hợp lệ");
+        }
+    }
+
+    public boolean isFileReferencedByOtherRegistration(String duongdanfile, Long currentDkId) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return false;
+        Path uploadRoot = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+        Path targetPath = layDuongDanVatLyHopLe(duongdanfile, uploadRoot);
+
+        if (repository != null) {
+            List<Nopbaocao> allReports = repository.findAll();
+            for (Nopbaocao r : allReports) {
+                if (r.getDangkydetaiid() != null && !r.getDangkydetaiid().equals(currentDkId)) {
+                    if (r.getDuongdanfile() != null) {
+                        // 1. So khớp chuỗi trực tiếp
+                        if (r.getDuongdanfile().trim().equalsIgnoreCase(duongdanfile.trim())) {
+                            return true;
+                        }
+                        // 2. So khớp đường dẫn chuẩn hóa và inode vật lý
+                        try {
+                            Path otherPath = layDuongDanVatLyHopLe(r.getDuongdanfile(), uploadRoot);
+                            if (targetPath != null && otherPath != null) {
+                                if (targetPath.equals(otherPath)) {
+                                    return true;
+                                }
+                                if (Files.exists(targetPath) && Files.exists(otherPath)) {
+                                    if (Files.isSameFile(targetPath, otherPath)) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void xoaFileVatLy(String duongdanfile) {
+        if (duongdanfile == null || duongdanfile.trim().isEmpty()) return;
+        try {
+            Path uploadDir = Paths.get(uploadDirectory).toAbsolutePath().normalize();
+            Path filePath = layDuongDanVatLyHopLe(duongdanfile, uploadDir);
+            if (filePath == null || !Files.exists(filePath)) {
+                return;
+            }
+            if (repository != null) {
+                List<Nopbaocao> remaining = repository.findAll();
+                for (Nopbaocao r : remaining) {
+                    if (r.getDuongdanfile() != null) {
+                        if (r.getDuongdanfile().trim().equalsIgnoreCase(duongdanfile.trim())) {
+                            return; // Bảo toàn file nếu còn bản ghi CSDL tham chiếu cùng chuỗi
+                        }
+                        try {
+                            Path otherPath = layDuongDanVatLyHopLe(r.getDuongdanfile(), uploadDir);
+                            if (otherPath != null) {
+                                if (filePath.equals(otherPath)) {
+                                    return; // Bảo toàn file nếu chuẩn hóa cùng một đường dẫn
+                                }
+                                if (Files.exists(otherPath) && Files.isSameFile(filePath, otherPath)) {
+                                    return; // Bảo toàn file nếu chung inode vật lý
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+            Files.deleteIfExists(filePath);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Sinhvien xacThucNhomTruongNopBaoCao(Dangkydetai dk, String currentUsername) {
         if (currentUsername == null || currentUsername.trim().isEmpty()) {
             throw new NghiepvuException("Người chưa đăng nhập không được phép nộp báo cáo");
         }
 
+        if (dk == null) {
+            throw new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài");
+        }
+
         Taikhoan tk = taikhoanRepository.findByTendangnhap(currentUsername)
                 .orElseThrow(() -> new NghiepvuException("Tài khoản người dùng không tồn tại"));
-
-        Dangkydetai dk = dangkydetaiRepository.findById(dangkydetaiid)
-                .orElseThrow(() -> new NghiepvuException("Không tìm thấy thông tin đăng ký đề tài"));
 
         if (dk.getTrangthai() != null && dk.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
             throw new NghiepvuException("Chỉ được nộp báo cáo khi đề tài của nhóm đã được duyệt chính thức (Trạng thái hiện tại: " + dk.getTrangthai() + ")");

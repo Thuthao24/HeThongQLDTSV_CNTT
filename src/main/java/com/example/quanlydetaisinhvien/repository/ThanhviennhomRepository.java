@@ -2,7 +2,9 @@ package com.example.quanlydetaisinhvien.repository;
 
 import com.example.quanlydetaisinhvien.entity.Thanhviennhom;
 import com.example.quanlydetaisinhvien.entity.ThanhviennhomId;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -19,9 +21,17 @@ public interface ThanhviennhomRepository extends JpaRepository<Thanhviennhom, Th
     void deleteByNhomidAndSinhvienid(Long nhomid, Long sinhvienid);
     void deleteByNhomid(Long nhomid);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT tv FROM Thanhviennhom tv WHERE tv.nhomid = :nhomid")
+    List<Thanhviennhom> findByNhomidForUpdate(@Param("nhomid") Long nhomid);
+
     @Query("SELECT (COUNT(tv) > 0) FROM Thanhviennhom tv, Nhomsinhvien n " +
            "WHERE tv.nhomid = n.id AND tv.sinhvienid = :sinhvienid AND n.dotdangkyid = :dotdangkyid")
     boolean existsSinhvienInDot(@Param("sinhvienid") Long sinhvienid, @Param("dotdangkyid") Long dotdangkyid);
+
+    @Query("SELECT (COUNT(tv) > 0) FROM Thanhviennhom tv, Nhomsinhvien n, Dotdangky d " +
+           "WHERE tv.nhomid = n.id AND n.dotdangkyid = d.id AND tv.sinhvienid = :sinhvienid AND d.trangthai <> com.example.quanlydetaisinhvien.entity.TrangthaiDotdangky.DONG")
+    boolean existsSinhvienInActiveDot(@Param("sinhvienid") Long sinhvienid);
 
     @Query("SELECT n FROM Nhomsinhvien n, Thanhviennhom tv " +
            "WHERE tv.nhomid = n.id AND tv.sinhvienid = :sinhvienid AND n.dotdangkyid = :dotdangkyid")

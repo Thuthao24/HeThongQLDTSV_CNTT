@@ -212,47 +212,169 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function initConfirmModal() {
-    const modal = document.getElementById('confirmModal');
-    if (!modal) return;
-    const msgEl = document.getElementById('confirmModalMessage');
-    const titleEl = document.getElementById('confirmModalTitle');
-    const acceptBtn = document.getElementById('confirmModalAccept');
-    let pendingForm = null;
+  // ===== Module Nop Bao Cao: Toggle Resubmit & Drag Drop =====
+  function initNopBaoCaoModule() {
+    const btnToggle = document.getElementById('btnToggleResubmit');
+    const btnCancel = document.getElementById('btnCancelResubmit');
+    const formContainer = document.getElementById('uploadFormContainer');
+    const fileCard = document.getElementById('submittedFileCard');
+    const fileInput = document.getElementById('file');
+    const fileNameDisplay = document.getElementById('selectedFileName');
+    const dropzone = document.getElementById('uploadDropzone');
 
-    document.querySelectorAll('form[data-confirm]').forEach(form => {
-      form.addEventListener('submit', function (e) {
+    if (btnToggle && formContainer) {
+      btnToggle.addEventListener('click', function (e) {
         e.preventDefault();
-        pendingForm = form;
-        const msg = form.getAttribute('data-confirm') || 'Bạn có chắc chắn muốn thực hiện thao tác này?';
-        const title = form.getAttribute('data-modal-title') || 'Thông báo';
-        if (msgEl) msgEl.textContent = msg;
-        if (titleEl) titleEl.textContent = title;
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
+        formContainer.classList.remove('is-collapsed');
+        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-    });
+    }
 
-    modal.querySelectorAll('[data-modal-cancel]').forEach(btn => {
-      btn.addEventListener('click', function () {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        pendingForm = null;
+    if (btnCancel && formContainer) {
+      btnCancel.addEventListener('click', function (e) {
+        e.preventDefault();
+        formContainer.classList.add('is-collapsed');
+        if (fileCard) {
+          fileCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
-    });
+    }
 
-    if (acceptBtn) {
-      acceptBtn.addEventListener('click', function () {
-        if (pendingForm) {
-          const formToSubmit = pendingForm;
-          pendingForm = null;
-          formToSubmit.removeAttribute('data-confirm');
-          formToSubmit.submit();
+    if (fileInput && fileNameDisplay) {
+      fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files.length > 0) {
+          fileNameDisplay.textContent = 'Đã chọn tệp: ' + fileInput.files[0].name;
+          fileNameDisplay.style.color = '#0284c7';
+          fileNameDisplay.style.fontWeight = '600';
+        } else {
+          fileNameDisplay.textContent = 'Chưa có tệp nào được chọn';
+          fileNameDisplay.style.color = '';
+          fileNameDisplay.style.fontWeight = '';
+        }
+      });
+    }
+
+    if (dropzone && fileInput) {
+      ['dragenter', 'dragover'].forEach(function (eventName) {
+        dropzone.addEventListener(eventName, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(function (eventName) {
+        dropzone.addEventListener(eventName, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove('dragover');
+        });
+      });
+
+      dropzone.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          fileInput.files = e.dataTransfer.files;
+          const event = new Event('change');
+          fileInput.dispatchEvent(event);
         }
       });
     }
   }
 
+  // ===== Module Confirm Modal =====
+  function initConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    const msgEl = document.getElementById('confirmModalMessage');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const acceptBtn = document.getElementById('confirmModalAccept');
+    let pendingForm = null;
+
+    function openConfirmModal(form) {
+      pendingForm = form;
+      const msg = form.getAttribute('data-confirm') || 'Bạn có chắc chắn muốn thực hiện thao tác này?';
+      const title = form.getAttribute('data-modal-title') || 'Thông báo';
+      if (msgEl) msgEl.textContent = msg;
+      if (titleEl) titleEl.textContent = title;
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      }
+    }
+
+    function closeConfirmModal() {
+      if (modal) {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      }
+      pendingForm = null;
+    }
+
+    // Lắng nghe submit trên mọi form có data-confirm
+    document.addEventListener('submit', function (e) {
+      const form = e.target.closest('form[data-confirm]');
+      if (!form) return;
+
+      // Fallback nếu modal hoặc nút xác nhận không tồn tại
+      if (!modal || !acceptBtn) {
+        const msg = form.getAttribute('data-confirm') || 'Bạn có chắc chắn muốn thực hiện thao tác này?';
+        if (!window.confirm(msg)) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      e.preventDefault();
+      openConfirmModal(form);
+    });
+
+    if (modal) {
+      modal.querySelectorAll('[data-modal-cancel]').forEach(function(btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          closeConfirmModal();
+        });
+      });
+
+      // Click vào backdrop bên ngoài để đóng modal
+      modal.addEventListener('click', function (e) {
+        if (e.target.classList.contains('portal-modal-backdrop') || e.target === modal) {
+          closeConfirmModal();
+        }
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (!modal || !modal.classList.contains('open')) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeConfirmModal(); }
+    });
+
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (pendingForm) {
+          const formToSubmit = pendingForm;
+          pendingForm = null;
+          closeConfirmModal();
+
+          const savedConfirm = formToSubmit.getAttribute('data-confirm');
+          formToSubmit.removeAttribute('data-confirm');
+
+          // Submit form
+          formToSubmit.submit();
+
+          setTimeout(function() {
+            if (savedConfirm) formToSubmit.setAttribute('data-confirm', savedConfirm);
+          }, 500);
+        }
+      });
+    }
+  }
+
+  initNopBaoCaoModule();
   initConfirmModal();
   initHeaderNotices();
 });

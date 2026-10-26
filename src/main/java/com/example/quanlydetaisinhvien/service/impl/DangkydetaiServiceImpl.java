@@ -293,9 +293,16 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         if (account.getVaitro() != Vaitro.SINHVIEN) {
             return new ArrayList<>();
         }
-
-        DangKyDeTaiDto own = layDangKyCuaSinhVien(currentUsername);
-        return own == null ? new ArrayList<>() : List.of(own);
+        Optional<Sinhvien> svOpt = sinhvienRepository.findByMasinhvien(currentUsername);
+        if (svOpt.isPresent()) {
+            List<Thanhviennhom> tvList = thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
+            List<DangKyDeTaiDto> result = new ArrayList<>();
+            for (Thanhviennhom tv : tvList) {
+                repository.findByNhomid(tv.getNhomid()).ifPresent(dk -> result.add(chuyenSangDto(dk)));
+            }
+            return result;
+        }
+        return new ArrayList<>();
     }
 
     @Override
@@ -306,27 +313,16 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         if (currentUsername == null || currentUsername.isBlank()) {
             return null;
         }
-
-        Optional<Sinhvien> svOpt =
-            sinhvienRepository.findByMasinhvien(currentUsername);
-
-        if (svOpt.isEmpty()) {
-            return null;
-        }
-
-        List<Thanhviennhom> members =
-            thanhviennhomRepository.findBySinhvienid(svOpt.get().getId());
-
-        for (Thanhviennhom member : members) {
-            Optional<Dangkydetai> dk =
-                repository.findByNhomid(member.getNhomid());
-
-            if (dk.isPresent()) {
-                return chuyenSangDto(dk.get());
-            }
-        }
-
-        return null;
+        List<DangKyDeTaiDto> ds = layDanhSachDangKyChoUser(currentUsername);
+        if (ds.isEmpty()) return null;
+        // Ưu tiên đăng ký thuộc nhóm mà sinh viên làm nhóm trưởng
+        return ds.stream()
+                .filter(d -> currentUsername.equals(d.getMasinhvienNhomtruong()) && d.getTrangthai() == TrangthaiDangkydetai.DADUYET)
+                .findFirst()
+                .orElseGet(() -> ds.stream()
+                        .filter(d -> currentUsername.equals(d.getMasinhvienNhomtruong()))
+                        .findFirst()
+                        .orElse(ds.get(ds.size() - 1)));
     }
 
     private DangKyDeTaiDto chuyenSangDto(Dangkydetai dk) {
@@ -500,6 +496,7 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
 
         Dangkydetai dk = oldOpt.orElseGet(Dangkydetai::new);
 
+
         dk.setNhomid(nhom.getId());
         dk.setDetaiid(detai.getId());
         dk.setTrangthai(TrangthaiDangkydetai.CHODUYET);
@@ -661,6 +658,11 @@ public class DangkydetaiServiceImpl implements DangkydetaiService {
         }
 
         if (chapNhan) {
+            long soThanhvien = thanhviennhomRepository.countByNhomid(dk.getNhomid());
+            if (soThanhvien < 3 || soThanhvien > 5) {
+                throw new NghiepvuException("Nhóm phải có từ 3 đến 5 thành viên mới đủ điều kiện duyệt đề tài (Hiện có: " + soThanhvien + " thành viên)");
+            }
+
             boolean approvedElsewhere = repository.findApprovedForUpdate(
                     detaiId, TrangthaiDangkydetai.DADUYET)
                 .stream()

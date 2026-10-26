@@ -269,7 +269,7 @@ public class DiemServiceImpl implements DiemService {
         if (form == null || form.getDangkydetaiid() == null) {
             throw new NghiepvuException("Vui lòng chọn đề tài đăng ký");
         }
-        var registration = registrations.findById(form.getDangkydetaiid())
+        var registration = registrations.findByIdForUpdate(form.getDangkydetaiid())
                 .orElseThrow(() -> new NghiepvuException("Không tìm thấy đăng ký đề tài."));
         if (registration.getTrangthai() != null && registration.getTrangthai() != TrangthaiDangkydetai.DADUYET) {
             throw new NghiepvuException("Đăng ký đề tài chưa được duyệt, không thể nhập điểm.");

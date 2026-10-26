@@ -35,4 +35,14 @@ public interface NhomsinhvienService extends CrudService<Nhomsinhvien, Long> {
     void doiNhomTruong(Long nhomid, Long sinhvienidMoi, String currentUsername);
 
     void roiNhom(Long nhomid, String currentUsername);
+
+    java.util.List<com.example.quanlydetaisinhvien.dto.LoiMoiThanhVienDto> layDanhSachLoiMoiCuaSinhVien(String currentUsername);
+
+    void dongYLoiMoi(Long loiMoiId, String currentUsername);
+
+    void tuChoiLoiMoi(Long loiMoiId, String currentUsername);
+
+    void huyLoiMoi(Long nhomid, Long loiMoiId, String currentUsername);
+
+    long demSoLoiMoiDangCho(String currentUsername);
 }

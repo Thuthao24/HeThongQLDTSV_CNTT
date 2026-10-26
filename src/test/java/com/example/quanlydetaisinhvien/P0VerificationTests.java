@@ -146,6 +146,11 @@ class P0VerificationTests {
             grp.setTennhom("Nhóm P0-01");
             grp.setNhomtruongid(1L);
             em.persist(grp);
+            for (int i = 1; i <= 3; i++) {
+                Sinhvien s = createStudent("sv-auto-" + i);
+                if (i == 1) grp.setNhomtruongid(s.getId());
+                em.persist(new Thanhviennhom(grp.getId(), s.getId()));
+            }
 
             Dangkydetai dk = new Dangkydetai();
             dk.setDetaiid(dt.getId());
@@ -193,6 +198,11 @@ class P0VerificationTests {
             grp.setTennhom("Nhóm Idempotent");
             grp.setNhomtruongid(1L);
             em.persist(grp);
+            for (int i = 1; i <= 3; i++) {
+                Sinhvien s = createStudent("sv-idempotent-" + i);
+                if (i == 1) grp.setNhomtruongid(s.getId());
+                em.persist(new Thanhviennhom(grp.getId(), s.getId()));
+            }
 
             Dangkydetai dk = new Dangkydetai();
             dk.setDetaiid(dt.getId());
@@ -437,6 +447,7 @@ class P0VerificationTests {
 
             Sinhvien s1 = createStudent("sv-p03-1");
             Sinhvien s2 = createStudent("sv-p03-2");
+            Sinhvien s3 = createStudent("sv-p03-3");
             grp.setNhomtruongid(s1.getId());
 
             Thanhviennhom m1 = new Thanhviennhom();
@@ -448,6 +459,11 @@ class P0VerificationTests {
             m2.setNhomid(grp.getId());
             m2.setSinhvienid(s2.getId());
             em.persist(m2);
+
+            Thanhviennhom m3 = new Thanhviennhom();
+            m3.setNhomid(grp.getId());
+            m3.setSinhvienid(s3.getId());
+            em.persist(m3);
 
             Hoidong hd = new Hoidong();
             hd.setDotdangkyid(round.getId());
@@ -518,10 +534,10 @@ class P0VerificationTests {
 
         // 5. Kiểm tra email outbox Mailjet: Phải có 2 bản ghi email cho 2 sinh viên trong nhóm với trạng thái PENDING
         List<Emailketqua> outbox = emailketquaRepository.findByKetquaidOrderByIdAsc(kq.getId());
-        assertThat(outbox).hasSize(2);
+        assertThat(outbox).hasSize(3);
         assertThat(outbox).allMatch(e -> e.getTrangthai() == TrangthaiEmailketqua.PENDING);
         assertThat(outbox.stream().map(Emailketqua::getEmail).toList())
-                .containsExactlyInAnyOrder("sv-p03-1@student.edu.vn", "sv-p03-2@student.edu.vn");
+                .containsExactlyInAnyOrder("sv-p03-1@student.edu.vn", "sv-p03-2@student.edu.vn", "sv-p03-3@student.edu.vn");
 
         // 6. Kiểm tra sinh viên tra cứu: chỉ thấy kết quả đã công bố của nhóm mình
         authenticate(flow.sv1User(), "SINHVIEN");

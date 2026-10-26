@@ -13,4 +13,7 @@ public interface NopbaocaoRepository extends JpaRepository<Nopbaocao, Long> {
     List<Nopbaocao> findBySinhvienid(Long sinhvienid);
     boolean existsByDangkydetaiid(Long dangkydetaiid);
     void deleteByDangkydetaiid(Long dangkydetaiid);
+
+    boolean existsByDuongdanfileAndDangkydetaiidNot(String duongdanfile, Long dangkydetaiid);
+    long countByDuongdanfile(String duongdanfile);
 }
