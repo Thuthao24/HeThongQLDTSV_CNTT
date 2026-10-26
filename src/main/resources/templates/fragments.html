@@ -105,43 +105,73 @@
         <a href="/" class="nav-item" th:classappend="${active == 'dashboard'} ? ' active' : ''"><span class="nav-icon">⌂</span>Tổng quan</a>
         <a href="/thongbao" class="nav-item" th:classappend="${active == 'thongbao'} ? ' active' : ''"><span class="nav-icon">●</span>Thông báo</a>
 
-        <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN' or vaitro == 'SINHVIEN'}">QUẢN LÝ ĐỀ TÀI</div>
-        <a th:if="${vaitro == 'TRUONGKHOA'}" href="/dotdangky" class="nav-item" th:classappend="${active == 'dotdangky'} ? ' active' : ''"><span class="nav-icon">▣</span>Đợt đăng ký</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/detai" class="nav-item" th:classappend="${active == 'detai'} ? ' active' : ''"><span class="nav-icon">▤</span>Đề tài</a>
-        <a th:if="${vaitro == 'SINHVIEN'}" href="/nhom" class="nav-item" th:classappend="${active == 'nhom'} ? ' active' : ''"><span class="nav-icon">●</span>Nhóm sinh viên</a>
-        <a th:if="${vaitro == 'SINHVIEN'}" href="/dangkydetai" class="nav-item" th:classappend="${active == 'dangkydetai'} ? ' active' : ''"><span class="nav-icon">✓</span>Đăng ký đề tài</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/dangkydetai" class="nav-item" th:classappend="${active == 'dangkydetai'} ? ' active' : ''"><span class="nav-icon">✓</span>Duyệt đăng ký đề tài</a>
-        <a th:if="${vaitro == 'SINHVIEN'}" href="/nopbaocao" class="nav-item" th:classappend="${active == 'nopbaocao'} ? ' active' : ''"><span class="nav-icon">⇧</span>Nộp báo cáo</a>
+        ```html
+<div class="nav-section"
+     th:if="${vaitro == 'TRUONGKHOA'
+          or vaitro == 'TRUONGBOMON'
+          or vaitro == 'GIANGVIEN'
+          or vaitro == 'SINHVIEN'}">
+    QUẢN LÝ ĐỀ TÀI
+</div>
 
-        <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}">DANH MỤC</div>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" href="/giangvien" class="nav-item" th:classappend="${active == 'giangvien'} ? ' active' : ''"><span class="nav-icon">◆</span>Giảng viên</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON'}" href="/sinhvien" class="nav-item" th:classappend="${active == 'sinhvien'} ? ' active' : ''"><span class="nav-icon">●</span>Sinh viên</a>
-        <a th:if="${vaitro == 'TRUONGKHOA'}" href="/bomon" class="nav-item" th:classappend="${active == 'bomon'} ? ' active' : ''"><span class="nav-icon">▦</span>Bộ môn</a>
-
-        <div class="nav-section">ĐÁNH GIÁ</div>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/hoidong" class="nav-item" th:classappend="${active == 'hoidong'} ? ' active' : ''"><span class="nav-icon">▱</span>Hội đồng</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/phanbien" class="nav-item" th:classappend="${active == 'phanbien'} ? ' active' : ''"><span class="nav-icon">⚖</span>Phản biện</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'TRUONGBOMON' or vaitro == 'GIANGVIEN'}" href="/diem" class="nav-item" th:classappend="${active == 'diem'} ? ' active' : ''"><span class="nav-icon">★</span>Chấm điểm</a>
-        <a th:if="${vaitro == 'TRUONGKHOA' or vaitro == 'SINHVIEN'}" href="/ketqua" class="nav-item" th:classappend="${active == 'ketqua'} ? ' active' : ''"><span class="nav-icon">◎</span>Kết quả</a>
-        <div class="nav-section" th:if="${vaitro == 'TRUONGKHOA'}">TIỆN ÍCH</div>
-        <a th:if="${vaitro == 'TRUONGKHOA'}"
-           th:href="@{/morong/thongke}"
-           class="nav-item"
-           th:classappend="${active == 'thongke'} ? ' active' : ''"><span class="nav-icon">📊</span>Thống kê & Báo cáo</a>
-        
-<div class="nav-section">TÀI KHOẢN</div>
-
-<!-- Tất cả người dùng được xem hồ sơ của mình -->
-<a th:href="@{/taikhoan}"
+<a th:if="${vaitro == 'TRUONGKHOA'}"
+   href="/dotdangky"
    class="nav-item"
-   th:classappend="${active == 'canhan'} ? ' active' : ''">
-    <span class="nav-icon">👤</span>
-    Tài khoản của tôi
+   th:classappend="${active == 'dotdangky'} ? ' active' : ''">
+    <span class="nav-icon">▣</span>
+    Đợt đăng ký
 </a>
-        <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
-            <button class="nav-item sidebar-logout" type="submit"><span class="nav-icon">↪</span>Đăng xuất</button>
-        </form>
-    </nav>
-</aside>
-</body>
-</html>
+
+<!-- GIẢNG VIÊN: chỉ đề xuất đề tài -->
+<a th:if="${vaitro == 'GIANGVIEN'}"
+   th:href="@{/giai-doan-1/detai/tao}"
+   class="nav-item"
+   th:classappend="${active == 'detai'} ? ' active' : ''">
+    <span class="nav-icon">＋</span>
+    Đề xuất đề tài
+</a>
+
+<!-- TRƯỞNG BỘ MÔN / TRƯỞNG KHOA: xem danh sách đề tài -->
+<a th:if="${vaitro == 'TRUONGKHOA'
+        or vaitro == 'TRUONGBOMON'}"
+   th:href="@{/detai}"
+   class="nav-item"
+   th:classappend="${active == 'detai'} ? ' active' : ''">
+    <span class="nav-icon">▤</span>
+    Quản lý đề tài
+</a>
+
+<a th:if="${vaitro == 'SINHVIEN'}"
+   href="/nhom"
+   class="nav-item"
+   th:classappend="${active == 'nhom'} ? ' active' : ''">
+    <span class="nav-icon">●</span>
+    Nhóm sinh viên
+</a>
+
+<a th:if="${vaitro == 'SINHVIEN'}"
+   href="/dangkydetai"
+   class="nav-item"
+   th:classappend="${active == 'dangkydetai'} ? ' active' : ''">
+    <span class="nav-icon">✓</span>
+    Đăng ký đề tài
+</a>
+
+<a th:if="${vaitro == 'TRUONGKHOA'
+        or vaitro == 'TRUONGBOMON'
+        or vaitro == 'GIANGVIEN'}"
+   href="/dangkydetai"
+   class="nav-item"
+   th:classappend="${active == 'dangkydetai'} ? ' active' : ''">
+    <span class="nav-icon">✓</span>
+    Duyệt đăng ký đề tài
+</a>
+
+<a th:if="${vaitro == 'SINHVIEN'}"
+   href="/nopbaocao"
+   class="nav-item"
+   th:classappend="${active == 'nopbaocao'} ? ' active' : ''">
+    <span class="nav-icon">⇧</span>
+    Nộp báo cáo
+</a>
+```
